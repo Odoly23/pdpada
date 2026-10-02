@@ -1,0 +1,9 @@
+body { background: #f4f6f9; }
+.navbar-pada { background: #0b3d91; }
+.navbar-pada .navbar-brand, .navbar-pada .nav-link { color: #fff !important; }
+.navbar-pada .nav-link:hover { background: rgba(255,255,255,.12); border-radius: 4px; }
+.scope-badge { font-size: .8rem; }
+.card-header { font-weight: 600; background: #e9eef7; }
+.login-wrap { max-width: 400px; margin: 8vh auto; }
+.temp-pass { font-family: monospace; font-size: 1.4rem; letter-spacing: 1px; user-select: all; }
+.breadcrumb { background: transparent; }

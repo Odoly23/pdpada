@@ -1,0 +1,26 @@
+<nav class="navbar navbar-expand-lg navbar-pada">
+  <a class="navbar-brand" href="{% url 'home' %}"><i class="fa fa-flag"></i> PDPADA</a>
+  {% if user.is_authenticated %}
+  <button class="navbar-toggler text-white" type="button" data-toggle="collapse" data-target="#nav"><i class="fa fa-bars"></i></button>
+  <div class="collapse navbar-collapse" id="nav">
+    <ul class="navbar-nav mr-auto">
+      <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Varanda</a></li>
+      {% if perms.membro.view_membru %}<li class="nav-item"><a class="nav-link" href="{% url 'membru-list' %}">Membru</a></li>{% endif %}
+      {% if perms.membro.add_membru %}<li class="nav-item"><a class="nav-link" href="{% url 'membru-create' %}">+ Rejistu</a></li>{% endif %}
+      {% if perms.membro.confirm_membru %}<li class="nav-item"><a class="nav-link" href="{% url 'pending-konfirma' %}">Konfirma</a></li>{% endif %}
+      {% if perms.membro.approve_membru %}<li class="nav-item"><a class="nav-link" href="{% url 'pending-aprova' %}">Aprova</a></li>{% endif %}
+      {% if perms.membro.view_kargu %}<li class="nav-item"><a class="nav-link" href="{% url 'kargu-list' %}">Coordenador/Sekjen</a></li>{% endif %}
+      {% if perms.membro.view_report %}<li class="nav-item"><a class="nav-link" href="{% url 'report-dash' %}">Relatóriu</a></li>{% endif %}
+      {% if perms.users.manage_users %}<li class="nav-item"><a class="nav-link" href="{% url 'user-list' %}">User</a></li>{% endif %}
+      {% if perms.config.view_auditlog %}<li class="nav-item"><a class="nav-link" href="{% url 'audit-list' %}">Audit</a></li>{% endif %}
+    </ul>
+    <span class="navbar-text text-white mr-3 scope-badge">
+      <i class="fa fa-user"></i> {{ user.get_username }} · {{ role_label }}{% if scope_label %} · {{ scope_label }}{% endif %}
+    </span>
+    <a class="btn btn-sm btn-outline-light mr-2" href="{% url 'password_change' %}">Password</a>
+    <form method="post" action="{% url 'logout' %}" class="form-inline">{% csrf_token %}
+      <button class="btn btn-sm btn-light" type="submit">Sai</button>
+    </form>
+  </div>
+  {% endif %}
+</nav>

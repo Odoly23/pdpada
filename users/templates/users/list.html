@@ -1,0 +1,22 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1"><li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li><li class="breadcrumb-item active">{{ legend|upper }}</li></ol>
+<div class="card shadow-lg rounded"><div class="card-header">{{ legend|upper }}</div><div class="card-body">
+ <a class="btn btn-sm btn-primary mb-2" href="{% url 'user-create' %}"><i class="fa fa-plus"></i> User Foun</a>
+ <table id="tbl" class="table table-sm table-striped" width="100%">
+  <thead><tr><th>Username</th><th>Naran</th><th>Papel</th><th>Eskopu</th><th>Estadu</th><th>Asaun</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+   <tr><td>{{ r.user.username }}</td><td>{{ r.user.get_full_name }}</td><td>{{ r.role }}</td><td>{{ r.scope }}</td>
+    <td>{% if r.user.is_active %}<span class="badge badge-success">Ativu</span>{% else %}<span class="badge badge-secondary">La ativu</span>{% endif %}</td>
+    <td class="text-nowrap">
+     <a class="btn btn-xs btn-sm btn-outline-primary" href="{% url 'user-edit' r.user.pk %}">Edita</a>
+     <form method="post" action="{% url 'user-reset-password' r.user.pk %}" class="d-inline" onsubmit="return confirm('Reset password {{ r.user.username }}?')">{% csrf_token %}<button class="btn btn-sm btn-outline-warning">Reset</button></form>
+     <form method="post" action="{% url 'user-unlock' r.user.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-info">Hamoos bloku</button></form>
+     <form method="post" action="{% url 'user-toggle-active' r.user.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">{% if r.user.is_active %}Deativa{% else %}Ativa{% endif %}</button></form>
+    </td></tr>
+  {% endfor %}
+  </tbody></table>
+</div></div>
+{% endblock %}
+{% block scripts %}<script>$(function(){$('#tbl').DataTable();});</script>{% endblock %}

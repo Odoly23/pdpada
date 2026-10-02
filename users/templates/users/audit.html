@@ -1,0 +1,8 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<div class="card shadow-lg rounded mt-2"><div class="card-header">{{ legend|upper }}</div><div class="card-body">
+ <table id="tbl" class="table table-sm table-striped" width="100%"><thead><tr><th>Oras</th><th>User</th><th>Asaun</th><th>Alvu</th><th>Detallu</th><th>IP</th></tr></thead><tbody>
+ {% for l in logs %}<tr><td>{{ l.created_at|date:"Y-m-d H:i:s" }}</td><td>{{ l.username }}</td><td>{{ l.action }}</td><td>{{ l.target }}</td><td>{{ l.detail }}</td><td>{{ l.ip|default:"" }}</td></tr>{% endfor %}
+ </tbody></table></div></div>
+{% endblock %}
+{% block scripts %}<script>$(function(){$('#tbl').DataTable({order:[[0,'desc']]});});</script>{% endblock %}

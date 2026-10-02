@@ -1,0 +1,14 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1"><li class="breadcrumb-item"><a href="{% url 'membru-list' %}">MEMBRU</a></li><li class="breadcrumb-item active">{{ legend|upper }}</li></ol>
+<div class="row justify-content-center"><div class="col-md-8"><div class="card shadow-lg"><div class="card-header">{{ legend|upper }}</div><div class="card-body">
+ <form method="post" enctype="multipart/form-data" autocomplete="off">{% csrf_token %}
+  {{ form.non_field_errors }}
+  {% for f in form %}
+   <div class="form-group"><label for="{{ f.id_for_label }}">{{ f.label }}</label>
+    {{ f }}{% for e in f.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+  {% endfor %}
+  <button class="btn btn-primary" type="submit">Salva</button> <a class="btn btn-secondary" href="{% url 'membru-list' %}">Kansela</a>
+ </form>
+</div></div></div></div>
+{% endblock %}

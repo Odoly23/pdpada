@@ -1,0 +1,29 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1"><li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li><li class="breadcrumb-item active">{{ legend|upper }}</li></ol>
+<div class="row">
+ <div class="col-md-7"><div class="card shadow-lg rounded"><div class="card-header">MEMBRU TUIR {{ group_label|upper }} ({{ scope_label|default:"Nasional" }})</div><div class="card-body">
+  <table class="table table-sm" width="100%">
+   <thead><tr><th>Nu.</th><th>{{ group_label }}</th><th class="text-right">Mane</th><th class="text-right">Feto</th><th class="text-right">Total</th></tr></thead>
+   <tbody>{% for r in rows %}<tr><td>{{ forloop.counter }}</td><td>{{ r.nome }}</td><td class="text-right">{{ r.mane }}</td><td class="text-right">{{ r.feto }}</td><td class="text-right">{{ r.total }}</td></tr>
+    {% empty %}<tr><td colspan="5" class="text-center text-muted">Seidauk iha dadus.</td></tr>{% endfor %}</tbody>
+   <tfoot><tr class="font-weight-bold"><td></td><td>TOTAL</td><td class="text-right">{{ mane }}</td><td class="text-right">{{ feto }}</td><td class="text-right">{{ total }}</td></tr></tfoot>
+  </table></div></div></div>
+ <div class="col-md-5"><div class="card shadow-lg rounded"><div class="card-header">GRÁFIKU</div><div class="card-body"><canvas id="chart" height="220"></canvas></div></div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+{% load static %}
+<script src="{% static 'main/vendor/js/chart.umd.js' %}"></script>
+<script>
+fetch("{% url 'api-membru-sumariu' %}", {credentials: 'same-origin'}).then(r => r.json()).then(d => {
+  new Chart(document.getElementById('chart'), {
+    type: 'bar',
+    data: {labels: d.label, datasets: [
+      {label: 'Mane', data: d.mane, backgroundColor: '#0b3d91'},
+      {label: 'Feto', data: d.feto, backgroundColor: '#e07b00'}]},
+    options: {scales: {x: {stacked: true}, y: {stacked: true, beginAtZero: true, ticks: {precision: 0}}}}
+  });
+});
+</script>
+{% endblock %}

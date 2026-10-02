@@ -1,0 +1,30 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1"><li class="breadcrumb-item"><a href="{% url 'user-list' %}">USER</a></li><li class="breadcrumb-item active">{{ legend|upper }}</li></ol>
+<div class="row justify-content-center"><div class="col-md-7"><div class="card shadow-lg"><div class="card-header">{{ legend|upper }}</div><div class="card-body">
+ <form method="post" autocomplete="off">{% csrf_token %}
+  {{ form.non_field_errors }}
+  {% for f in form %}
+   <div class="form-group" data-field="{{ f.name }}"><label for="{{ f.id_for_label }}">{{ f.label }}</label>
+    {{ f }}{% for e in f.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+  {% endfor %}
+  {% if not edit %}<p class="text-muted small">Password sementara aleatóriu sei hatudu dala ida de’it. User tenke troka bainhira login primeiru.</p>{% endif %}
+  <button class="btn btn-primary" type="submit">Salva</button> <a class="btn btn-secondary" href="{% url 'user-list' %}">Kansela</a>
+ </form>
+</div></div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+$(function(){
+  $('form input[type=text], form input[type=email], form select').addClass('form-control');
+  var map = {postu:'postu', suku:'village', aldeia:'aldeia', opd:'organizasaun', omd:'organizasaun', dpd:'organizasaun'};
+  function toggle(){
+    var keep = map[$('#id_role').val()];
+    ['postu','village','aldeia','organizasaun'].forEach(function(f){
+      $('[data-field='+f+']').toggle(f===keep);
+    });
+  }
+  $('#id_role').on('change', toggle); toggle();
+});
+</script>
+{% endblock %}

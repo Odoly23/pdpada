@@ -1,0 +1,26 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1"><li class="breadcrumb-item"><a href="{% url 'membru-list' %}">MEMBRU</a></li><li class="breadcrumb-item active">{{ m.naran|upper }}</li></ol>
+<div class="card shadow-lg rounded"><div class="card-header">DETALLU MEMBRU
+  <span class="badge badge-info float-right">{{ m.get_estadu_display }}</span></div>
+ <div class="card-body"><div class="row">
+  <div class="col-md-3 text-center">{% if m.foto %}<img src="{% url 'membru-foto' m.public_id %}" class="img-thumbnail" alt="Foto {{ m.naran }}">{% else %}<i class="fa fa-user-circle fa-5x text-muted"></i>{% endif %}</div>
+  <div class="col-md-9"><table class="table table-sm table-borderless">
+   <tr><th>Nu. Eleitoral</th><td>{{ m.nu_eleitoral }}</td></tr>
+   <tr><th>Naran</th><td>{{ m.naran }}</td></tr>
+   <tr><th>Moris</th><td>{{ m.fatin_moris }}, {{ m.data_moris|date:"d/m/Y" }} ({{ m.idade }} tinan)</td></tr>
+   <tr><th>Sexu / Estadu Sivíl</th><td>{{ m.get_sexu_display }} / {{ m.get_estadu_civil_display|default:"-" }}</td></tr>
+   <tr><th>Edukasaun / Okupasaun</th><td>{{ m.get_edukasaun_display|default:"-" }} / {{ m.okupasaun|default:"-" }}</td></tr>
+   <tr><th>Kontaktu</th><td>{{ m.telemovel|default:"-" }} · {{ m.email|default:"-" }}</td></tr>
+   <tr><th>Enderesu</th><td>{{ m.enderesu|default:"-" }}</td></tr>
+   <tr><th>Lokalizasaun</th><td>Aldeia {{ m.aldeia }} · Suku {{ m.aldeia.village }} · Postu {{ m.postu }} · {{ m.postu.municipality }}</td></tr>
+   <tr><th>Organizasaun</th><td>{% for o in m.organizasaun.all %}<span class="badge badge-secondary">{{ o.code }}</span> {% empty %}-{% endfor %}</td></tr>
+   <tr><th>Kargu</th><td>{% for k in kargus %}{{ k.get_tipu_display }} {{ k.get_nivel_display }} {{ k.wilayah }}{% if not k.is_active %} (remata){% endif %}<br>{% empty %}-{% endfor %}</td></tr>
+   <tr><th>Konfirmasaun / Aprovasaun</th><td>{{ m.konfirma_at|date:"d/m/Y H:i"|default:"-" }} ({{ m.konfirma_by|default:"-" }}) / {{ m.aprova_at|date:"d/m/Y H:i"|default:"-" }} ({{ m.aprova_by|default:"-" }})</td></tr>
+  </table>
+  {% if can_edit %}<a class="btn btn-sm btn-warning" href="{% url 'membru-edit' m.public_id %}">Edita</a>{% endif %}
+  {% if can_confirm %}<form method="post" action="{% url 'membru-konfirma' m.public_id %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-success">Konfirma</button></form>{% endif %}
+  {% if can_approve %}<form method="post" action="{% url 'membru-aprova' m.public_id %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-success">Aprova</button></form>{% endif %}
+  {% if can_delete %}<form method="post" action="{% url 'membru-delete' m.public_id %}" class="d-inline" onsubmit="return confirm('Hamoos membru ne’e?')">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">Hamoos</button></form>{% endif %}
+  </div></div></div></div>
+{% endblock %}

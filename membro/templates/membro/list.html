@@ -1,0 +1,19 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1"><li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li><li class="breadcrumb-item active">{{ legend|upper }}</li></ol>
+<div class="card shadow-lg rounded"><div class="card-header">{{ legend|upper }} ({{ membrus|length }})</div><div class="card-body">
+ {% if perms.membro.add_membru %}<a class="btn btn-sm btn-primary mb-2" href="{% url 'membru-create' %}"><i class="fa fa-plus"></i> Rejistu Membru</a>{% endif %}
+ <div class="mb-2">Filtru estadu:
+  <a class="badge badge-light" href="{% url 'membru-list' %}">Hotu</a>
+  {% for v, l in estadus %}<a class="badge badge-{% if estadu == v %}primary{% else %}light{% endif %}" href="?estadu={{ v }}">{{ l }}</a> {% endfor %}</div>
+ <table id="tbl" class="table table-sm table-striped" width="100%">
+  <thead><tr><th>Nu.</th><th>Nu. Eleitoral</th><th>Naran</th><th>Sexu</th><th>Idade</th><th>Aldeia</th><th>Suku</th><th>Organizasaun</th><th>Estadu</th><th></th></tr></thead>
+  <tbody>{% for m in membrus %}
+   <tr><td>{{ forloop.counter }}</td><td>{{ m.nu_eleitoral }}</td><td>{{ m.naran }}</td><td>{{ m.get_sexu_display }}</td><td>{{ m.idade }}</td>
+    <td>{{ m.aldeia }}</td><td>{{ m.aldeia.village }}</td><td>{% for o in m.organizasaun.all %}{{ o.code }} {% endfor %}</td>
+    <td><span class="badge badge-{% if m.estadu == 'aprovadu' %}success{% elif m.estadu == 'konfirmadu' %}info{% else %}secondary{% endif %}">{{ m.get_estadu_display }}</span></td>
+    <td><a class="btn btn-sm btn-outline-primary" href="{% url 'membru-detail' m.public_id %}">Detallu</a></td></tr>
+  {% endfor %}</tbody></table>
+</div></div>
+{% endblock %}
+{% block scripts %}<script>$(function(){$('#tbl').DataTable();});</script>{% endblock %}

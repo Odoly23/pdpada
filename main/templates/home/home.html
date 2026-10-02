@@ -1,0 +1,23 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1"><li class="breadcrumb-item active">VARANDA</li></ol>
+<div class="row">
+  <div class="col-12">
+    <div class="card shadow-lg rounded">
+      <div class="card-header">BEM-VINDU, {{ user.get_full_name|default:user.get_username|upper }}</div>
+      <div class="card-body">
+        <p class="mb-3"><span class="badge badge-primary">{{ role_label }}</span>
+          {% if scope_label %}<span class="badge badge-secondary">{{ scope_label }}</span>{% endif %}</p>
+        {% if perms.membro.view_report %}
+        <div class="row text-center">
+          <div class="col-md-3"><div class="card"><div class="card-body"><h2>{{ total }}</h2>Total Membru</div></div></div>
+          <div class="col-md-3"><div class="card"><div class="card-body"><h2>{{ mane }}</h2>Mane</div></div></div>
+          <div class="col-md-3"><div class="card"><div class="card-body"><h2>{{ feto }}</h2>Feto</div></div></div>
+          <div class="col-md-3"><div class="card"><div class="card-body"><h2>{{ estadu.aprovadu|default:0 }}</h2>Aprovadu</div></div></div>
+        </div>
+        {% else %}<p>Ita nia papel la iha asesu ba relatóriu.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

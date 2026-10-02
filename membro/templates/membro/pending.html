@@ -1,0 +1,17 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<div class="card shadow-lg rounded mt-2"><div class="card-header">{{ legend|upper }} ({{ membrus|length }})</div><div class="card-body">
+ <table id="tbl" class="table table-sm table-striped" width="100%">
+  <thead><tr><th>Nu. Eleitoral</th><th>Naran</th><th>Aldeia</th><th>Rejistu iha</th><th></th></tr></thead>
+  <tbody>{% for m in membrus %}
+   <tr><td>{{ m.nu_eleitoral }}</td><td>{{ m.naran }}</td><td>{{ m.aldeia }}, {{ m.aldeia.village }}</td><td>{{ m.created_at|date:"d/m/Y" }}</td>
+    <td class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="{% url 'membru-detail' m.public_id %}">Haree</a>
+     {% if action == 'konfirma' %}
+     <form method="post" action="{% url 'membru-konfirma' m.public_id %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-success">Konfirma</button></form>
+     {% else %}
+     <form method="post" action="{% url 'membru-aprova' m.public_id %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-success">Aprova</button></form>
+     {% endif %}</td></tr>
+  {% endfor %}</tbody></table>
+</div></div>
+{% endblock %}
+{% block scripts %}<script>$(function(){$('#tbl').DataTable();});</script>{% endblock %}

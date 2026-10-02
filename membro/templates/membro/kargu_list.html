@@ -1,0 +1,15 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1"><li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li><li class="breadcrumb-item active">{{ legend|upper }}</li></ol>
+<div class="card shadow-lg rounded"><div class="card-header">{{ legend|upper }}</div><div class="card-body">
+ {% if can_add %}<a class="btn btn-sm btn-primary mb-2" href="{% url 'kargu-create' %}"><i class="fa fa-plus"></i> Kargu Foun</a>{% endif %}
+ <table id="tbl" class="table table-sm table-striped" width="100%">
+  <thead><tr><th>Nivel</th><th>Wilayah</th><th>Pozisaun</th><th>Naran</th><th>Telemovel</th><th>Hahu</th><th></th></tr></thead>
+  <tbody>{% for k in kargus %}
+   <tr><td>{{ k.get_nivel_display }}</td><td>{{ k.wilayah }}</td><td>{{ k.get_tipu_display }}</td>
+    <td><a href="{% url 'membru-detail' k.membru.public_id %}">{{ k.membru.naran }}</a></td><td>{{ k.membru.telemovel }}</td><td>{{ k.data_hahu|date:"d/m/Y" }}</td>
+    <td>{% if perms.membro.change_kargu %}<form method="post" action="{% url 'kargu-end' k.pk %}" class="d-inline" onsubmit="return confirm('Remata kargu ne’e?')">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">Remata</button></form>{% endif %}</td></tr>
+  {% endfor %}</tbody></table>
+</div></div>
+{% endblock %}
+{% block scripts %}<script>$(function(){$('#tbl').DataTable();});</script>{% endblock %}
