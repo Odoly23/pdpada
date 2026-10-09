@@ -1,0 +1,16 @@
+{
+  "name": "lafex",
+  "version": "0.1.0",
+  "description": "Lafex - tutor bahasa AI berbasis suara untuk Timor-Leste",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js",
+    "vouchers": "node scripts/make-vouchers.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.132.1"
+  }
+}

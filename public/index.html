@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lafex</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%230b6b3a%27/%3E%3Ctext x=%2716%27 y=%2723%27 font-size=%2720%27 text-anchor=%27middle%27 fill=%27white%27 font-family=%27sans-serif%27%3EL%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Lafex</h1>
+  <div id="status" aria-live="polite"></div>
+</header>
+
+<main>
+  <!-- Masuk -->
+  <section id="view-login" hidden>
+    <h2 data-i18n="login_title"></h2>
+    <label for="phone" data-i18n="phone"></label>
+    <input id="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+670 7xxx xxxx">
+    <label for="pin" data-i18n="pin"></label>
+    <input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password">
+    <button id="btn-login" class="primary" data-i18n="login"></button>
+    <p id="login-msg" class="msg" role="alert"></p>
+  </section>
+
+  <!-- Beranda -->
+  <section id="view-home" hidden>
+    <p id="access-line" class="access" aria-live="polite"></p>
+
+    <label for="sel-lang" data-i18n="learn"></label>
+    <select id="sel-lang"></select>
+
+    <label for="sel-ui" data-i18n="explain_in"></label>
+    <select id="sel-ui"></select>
+
+    <button id="btn-start" class="primary big" data-i18n="start"></button>
+
+    <details id="buy">
+      <summary data-i18n="access"></summary>
+      <ul id="plans"></ul>
+      <label for="voucher" data-i18n="voucher"></label>
+      <input id="voucher" autocapitalize="characters" placeholder="XXXX-XXXX-XX">
+      <button id="btn-redeem" data-i18n="redeem"></button>
+      <p id="redeem-msg" class="msg" role="alert"></p>
+    </details>
+  </section>
+
+  <!-- Sesi belajar -->
+  <section id="view-session" hidden>
+    <div class="bar">
+      <button id="btn-back" data-i18n="back"></button>
+      <span id="level-badge" aria-live="polite"></span>
+    </div>
+
+    <div id="chat" aria-live="polite"></div>
+
+    <button id="btn-mic" class="mic" aria-label="Mic">
+      <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>
+    </button>
+    <div id="mic-hint" aria-live="assertive"></div>
+
+    <div class="row">
+      <button id="btn-repeat" data-i18n="repeat"></button>
+      <label class="toggle"><input type="checkbox" id="chk-hands" checked> <span data-i18n="handsfree"></span></label>
+      <label class="toggle"><input type="checkbox" id="chk-slow"> <span data-i18n="slow"></span></label>
+    </div>
+
+    <form id="text-form" class="row">
+      <input id="text-input" autocomplete="off" aria-label="Text">
+      <button type="submit" data-i18n="send"></button>
+    </form>
+    <p id="voice-warn" class="msg"></p>
+  </section>
+</main>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
