@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "Login" %} — APORTIL{% endblock %}
+{% block body %}
+<main><div class="wrap"><div class="auth card">
+  <h1 style="margin-top:0;color:var(--navy)">{% trans "Portal Sistema Bilheteira" %}</h1>
+  <form method="post" class="stack" autocomplete="off">{% csrf_token %}
+    {% if form.non_field_errors %}<div class="errors">{{ form.non_field_errors }}</div>{% endif %}
+    <label for="id_username">{% trans "Naran uza-na'in" %}</label>
+    <input id="id_username" name="username" autofocus required autocapitalize="none">
+    <label for="id_password">{% trans "Liafuan-pase" %}</label>
+    <input id="id_password" name="password" type="password" required>
+    <input type="hidden" name="next" value="{{ next }}">
+    <div style="margin-top:18px"><button class="btn block">{% trans "Tama" %}</button></div>
+  </form>
+  <p class="muted">{% trans "Sesaun taka automátiku wainhira la uza ba minutu 30." %}</p>
+</div></div></main>
+{% endblock %}

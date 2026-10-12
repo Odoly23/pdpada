@@ -1,0 +1,28 @@
+{% extends "base.html" %}{% load i18n %}
+{% block body %}
+<section class="hero"><div class="wrap">
+  <h1>{% trans "Horáriu Ró-Laran" %}</h1>
+  <p>Dili · Ataúro · Oecusse</p>
+</div></section>
+<main><div class="wrap">
+  {% for a in announcements %}<div class="notice"><strong>{{ a.title }}</strong><br>{{ a.body|linebreaksbr }}</div>{% endfor %}
+  <h2>{% trans "Viajen tuir mai" %}</h2>
+  <div class="grid">
+  {% for s in sailings %}
+    <div class="card">
+      <div class="row"><strong>{{ s.route }}</strong><span class="badge {{ s.status }}">{{ s.get_status_display }}</span></div>
+      <div>{{ s.vessel }} <span class="muted">· {{ s.vessel.operator }}</span></div>
+      <div>{{ s.departure|date:"D d/m/Y H:i" }}</div>
+      {% if s.note %}<div class="muted">{{ s.note }}</div>{% endif %}
+    </div>
+  {% empty %}<p class="muted">{% trans "Seidauk iha viajen agendadu." %}</p>{% endfor %}
+  </div>
+  <h2>{% trans "Presu bilhete" %}</h2>
+  <div class="table-scroll"><table>
+    <tr><th>{% trans "Rota" %}</th><th>{% trans "Tipu" %}</th><th>USD</th></tr>
+    {% for f in fares %}<tr><td>{{ f.route }}</td><td>{{ f.item.display_name }}</td><td>${{ f.price }}</td></tr>
+    {% empty %}<tr><td colspan="3" class="muted">—</td></tr>{% endfor %}
+  </table></div>
+  <p class="muted">{% trans "Bilhete sosa deit iha loket portu. La presiza konta." %}</p>
+</div></main>
+{% endblock %}

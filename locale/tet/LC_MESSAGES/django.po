@@ -1,0 +1,182 @@
+#
+msgid ""
+msgstr ""
+"Language: tet\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#: ticketing/models.py
+msgid "Agendadu"
+msgstr ""
+
+#: ticketing/models.py
+msgid "Atrazadu"
+msgstr ""
+
+#: ticketing/models.py
+msgid "Bilhete Identidade (BI)"
+msgstr ""
+
+#: templates/core/landing.html
+msgid "Bilhete sosa deit iha loket portu. La presiza konta."
+msgstr ""
+
+#: ticketing/models.py
+msgid "Emite ona"
+msgstr ""
+
+#: ticketing/models.py
+msgid "Fila fali osan"
+msgstr ""
+
+#: templates/core/landing.html
+msgid "Horáriu Ró-Laran"
+msgstr ""
+
+#: ticketing/models.py
+msgid "Kansela"
+msgstr ""
+
+#: ticketing/models.py
+msgid "Kartaun Eleitorál"
+msgstr ""
+
+#: templates/accounts/login.html
+msgid "Liafuan-pase"
+msgstr ""
+
+#: accounts/models.py
+msgid "Lian"
+msgstr ""
+
+#: templates/accounts/login.html
+msgid "Login"
+msgstr ""
+
+#: templates/base.html
+msgid "Login staff"
+msgstr ""
+
+#: templates/core/dashboard.html
+msgid "Módulu sira (venda bilhete, scan, relatóriu) sei iha faze tuir mai."
+msgstr ""
+
+#: fleet/models.py
+msgid "Naran"
+msgstr ""
+
+#: templates/accounts/login.html
+msgid "Naran uza-na'in"
+msgstr ""
+
+#: accounts/models.py
+msgid "Operadór"
+msgstr ""
+
+#: ticketing/models.py
+msgid "Osan kontante"
+msgstr ""
+
+#: templates/base.html
+msgid "Painel"
+msgstr ""
+
+#: ticketing/models.py
+msgid "Partida ona"
+msgstr ""
+
+#: ticketing/models.py
+msgid "Pasajeiru"
+msgstr ""
+
+#: ticketing/models.py
+msgid "Pasajeiru: idade maximu"
+msgstr ""
+
+#: ticketing/models.py
+msgid "Pasajeiru: idade minimu"
+msgstr ""
+
+#: ticketing/models.py
+msgid "Pasaporte"
+msgstr ""
+
+#: templates/accounts/login.html
+msgid "Portal Sistema Bilheteira"
+msgstr ""
+
+#: templates/core/landing.html
+msgid "Presu bilhete"
+msgstr ""
+
+#: ticketing/models.py
+msgid "Remata"
+msgstr ""
+
+#: templates/core/landing.html
+msgid "Rota"
+msgstr ""
+
+#: templates/base.html
+msgid "Sai"
+msgstr ""
+
+#: ticketing/models.py
+msgid "Sasán / Animál"
+msgstr ""
+
+#: templates/core/landing.html
+msgid "Seidauk iha viajen agendadu."
+msgstr ""
+
+#: ticketing/models.py
+msgid "Seluk"
+msgstr ""
+
+#: ticketing/models.py
+msgid "Sertifikadu Batismu"
+msgstr ""
+
+#: ticketing/models.py
+msgid "Sertifikadu RDTL"
+msgstr ""
+
+#: templates/accounts/login.html
+msgid "Sesaun taka automátiku wainhira la uza ba minutu 30."
+msgstr ""
+
+#: templates/accounts/login.html
+msgid "Tama"
+msgstr ""
+
+#: ticketing/models.py
+msgid "Tama ona ro"
+msgstr ""
+
+#: accounts/models.py
+msgid "Telefone"
+msgstr ""
+
+#: accounts/forms.py
+msgid "Tentativa barak liu. Hein minutu %(m)d ho tenta fali."
+msgstr ""
+
+#: templates/core/landing.html
+msgid "Tipu"
+msgstr ""
+
+#: ticketing/models.py
+msgid "Transferénsia banku"
+msgstr ""
+
+#: accounts/models.py
+msgid "Uza-na'in operadór nia haree de'it dadus operadór rasik nian."
+msgstr ""
+
+#: ticketing/models.py
+msgid "Veíkulu"
+msgstr ""
+
+#: templates/core/landing.html
+msgid "Viajen tuir mai"
+msgstr ""

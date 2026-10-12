@@ -1,0 +1,8 @@
+{% extends "base.html" %}{% load i18n %}
+{% block body %}
+<main><div class="wrap">
+  <h1 style="color:var(--navy)">{% trans "Painel" %} — {{ user.get_full_name|default:user.username }}</h1>
+  <p class="muted">{% for g in user.groups.all %}{{ g.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+  <div class="card">{% trans "Módulu sira (venda bilhete, scan, relatóriu) sei iha faze tuir mai." %}</div>
+</div></main>
+{% endblock %}

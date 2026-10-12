@@ -1,0 +1,182 @@
+#
+msgid ""
+msgstr ""
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#: ticketing/models.py
+msgid "Agendadu"
+msgstr "Scheduled"
+
+#: ticketing/models.py
+msgid "Atrazadu"
+msgstr "Delayed"
+
+#: ticketing/models.py
+msgid "Bilhete Identidade (BI)"
+msgstr "Identity Card (BI)"
+
+#: templates/core/landing.html
+msgid "Bilhete sosa deit iha loket portu. La presiza konta."
+msgstr "Tickets are sold only at the port ticket office. No account needed."
+
+#: ticketing/models.py
+msgid "Emite ona"
+msgstr "Issued"
+
+#: ticketing/models.py
+msgid "Fila fali osan"
+msgstr "Refunded"
+
+#: templates/core/landing.html
+msgid "Horáriu Ró-Laran"
+msgstr "Ferry Schedule"
+
+#: ticketing/models.py
+msgid "Kansela"
+msgstr "Cancelled"
+
+#: ticketing/models.py
+msgid "Kartaun Eleitorál"
+msgstr "Voter Card"
+
+#: templates/accounts/login.html
+msgid "Liafuan-pase"
+msgstr "Password"
+
+#: accounts/models.py
+msgid "Lian"
+msgstr "Language"
+
+#: templates/accounts/login.html
+msgid "Login"
+msgstr "Login"
+
+#: templates/base.html
+msgid "Login staff"
+msgstr "Staff login"
+
+#: templates/core/dashboard.html
+msgid "Módulu sira (venda bilhete, scan, relatóriu) sei iha faze tuir mai."
+msgstr "Modules (ticket sales, scanning, reports) come in the next phases."
+
+#: fleet/models.py
+msgid "Naran"
+msgstr "Name"
+
+#: templates/accounts/login.html
+msgid "Naran uza-na'in"
+msgstr "Username"
+
+#: accounts/models.py
+msgid "Operadór"
+msgstr "Operator"
+
+#: ticketing/models.py
+msgid "Osan kontante"
+msgstr "Cash"
+
+#: templates/base.html
+msgid "Painel"
+msgstr "Dashboard"
+
+#: ticketing/models.py
+msgid "Partida ona"
+msgstr "Departed"
+
+#: ticketing/models.py
+msgid "Pasajeiru"
+msgstr "Passenger"
+
+#: ticketing/models.py
+msgid "Pasajeiru: idade maximu"
+msgstr "Passengers: maximum age"
+
+#: ticketing/models.py
+msgid "Pasajeiru: idade minimu"
+msgstr "Passengers: minimum age"
+
+#: ticketing/models.py
+msgid "Pasaporte"
+msgstr "Passport"
+
+#: templates/accounts/login.html
+msgid "Portal Sistema Bilheteira"
+msgstr "Ticketing System Portal"
+
+#: templates/core/landing.html
+msgid "Presu bilhete"
+msgstr "Ticket prices"
+
+#: ticketing/models.py
+msgid "Remata"
+msgstr "Completed"
+
+#: templates/core/landing.html
+msgid "Rota"
+msgstr "Route"
+
+#: templates/base.html
+msgid "Sai"
+msgstr "Logout"
+
+#: ticketing/models.py
+msgid "Sasán / Animál"
+msgstr "Goods / Animals"
+
+#: templates/core/landing.html
+msgid "Seidauk iha viajen agendadu."
+msgstr "No sailings scheduled yet."
+
+#: ticketing/models.py
+msgid "Seluk"
+msgstr "Other"
+
+#: ticketing/models.py
+msgid "Sertifikadu Batismu"
+msgstr "Baptism Certificate"
+
+#: ticketing/models.py
+msgid "Sertifikadu RDTL"
+msgstr "RDTL Certificate"
+
+#: templates/accounts/login.html
+msgid "Sesaun taka automátiku wainhira la uza ba minutu 30."
+msgstr "The session closes automatically after 30 minutes of inactivity."
+
+#: templates/accounts/login.html
+msgid "Tama"
+msgstr "Sign in"
+
+#: ticketing/models.py
+msgid "Tama ona ro"
+msgstr "Boarded"
+
+#: accounts/models.py
+msgid "Telefone"
+msgstr "Phone"
+
+#: accounts/forms.py
+msgid "Tentativa barak liu. Hein minutu %(m)d ho tenta fali."
+msgstr "Too many attempts. Wait %(m)d minutes and try again."
+
+#: templates/core/landing.html
+msgid "Tipu"
+msgstr "Type"
+
+#: ticketing/models.py
+msgid "Transferénsia banku"
+msgstr "Bank transfer"
+
+#: accounts/models.py
+msgid "Uza-na'in operadór nia haree de'it dadus operadór rasik nian."
+msgstr "Operator users only see their own operator's data."
+
+#: ticketing/models.py
+msgid "Veíkulu"
+msgstr "Vehicle"
+
+#: templates/core/landing.html
+msgid "Viajen tuir mai"
+msgstr "Upcoming sailings"
