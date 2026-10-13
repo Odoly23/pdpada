@@ -1,0 +1,107 @@
+{% extends "main/layout.html" %}
+{% load static %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1">
+	<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+	<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
+</ol>
+<div class="row">
+	<div class="col-sm-12">
+		<div class="card shadow-lg pt-0 rounded">
+			<div class="card-header">{{ legend|upper }}{% if ano_ativu %} - TINAN {{ ano_ativu }}{% endif %}</div>
+			<div class="card-body">
+				<div class="row">
+					<div class="col-md-4 mb-3"><div id="chart-sex" style="height: 280px;"></div></div>
+					<div class="col-md-4 mb-3"><div id="chart-aprovasaun" style="height: 280px;"></div></div>
+					<div class="col-md-4 mb-3"><div id="chart-suku" style="height: 280px;"></div></div>
+				</div>
+
+				<h6 class="mt-2">Membru Por Suku</h6>
+				<div class="table-responsive">
+				<table class="table table-sm">
+					<thead><tr><th>Nu.</th><th>Suku</th><th>Total</th><th>Mane</th><th>Feto</th><th>Aprovadu</th><th>Pendente</th><th>Rejeitadu</th></tr></thead>
+					<tbody>
+						{% for r in por_suku %}
+						<tr>
+							<td>{{ forloop.counter }}</td>
+							<td>{{ r.village__name }}</td>
+							<td><a href="{% url 'membro-list' %}?village={{ r.village_id }}">{{ r.total }}</a></td>
+							<td>{{ r.mane }}</td><td>{{ r.feto }}</td>
+							<td><a href="{% url 'membro-list' %}?village={{ r.village_id }}&aprovasaun=Aprovadu">{{ r.aprovadu }}</a></td>
+							<td><a href="{% url 'membro-list' %}?village={{ r.village_id }}&aprovasaun=Pendente">{{ r.pendente }}</a></td>
+							<td><a href="{% url 'membro-list' %}?village={{ r.village_id }}&aprovasaun=Rejeitadu">{{ r.rejeitadu }}</a></td>
+						</tr>
+						{% empty %}<tr><td colspan="8">Laiha data.</td></tr>{% endfor %}
+					</tbody>
+				</table>
+				</div>
+
+				<h6 class="mt-3">Membru Por Aldeia</h6>
+				<div class="table-responsive">
+				<table class="table table-sm">
+					<thead><tr><th>Nu.</th><th>Suku</th><th>Aldeia</th><th>Total</th><th>Mane</th><th>Feto</th><th>Aprovadu</th><th>Pendente</th><th>Rejeitadu</th></tr></thead>
+					<tbody>
+						{% for r in por_aldeia %}
+						<tr>
+							<td>{{ forloop.counter }}</td>
+							<td>{{ r.aldeia__village__name }}</td>
+							<td>{{ r.aldeia__name }}</td>
+							<td><a href="{% url 'membro-list' %}?aldeia={{ r.aldeia_id }}">{{ r.total }}</a></td>
+							<td>{{ r.mane }}</td><td>{{ r.feto }}</td>
+							<td>{{ r.aprovadu }}</td><td>{{ r.pendente }}</td><td>{{ r.rejeitadu }}</td>
+						</tr>
+						{% empty %}<tr><td colspan="9">Laiha data.</td></tr>{% endfor %}
+					</tbody>
+				</table>
+				</div>
+
+				<h6 class="mt-3">Membru Por Organizasaun</h6>
+				<div class="table-responsive">
+				<table class="table table-sm">
+					<thead><tr><th>Nu.</th><th>Organizasaun</th><th>Total</th><th>Mane</th><th>Feto</th><th>Aprovadu</th><th>Pendente</th><th>Rejeitadu</th></tr></thead>
+					<tbody>
+						{% for r in por_org %}
+						<tr>
+							<td>{{ forloop.counter }}</td>
+							<td>{{ r.organizasaun__code }}</td>
+							<td><a href="{% url 'membro-list' %}?organizasaun={{ r.organizasaun_id }}">{{ r.total }}</a></td>
+							<td>{{ r.mane }}</td><td>{{ r.feto }}</td>
+							<td>{{ r.aprovadu }}</td><td>{{ r.pendente }}</td><td>{{ r.rejeitadu }}</td>
+						</tr>
+						{% empty %}<tr><td colspan="8">Laiha membru iha organizasaun.</td></tr>{% endfor %}
+					</tbody>
+				</table>
+				</div>
+				<p class="text-muted"><small>Membru la tama organizasaun: {{ sem_org }}</small></p>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'main/charts/js/highcharts.js' %}"></script>
+<script type="text/javascript">
+	Highcharts.setOptions({ colors: ['#010080', '#ff0000', '#6b6bd1', '#ff8080', '#9a9ae6'], credits: { enabled: false } });
+	function draw(id, url, type, title) {
+		fetch(url, { credentials: 'same-origin' })
+			.then(function (r) { return r.json(); })
+			.then(function (d) {
+				var pie = (type === 'pie');
+				Highcharts.chart(id, {
+					chart: { type: type },
+					title: { text: title, style: { fontSize: '14px' } },
+					xAxis: pie ? undefined : { categories: d.label },
+					yAxis: pie ? undefined : { title: { text: null }, allowDecimals: false },
+					legend: { enabled: pie },
+					series: [{
+						name: 'Membru', colorByPoint: true,
+						data: pie ? d.label.map(function (l, i) { return { name: l, y: d.obj[i] }; }) : d.obj
+					}]
+				});
+			});
+	}
+	draw('chart-sex', "{% url 'api-gender' %}", 'pie', 'Sexu');
+	draw('chart-aprovasaun', "{% url 'api-aprovasaun' %}", 'pie', 'Aprovasaun');
+	draw('chart-suku', "{% url 'api-suku' %}", 'column', 'Membru Por Suku');
+</script>
+{% endblock %}

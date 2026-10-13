@@ -1,0 +1,23 @@
+{% extends "main/layout.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+{% block content %}
+<div class="login-wrap">
+	<img class="logo" src="{% static 'main/images/logo_pd.png' %}" alt="Partido Democratico">
+	<div class="card shadow-lg rounded">
+		<div class="card-header">SGDM-PDPADA<br><small>Sistema Jestaun Dadus Membru PD - Postu Dom Aleixo</small></div>
+		<div class="card-body">
+			{% if form.errors %}
+				<div class="alert alert-danger p-2">Username ka password la loos.</div>
+			{% endif %}
+			<form method="post" novalidate>
+				{% csrf_token %}
+				{{ form.username|as_crispy_field }}
+				{{ form.password|as_crispy_field }}
+				<input type="hidden" name="next" value="{{ next }}">
+				<button class="btn btn-primary btn-block" type="submit">Tama <i class="fa fa-sign-in"></i></button>
+			</form>
+		</div>
+	</div>
+</div>
+{% endblock %}

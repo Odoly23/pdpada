@@ -1,0 +1,76 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1">
+	<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+	<li class="breadcrumb-item"><a href="{% url 'membro-list' %}">LISTA MEMBRU</a></li>
+	<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
+</ol>
+<div class="row">
+	<div class="col-sm-12">
+		<div class="card shadow-lg pt-0 rounded">
+			<div class="card-header">{{ legend|upper }}</div>
+			<div class="card-body">
+				<div class="mb-2 no-print">
+					{% if can_edit %}<a class="btn btn-sm btn-success" href="{% url 'membro-update' hashid %}"><i class="fa fa-edit"></i> Edita</a>{% endif %}
+					{% if can_aprova %}
+					<form class="d-inline" method="post" action="{% url 'aprovasaun-aprova' hashid %}">{% csrf_token %}
+						<input type="hidden" name="next" value="detail">
+						<button class="btn btn-sm btn-primary" type="submit"><i class="fa fa-check"></i> Aprova</button>
+					</form>
+					<a class="btn btn-sm btn-danger" href="{% url 'aprovasaun-rejeita' hashid %}"><i class="fa fa-times"></i> Rejeita</a>
+					{% endif %}
+					{% if can_del %}
+					<form class="d-inline" method="post" action="{% url 'membro-del' hashid %}" onsubmit="return confirm('Ita boot Hakarak Hamoos Membru ne\'e?');">{% csrf_token %}
+						<button class="btn btn-sm btn-outline-primary" type="submit"><i class="fa fa-trash"></i> Hamoos</button>
+					</form>
+					{% endif %}
+				</div>
+				{% if obj.aprovasaun == 'Rejeitadu' %}
+				<div class="alert alert-danger p-2"><b>Rejeitadu.</b> Razaun: <span class="pre-wrap">{{ obj.razaun_rejeita }}</span></div>
+				{% endif %}
+				<table class="table table-sm">
+					<tr>
+						<td width="25%">Naran</td><td>{{ obj.nome }}</td>
+						<td rowspan="12" align="right" style="text-align: center; vertical-align: middle;">
+						{% if obj.image %}<img class="foto-membro" src="{{ obj.image.url }}" alt="{{ obj.nome }}">{% else %}<i class="fa fa-user-circle fa-5x text-muted"></i>{% endif %}
+						</td>
+					</tr>
+					<tr><td>Nu. Eleitoral</td><td>{{ obj.nu_eleitoral }}</td></tr>
+					<tr><td>Sexu</td><td>{{ obj.sex }}</td></tr>
+					<tr><td>Fatin/Data Moris</td><td>{{ obj.place_of_birth|default:"-" }} / {{ obj.date_of_birth|date:"d/m/Y" }} ({{ obj.age }} tinan)</td></tr>
+					<tr><td>Estado Civil</td><td>{{ obj.marital|default:"-" }}</td></tr>
+					<tr><td>Nu. BI</td><td>{{ obj.nu_bi|default:"-" }}</td></tr>
+					<tr><td>Nu. Telemovel</td><td>{{ obj.telefone|default:"-" }}</td></tr>
+					<tr><td>Suku / Aldeia</td><td>{{ obj.village }} / {{ obj.aldeia }}</td></tr>
+					<tr><td>Hela Fatin</td><td>{{ obj.address|default:"-" }}</td></tr>
+					<tr><td>Organizasaun</td><td>{{ obj.organizasaun|default:"-" }}</td></tr>
+					<tr><td>Data Hakbit</td><td>{{ obj.data_hakbit|date:"d/m/Y"|default:"-" }}</td></tr>
+					<tr><td>Status</td><td>{{ obj.status }}</td></tr>
+					<tr><th colspan="3" bgcolor="#eceefa">APROVASAUN</th></tr>
+					<tr><td>Estatutu</td><td colspan="2"><span class="badge badge-{{ obj.aprovasaun|lower }}">{{ obj.aprovasaun }}</span>
+						{% if obj.aprovadu_husi %} husi {{ obj.aprovadu_husi.get_username }} ({{ obj.data_aprovasaun|date:"d/m/Y H:i" }}){% endif %}</td></tr>
+					<tr><th colspan="3" bgcolor="#eceefa">POZISAUN</th></tr>
+					{% for a in alokasauns %}
+					<tr><td>{{ a.pozisaun }} {{ a.nivel }}</td><td colspan="2">{{ a.unit|default:"Postu Dom Aleixo" }} (desde {{ a.data_hahu|date:"d/m/Y" }})</td></tr>
+					{% empty %}
+					<tr><td colspan="3">Membru ordináriu (laiha pozisaun).</td></tr>
+					{% endfor %}
+				</table>
+				{% if historias is not None %}
+				<h6 class="mt-3">Historia Mudansa</h6>
+				<table class="table table-sm">
+					<thead><tr><th>Data</th><th>Aksaun</th><th>Husi</th><th>Detalhe</th></tr></thead>
+					<tbody>
+					{% for h in historias %}
+						<tr><td>{{ h.datetime|date:"d/m/Y H:i" }}</td><td>{{ h.aksaun }}</td><td>{{ h.user.get_username|default:"-" }}</td><td class="pre-wrap">{{ h.detalhe }}</td></tr>
+					{% empty %}
+						<tr><td colspan="4">Laiha historia.</td></tr>
+					{% endfor %}
+					</tbody>
+				</table>
+				{% endif %}
+			</div> <!--end card-body-->
+		</div> <!--end card-->
+	</div> <!--end col-->
+</div> <!--end row-->
+{% endblock %}

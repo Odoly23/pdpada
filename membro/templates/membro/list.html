@@ -1,0 +1,67 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1">
+	<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+	<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
+</ol>
+<div class="row">
+	<div class="col-sm-12">
+		<div class="card shadow-lg pt-0 rounded">
+			<div class="card-header">{{ legend|upper }}{% if ano_ativu and not semua_ano %} - TINAN {{ ano_ativu }}{% endif %}</div>
+			<div class="card-body">
+				<div class="mb-2 no-print">
+					{% if can_add %}<a class="btn btn-sm btn-primary" href="{% url 'membro-add' %}">Aumenta <i class="fa fa-plus"></i></a>{% endif %}
+					{% if can_aprova %}<a class="btn btn-sm btn-warning" href="{% url 'aprovasaun-list' %}">Hein Aprovasaun <i class="fa fa-check-square-o"></i></a>{% endif %}
+					<a class="btn btn-sm btn-outline-primary" href="{% url 'membro-list' %}">Hotu</a>
+					<a class="btn btn-sm btn-outline-primary" href="?aprovasaun=Pendente">Pendente</a>
+					<a class="btn btn-sm btn-outline-primary" href="?aprovasaun=Aprovadu">Aprovadu</a>
+					<a class="btn btn-sm btn-outline-primary" href="?aprovasaun=Rejeitadu">Rejeitadu</a>
+					{% if ano_ativu %}
+						{% if semua_ano %}<a class="btn btn-sm btn-link" href="{% url 'membro-list' %}">Tinan ativu deit</a>
+						{% else %}<a class="btn btn-sm btn-link" href="?ano=hotu">Tinan hotu</a>{% endif %}
+					{% endif %}
+				</div>
+				<section id="no-more-tables">
+					<table id="example" class="table table-sm responsive" style="width:100%">
+						<thead>
+							<tr>
+								<th>NU.</th>
+								<th>NU. ELEITORAL</th>
+								<th>NARAN</th>
+								<th>SEXU</th>
+								<th>IDADE</th>
+								<th>SUKU</th>
+								<th>ALDEIA</th>
+								<th>ORGANIZASAUN</th>
+								<th>STATUS</th>
+								<th>APROVASAUN</th>
+								<th class="no-export">#</th>
+							</tr>
+						</thead>
+						<tbody>
+						{% for obj in objects %}
+							<tr>
+								<td data-title="Nu.">{{ forloop.counter }}</td>
+								<td data-title="Nu. Eleitoral">{{ obj.nu_eleitoral }}</td>
+								<td data-title="Naran"><a href="{% url 'membro-detail' obj.hashed %}">{{ obj.nome }}</a></td>
+								<td data-title="Sexu">{{ obj.sex }}</td>
+								<td data-title="Idade">{{ obj.age }}</td>
+								<td data-title="Suku">{{ obj.village }}</td>
+								<td data-title="Aldeia">{{ obj.aldeia }}</td>
+								<td data-title="Organizasaun">{{ obj.organizasaun|default_if_none:"-" }}</td>
+								<td data-title="Status">{{ obj.status }}</td>
+								<td data-title="Aprovasaun"><span class="badge badge-{{ obj.aprovasaun|lower }}">{{ obj.aprovasaun }}</span></td>
+								<td><a class="btn btn-sm btn-primary" href="{% url 'membro-detail' obj.hashed %}" title="Detalha"><i class="fa fa-eye"></i></a></td>
+							</tr>
+						{% endfor %}
+						</tbody>
+					</table>
+				</section>
+			</div> <!--end card-body-->
+		</div> <!--end card-->
+	</div> <!--end col-->
+</div> <!--end row-->
+{% endblock %}
+{% block scripts %}
+{% include 'main/datatable_full.html' %}
+{% endblock %}

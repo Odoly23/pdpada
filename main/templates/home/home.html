@@ -1,0 +1,34 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1">
+	<li class="breadcrumb-item active" aria-current="page">VARANDA</li>
+</ol>
+<div class="card shadow-lg pt-0 rounded">
+	<div class="card-header">BAINHIRA, {{ user.first_name|default:user.username|upper }}</div>
+	<div class="card-body">
+		{% if not group %}
+			<div class="alert alert-warning">Konta ida ne'e seidauk iha peran. Kontaktu Admin.</div>
+		{% elif group == 'admin' %}
+			<p>Admin jere uzuáriu, data master (suku, aldeia, organizasaun), tinan ativu no hare historia mudansa data.</p>
+			<a class="btn btn-primary" href="{% url 'user-list' %}"><i class="fa fa-users"></i> Uzuáriu</a>
+			<a class="btn btn-primary" href="{% url 'master-list' 'ano' %}"><i class="fa fa-calendar"></i> Tinan Ativu</a>
+			<a class="btn btn-primary" href="{% url 'historia-list' %}"><i class="fa fa-history"></i> Historia</a>
+		{% else %}
+			<div class="row">
+				<div class="col-6 col-md-3 mb-3"><div class="card stat-card"><div class="card-body"><div class="stat-number">{{ counts.total }}</div>Total Membru</div></div></div>
+				<div class="col-6 col-md-3 mb-3"><div class="card stat-card pendente"><div class="card-body"><div class="stat-number">{{ counts.pendente }}</div>Hein Aprovasaun</div></div></div>
+				<div class="col-6 col-md-3 mb-3"><div class="card stat-card aprovadu"><div class="card-body"><div class="stat-number">{{ counts.aprovadu }}</div>Aprovadu</div></div></div>
+				<div class="col-6 col-md-3 mb-3"><div class="card stat-card rejeitadu"><div class="card-body"><div class="stat-number">{{ counts.rejeitadu }}</div>Rejeitadu</div></div></div>
+			</div>
+			<a class="btn btn-primary" href="{% url 'membro-list' %}"><i class="fa fa-list"></i> Lista Membru</a>
+			<a class="btn btn-primary" href="{% url 'report-dash' %}"><i class="fa fa-bar-chart"></i> Dashboard</a>
+			{% if group == 'sekr_suku' or group == 'sekr_aldeia' %}
+			<a class="btn btn-danger" href="{% url 'membro-add' %}"><i class="fa fa-plus"></i> Aumenta Membru</a>
+			{% endif %}
+			{% if group == 'presidente' or group == 'koord_postu' %}
+			<a class="btn btn-danger" href="{% url 'aprovasaun-list' %}"><i class="fa fa-check-square-o"></i> Hein Aprovasaun{% if counts.pendente %} ({{ counts.pendente }}){% endif %}</a>
+			{% endif %}
+		{% endif %}
+	</div>
+</div>
+{% endblock %}

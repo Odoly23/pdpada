@@ -1,0 +1,26 @@
+{% extends "main/layout.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1">
+	<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+	{% if back_url %}
+	<li class="breadcrumb-item"><a href="{% if back_args %}{% url back_url back_args.0 %}{% else %}{% url back_url %}{% endif %}">{{ back_label|upper }}</a></li>
+	{% endif %}
+	<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
+</ol>
+<div class="row">
+	<div class="col-sm-12">
+		<div class="card shadow-lg pt-0 rounded">
+			<div class="card-header">{{ legend|upper }}</div>
+			<div class="card-body">
+				{% crispy form %}
+			</div> <!--end card-body-->
+		</div> <!--end card-->
+	</div> <!--end col-->
+</div> <!--end row-->
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'main/js_custom/dropdown_chain.js' %}"></script>
+{% block form_scripts %}{% endblock %}
+{% endblock %}

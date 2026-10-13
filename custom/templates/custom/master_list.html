@@ -1,0 +1,51 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1">
+	<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+	<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
+</ol>
+<div class="row">
+	<div class="col-sm-12">
+		<div class="card shadow-lg pt-0 rounded">
+			<div class="card-header">{{ legend|upper }}</div>
+			<div class="card-body">
+				<a class="btn btn-sm btn-primary mb-2" href="{% url 'master-add' tipu %}">Aumenta <i class="fa fa-plus"></i></a>
+				{% if tipu == 'suku' or tipu == 'aldeia' %}
+				<p class="text-muted"><small>Suku no aldeia sira iha Postu Dom Aleixo tenke rejista iha ne'e molok halo input membru.</small></p>
+				{% endif %}
+				<section id="no-more-tables">
+					<table class="table table-sm" id="example" width="100%" cellspacing="0">
+						<thead>
+							<tr><th>Nu.</th>{% for h in headers %}<th>{{ h }}</th>{% endfor %}<th>#</th></tr>
+						</thead>
+						<tbody>
+							{% for obj, cells in rows %}
+							<tr>
+								<td data-title="Nu.">{{ forloop.counter }}</td>
+								{% for c in cells %}<td data-title="{{ forloop.counter }}">{{ c }}</td>{% endfor %}
+								<td>
+									<a class="btn btn-sm btn-success" href="{% url 'master-update' tipu obj.pk %}" title="Edita"><i class="fa fa-edit"></i></a>
+									{% if tipu == 'ano' and not obj.is_active %}
+									<form class="d-inline" method="post" action="{% url 'ano-aktiva' obj.pk %}">{% csrf_token %}
+										<button class="btn btn-sm btn-primary" type="submit" title="Ativa tinan ne'e"><i class="fa fa-check"></i> Ativa</button>
+									</form>
+									{% endif %}
+									<form class="d-inline" method="post" action="{% url 'master-del' tipu obj.pk %}" onsubmit="return confirm('Ita boot Hakarak Hamoos?');">{% csrf_token %}
+										<button class="btn btn-sm btn-danger" type="submit" title="Hamoos"><i class="fa fa-times"></i></button>
+									</form>
+								</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</section>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script type="text/javascript">
+	$(document).ready(function () { $('#example').DataTable(); });
+</script>
+{% endblock %}
