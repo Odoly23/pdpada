@@ -44,4 +44,7 @@ def apply_filters(qs, params):
 		val = params.get(key)
 		if val and val.isdigit():
 			qs = qs.filter(**{f'{key}_id': int(val)})
+	hakbit = params.get('hakbit')
+	if hakbit and hakbit.isdigit():
+		qs = qs.filter(data_hakbit__year=int(hakbit))
 	return qs

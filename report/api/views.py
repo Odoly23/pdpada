@@ -43,3 +43,15 @@ class APIOrganizasaun(BaseAPI):
 	def get(self, request, format=None):
 		label, obj = self.grouped('organizasaun__code')
 		return Response({'label': label, 'obj': obj})
+
+
+class APIAldeia(BaseAPI):
+	def get(self, request, format=None):
+		label, obj = self.grouped('aldeia__name')
+		return Response({'label': label, 'obj': obj})
+
+
+class APIStatus(BaseAPI):
+	def get(self, request, format=None):
+		label, obj = self.grouped('status')
+		return Response({'label': label, 'obj': obj})

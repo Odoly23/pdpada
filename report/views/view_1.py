@@ -6,16 +6,10 @@ from config.decorators import allowed_users
 from config.user_utils import c_user_group, membro_ativu
 
 
-def _rows(qs, field, label_field, extra=()):
-	"""Rekapitulasi membru per unit (suku/aldeia/organizasaun)."""
-	return list(qs.values(field, label_field, *extra).annotate(
-		total=Count('id'),
-		mane=Count('id', filter=Q(sex='Mane')),
-		feto=Count('id', filter=Q(sex='Feto')),
-		aprovadu=Count('id', filter=Q(aprovasaun='Aprovadu')),
-		pendente=Count('id', filter=Q(aprovasaun='Pendente')),
-		rejeitadu=Count('id', filter=Q(aprovasaun='Rejeitadu')),
-	).order_by(label_field))
+def _rows(qs, id_field, name_field):
+	"""Rekap jumlah membru per unit sebagai daftar {id, name, total}."""
+	rows = qs.values(id_field, name_field).annotate(total=Count('id')).order_by(name_field)
+	return [{'id': r[id_field], 'name': r[name_field], 'total': r['total']} for r in rows]
 
 
 @login_required
@@ -23,12 +17,32 @@ def _rows(qs, field, label_field, extra=()):
 def Dash(request):
 	group = c_user_group(request.user)
 	qs = membro_ativu(request.user)
+	tot = qs.aggregate(
+		total=Count('id'),
+		mane=Count('id', filter=Q(sex='Mane')),
+		feto=Count('id', filter=Q(sex='Feto')),
+		pendente=Count('id', filter=Q(aprovasaun='Pendente')),
+		aprovadu=Count('id', filter=Q(aprovasaun='Aprovadu')),
+		rejeitadu=Count('id', filter=Q(aprovasaun='Rejeitadu')),
+		sem_org=Count('id', filter=Q(organizasaun__isnull=True)),
+	)
 	context = {
-		'group': group,
-		'por_suku': _rows(qs, 'village_id', 'village__name'),
-		'por_aldeia': _rows(qs.filter(), 'aldeia_id', 'aldeia__name', ('aldeia__village__name',)),
+		'group': group, 'tot': tot,
 		'por_org': _rows(qs.filter(organizasaun__isnull=False), 'organizasaun_id', 'organizasaun__code'),
-		'sem_org': qs.filter(organizasaun__isnull=True).count(),
+		'por_suku': _rows(qs, 'village_id', 'village__name'),
+		'por_aldeia': _rows(qs, 'aldeia_id', 'aldeia__name'),
+		'por_status': _rows(qs, 'status', 'status'),
+		'por_tinan': _rows(qs.filter(data_hakbit__isnull=False), 'data_hakbit__year', 'data_hakbit__year'),
 		'title': 'Dashboard Membru', 'legend': 'Dashboard Membru'
 	}
 	return render(request, 'report/dash.html', context)
+
+
+@login_required
+@allowed_users(allowed_roles=roles.VIEW_ROLES)
+def ChartDash(request):
+	context = {
+		'group': c_user_group(request.user),
+		'title': 'Grafik Membru', 'legend': 'Grafik Membru'
+	}
+	return render(request, 'report/chart_dash.html', context)

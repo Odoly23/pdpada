@@ -15,18 +15,20 @@
 			<a class="btn btn-primary" href="{% url 'historia-list' %}"><i class="fa fa-history"></i> Historia</a>
 		{% else %}
 			<div class="row">
-				<div class="col-6 col-md-3 mb-3"><div class="card stat-card"><div class="card-body"><div class="stat-number">{{ counts.total }}</div>Total Membru</div></div></div>
-				<div class="col-6 col-md-3 mb-3"><div class="card stat-card pendente"><div class="card-body"><div class="stat-number">{{ counts.pendente }}</div>Hein Aprovasaun</div></div></div>
-				<div class="col-6 col-md-3 mb-3"><div class="card stat-card aprovadu"><div class="card-body"><div class="stat-number">{{ counts.aprovadu }}</div>Aprovadu</div></div></div>
-				<div class="col-6 col-md-3 mb-3"><div class="card stat-card rejeitadu"><div class="card-body"><div class="stat-number">{{ counts.rejeitadu }}</div>Rejeitadu</div></div></div>
+				<div class="col-6 col-md-3"><div class="text-center mb-2 mt-1"><span class="stat-label">Total Membru</span><h4 class="stat-number"><a href="{% url 'membro-list' %}">{{ counts.total }}</a></h4></div></div>
+				<div class="col-6 col-md-3"><div class="text-center mb-2 mt-1"><span class="stat-label">Hein Aprovasaun</span><h4 class="stat-number"><a href="{% url 'membro-list' %}?aprovasaun=Pendente">{{ counts.pendente }}</a></h4></div></div>
+				<div class="col-6 col-md-3"><div class="text-center mb-2 mt-1"><span class="stat-label">Aprovadu</span><h4 class="stat-number"><a href="{% url 'membro-list' %}?aprovasaun=Aprovadu">{{ counts.aprovadu }}</a></h4></div></div>
+				<div class="col-6 col-md-3"><div class="text-center mb-2 mt-1"><span class="stat-label">Rejeitadu</span><h4 class="stat-number"><a href="{% url 'membro-list' %}?aprovasaun=Rejeitadu">{{ counts.rejeitadu }}</a></h4></div></div>
 			</div>
+			<hr class="mb-3">
 			<a class="btn btn-primary" href="{% url 'membro-list' %}"><i class="fa fa-list"></i> Lista Membru</a>
-			<a class="btn btn-primary" href="{% url 'report-dash' %}"><i class="fa fa-bar-chart"></i> Dashboard</a>
+			<a class="btn btn-primary" href="{% url 'report-dash' %}"><i class="fa fa-tachometer"></i> Dashboard</a>
+			<a class="btn btn-primary" href="{% url 'report-chart' %}"><i class="fa fa-bar-chart"></i> Grafik</a>
 			{% if group == 'sekr_suku' or group == 'sekr_aldeia' %}
-			<a class="btn btn-danger" href="{% url 'membro-add' %}"><i class="fa fa-plus"></i> Aumenta Membru</a>
+			<a class="btn btn-primary" href="{% url 'membro-add' %}"><i class="fa fa-plus"></i> Aumenta Membru</a>
 			{% endif %}
 			{% if group == 'presidente' or group == 'koord_postu' %}
-			<a class="btn btn-danger" href="{% url 'aprovasaun-list' %}"><i class="fa fa-check-square-o"></i> Hein Aprovasaun{% if counts.pendente %} ({{ counts.pendente }}){% endif %}</a>
+			<a class="btn btn-warning" href="{% url 'aprovasaun-list' %}"><i class="fa fa-check-square-o"></i> Hein Aprovasaun{% if counts.pendente %} ({{ counts.pendente }}){% endif %}</a>
 			{% endif %}
 		{% endif %}
 	</div>

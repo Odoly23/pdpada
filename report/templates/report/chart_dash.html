@@ -1,0 +1,75 @@
+{% extends "main/layout.html" %}
+{% load static %}
+{% block content %}
+	<ol class="breadcrumb mb-2 mt-1">
+		<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+		<li class="breadcrumb-item"><a href="{% url 'report-dash' %}">DASHBOARD</a></li>
+		<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
+	</ol>
+	<div class="row">
+		<div class="col-md-12">
+			<div class="text-center mb-2 mt-1">
+				<h3 class="text-muted">{{ legend|upper }}{% if ano_ativu %} - TINAN {{ ano_ativu }}{% endif %}</h3>
+			</div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-md-6">
+			<div class="card">
+				<div class="card-header">Membru Bazeia Sexu</div>
+				<div class="card-body"><figure class="highcharts-figure"><div id="chart_sexo"></div></figure></div>
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="card">
+				<div class="card-header">Membru Bazeia Aprovasaun</div>
+				<div class="card-body"><figure class="highcharts-figure"><div id="chart_aprovasaun"></div></figure></div>
+			</div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-md-6">
+			<div class="card">
+				<div class="card-header">Membru Bazeia Suku</div>
+				<div class="card-body"><figure class="highcharts-figure"><div id="chart_suku"></div></figure></div>
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="card">
+				<div class="card-header">Membru Bazeia Organizasaun</div>
+				<div class="card-body"><figure class="highcharts-figure"><div id="chart_org"></div></figure></div>
+			</div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-md-6">
+			<div class="card">
+				<div class="card-header">Membru Bazeia Status</div>
+				<div class="card-body"><figure class="highcharts-figure"><div id="chart_status"></div></figure></div>
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="card">
+				<div class="card-header">Membru Bazeia Aldeia</div>
+				<div class="card-body"><figure class="highcharts-figure"><div id="chart_aldeia"></div></figure></div>
+			</div>
+		</div>
+	</div>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'main/js_custom/highcharts.js' %}"></script>
+<script src="{% static 'main/js_custom/exporting.js' %}"></script>
+<script src="{% static 'main/js_custom/offline-exporting.js' %}"></script>
+<script src="{% static 'main/js_custom/export-data.js' %}"></script>
+<script src="{% static 'main/js_custom/accessibility.js' %}"></script>
+<link rel="stylesheet" href="{% static 'main/js_custom/chart.css' %}">
+<script>
+	{% include 'chart/chart_base.js' %}
+	{% include 'chart/chart_sexo.js' %}
+	{% include 'chart/chart_aprovasaun.js' %}
+	{% include 'chart/chart_suku.js' %}
+	{% include 'chart/chart_org.js' %}
+	{% include 'chart/chart_status.js' %}
+	{% include 'chart/chart_aldeia.js' %}
+</script>
+{% endblock %}

@@ -26,12 +26,16 @@ Setelah login sebagai `admin`: isi **Data Master** (Suku dan Aldeia di Postu Dom
 
 | App | Isi |
 |---|---|
-| `main` | layout, navbar per peran, login/logout, home, static |
+| `main` | layout (topbar, navbar, sidebar mobile, footer), login/logout, home, static |
 | `custom` | data master: Municipality, AdministrativePost, Village (Suku), Aldeia, Organizasaun, Year + dropdown AJAX |
 | `config` | `utils` (hash), `decorators` (`allowed_users`), `roles`, `user_utils` (scope), upload, command `seed_inisial` |
 | `users` | `UserScope` (wilayah user), kelola uzuáriu (Admin) |
 | `membro` | `Membro`, `Alokasaun` (posisi/kargu), `Historia` (log perubahan); views, forms, urls |
-| `report` | dashboard + API (`/report/api/...`) |
+| `report` | dashboard angka (`/report/`), grafik Highcharts (`/report/chart/`) + API (`/report/api/...`) |
+
+## Tampilan
+
+`main/static/main/css/main.css` memuat variabel warna (`--navy`, `--navy-dk`) di bagian atas. Menu navbar desktop dan sidebar mobile berasal dari satu definisi per peran di `config/context_processors.py`. Grafik memakai Highcharts `styledMode`; warna di `main/static/main/js_custom/chart.css` (`--highcharts-color-N`). Ekspor grafik berjalan offline (tanpa server Highcharts).
 
 ## Peran dan hak akses
 

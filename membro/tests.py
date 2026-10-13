@@ -370,3 +370,65 @@ class UserAdminTests(BaseCase):
 		self.login('admin')
 		self.client.post(reverse('master-del', args=['suku', self.va.pk]))
 		self.assertTrue(Village.objects.filter(pk=self.va.pk).exists())
+
+
+class LayoutAndReportTests(BaseCase):
+	def menu(self, user, url='/'):
+		self.login(user)
+		resp = self.client.get(url)
+		self.assertEqual(resp.status_code, 200)
+		return [i['label'] for i in resp.context['nav_items']]
+
+	def test_menu_per_role(self):
+		self.assertEqual(self.menu('admin'), ['Varanda', 'Uzuáriu', 'Data Master', 'Historia'])
+		self.assertEqual(self.menu('presidente'),
+			['Varanda', 'Dashboard', 'Grafik', 'Membru', 'Aprovasaun', 'Struktura', 'Historia'])
+		self.assertEqual(self.menu('sekrsuku'), ['Varanda', 'Dashboard', 'Grafik', 'Membru', 'Aumenta', 'Struktura'])
+		self.assertEqual(self.menu('koordsuku'), ['Varanda', 'Dashboard', 'Grafik', 'Membru', 'Struktura'])
+
+	def test_active_menu_item(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('report-chart'))
+		active = [i['label'] for i in resp.context['nav_items'] if i['active']]
+		self.assertEqual(active, ['Grafik'])
+
+	def test_navbar_has_sidebar_and_logout_form(self):
+		self.login('presidente')
+		resp = self.client.get('/')
+		self.assertContains(resp, 'id="sidebar"')
+		self.assertContains(resp, 'id="btn-ham"')
+		self.assertContains(resp, 'action="/logout/"')
+
+	def test_login_page_has_no_menu(self):
+		self.client.logout()
+		resp = self.client.get(reverse('login'))
+		self.assertNotContains(resp, 'id="sidebar"')
+
+	def test_chart_page_and_extra_apis(self):
+		self.make('CH00001', aprovasaun='Aprovadu')
+		self.login('presidente')
+		self.assertEqual(self.client.get(reverse('report-chart')).status_code, 200)
+		self.assertEqual(self.client.get(reverse('api-aldeia')).json()['obj'], [1])
+		self.assertEqual(self.client.get(reverse('api-status')).json()['label'], ['Ativu'])
+		self.login('admin')
+		self.assertEqual(self.client.get(reverse('report-chart')).status_code, 403)
+
+	def test_dashboard_numbers_are_scoped(self):
+		self.make('DB00001', self.va, self.a1, sex='Mane')
+		self.make('DB00002', self.vb, self.b1, sex='Feto', aprovasaun='Aprovadu')
+		self.login('koordsuku')
+		tot = self.client.get(reverse('report-dash')).context['tot']
+		self.assertEqual((tot['total'], tot['mane'], tot['feto'], tot['pendente']), (1, 1, 0, 1))
+		self.login('presidente')
+		tot = self.client.get(reverse('report-dash')).context['tot']
+		self.assertEqual((tot['total'], tot['aprovadu']), (2, 1))
+
+	def test_list_filters_from_dashboard_links(self):
+		self.make('FL00001', sex='Mane', data_hakbit=datetime.date(2015, 5, 1))
+		self.make('FL00002', sex='Feto', data_hakbit=datetime.date(2020, 5, 1))
+		self.login('presidente')
+		get = lambda q: {o.nu_eleitoral for o in self.client.get(reverse('membro-list') + q).context['objects']}
+		self.assertEqual(get('?sex=Feto'), {'FL00002'})
+		self.assertEqual(get('?hakbit=2015'), {'FL00001'})
+		self.assertEqual(get('?hakbit=abc'), {'FL00001', 'FL00002'})
+		self.assertEqual(get('?village=abc'), {'FL00001', 'FL00002'})

@@ -1,26 +1,77 @@
 {% load static %}
-<header class="site-header">
-	<nav class="navbar navbar-expand-lg navbar-dark fixed-top navbar-pd">
+<!-- TOPBAR -->
+<div class="topbar">
+	<div class="container">
+		<div class="tb-left">
+			<span><i class="fa fa-map-marker"></i> Postu Dom Aleixo, Dili</span>
+			{% if ano_ativu %}<span><i class="fa fa-calendar"></i> Tinan {{ ano_ativu }}</span>{% endif %}
+		</div>
+		<div class="tb-right">
+			{% if user.is_authenticated %}<span><i class="fa fa-user"></i> {{ user.username }}{% if nav_role and nav_role|lower != user.username|lower %}<span class="d-none d-md-inline"> &middot; {{ nav_role }}</span>{% endif %}</span>{% endif %}
+		</div>
+	</div>
+</div>
+
+<!-- NAVBAR -->
+<nav class="main-navbar">
+	<div class="container">
+		<a class="brand" href="{% if user.is_authenticated %}{% url 'home' %}{% else %}{% url 'login' %}{% endif %}">
+			<img src="{% static 'main/images/logo_pd.png' %}" alt="PD"><span>SGDM-PDPADA</span>
+		</a>
 		{% if user.is_authenticated %}
-			<a class="navbar-brand" href="{% url 'home' %}"><img src="{% static 'main/images/logo_pd.png' %}" alt="PD"><b>SGDM-PDPADA</b></a>
-		{% else %}
-			<a class="navbar-brand" href="{% url 'login' %}"><img src="{% static 'main/images/logo_pd.png' %}" alt="PD"><b>SGDM-PDPADA</b></a>
-		{% endif %}
-		<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarToggle" aria-controls="navbarToggle" aria-expanded="false" aria-label="Toggle navigation">
-			<span class="navbar-toggler-icon"></span>
-		</button>
-		{% if user.is_authenticated %}
-			{% with role=user.groups.all.0.name %}
-				{% if role == 'admin' %}
-					{% include 'main/adm.html' %}
-				{% elif role == 'presidente' or role == 'koord_postu' or role == 'sekr_postu' %}
-					{% include 'main/postu.html' %}
-				{% elif role %}
-					{% include 'main/local.html' %}
+		<ul class="nav-links">
+			{% for it in nav_items %}
+				{% if it.children %}
+				<li class="dropdown">
+					<a href="#" class="dropdown-toggle{% if it.active %} active{% endif %}" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa {{ it.icon }}"></i> {{ it.label }}</a>
+					<div class="dropdown-menu">
+						{% for c in it.children %}<a class="dropdown-item" href="{{ c.url }}"><i class="fa {{ c.icon }}"></i> {{ c.label }}</a>{% endfor %}
+					</div>
+				</li>
 				{% else %}
-					{% include 'main/akun.html' %}
+				<li><a href="{{ it.url }}"{% if it.active %} class="active"{% endif %}><i class="fa {{ it.icon }}"></i> {{ it.label }}</a></li>
 				{% endif %}
-			{% endwith %}
+			{% endfor %}
+			<li class="dropdown ml-2">
+				<a href="#" class="p-1" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" title="{{ user.username }}"><span class="av"><i class="fa fa-user"></i></span></a>
+				<div class="dropdown-menu dropdown-menu-right">
+					<span class="dropdown-header">{{ user.first_name|default:user.username }}{% if nav_role %}<br>{{ nav_role }}{% endif %}</span>
+					<a class="dropdown-item" href="{% url 'change-password' %}"><i class="fa fa-key"></i> Troka Password</a>
+					<form method="post" action="{% url 'logout' %}">{% csrf_token %}
+						<button class="dropdown-item text-danger" type="submit"><i class="fa fa-sign-out"></i> Sai</button>
+					</form>
+				</div>
+			</li>
+		</ul>
+		<button class="btn-ham" id="btn-ham" type="button" aria-label="Menu" aria-expanded="false"><i class="fa fa-bars"></i></button>
 		{% endif %}
-	</nav>
-</header>
+	</div>
+</nav>
+
+{% if user.is_authenticated %}
+<!-- SIDEBAR (mobile) -->
+<aside id="sidebar" aria-label="Menu">
+	<div class="sb-body">
+		<ul>
+			{% for it in nav_items %}
+				{% if it.children %}
+					<li class="sb-sec">{{ it.label }}</li>
+					{% for c in it.children %}
+					<li{% if c.active %} class="sb-on"{% endif %}><a href="{{ c.url }}"><i class="fa {{ c.icon }}"></i>{{ c.label }}</a></li>
+					{% endfor %}
+					<li><hr></li>
+				{% else %}
+				<li{% if it.active %} class="sb-on"{% endif %}><a href="{{ it.url }}"><i class="fa {{ it.icon }}"></i>{{ it.label }}</a></li>
+				{% endif %}
+			{% endfor %}
+			<li><hr></li>
+			<li><a href="{% url 'change-password' %}"><i class="fa fa-key"></i>Password</a></li>
+			<li>
+				<form method="post" action="{% url 'logout' %}">{% csrf_token %}
+					<button type="submit"><i class="fa fa-sign-out"></i>Sai</button>
+				</form>
+			</li>
+		</ul>
+	</div>
+</aside>
+{% endif %}
