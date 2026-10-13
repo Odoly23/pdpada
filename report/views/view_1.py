@@ -33,7 +33,7 @@ def Dash(request):
 		'por_aldeia': _rows(qs, 'aldeia_id', 'aldeia__name'),
 		'por_status': _rows(qs, 'status', 'status'),
 		'por_tinan': _rows(qs.filter(data_hakbit__isnull=False), 'data_hakbit__year', 'data_hakbit__year'),
-		'title': 'Dashboard Membru', 'legend': 'Dashboard Membru'
+		'title': 'Rekapitulasaun Membru', 'legend': 'Rekapitulasaun Membru'
 	}
 	return render(request, 'report/dash.html', context)
 

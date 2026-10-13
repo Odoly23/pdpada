@@ -382,9 +382,9 @@ class LayoutAndReportTests(BaseCase):
 	def test_menu_per_role(self):
 		self.assertEqual(self.menu('admin'), ['Varanda', 'Uzuáriu', 'Data Master', 'Historia'])
 		self.assertEqual(self.menu('presidente'),
-			['Varanda', 'Dashboard', 'Grafik', 'Membru', 'Aprovasaun', 'Struktura', 'Historia'])
-		self.assertEqual(self.menu('sekrsuku'), ['Varanda', 'Dashboard', 'Grafik', 'Membru', 'Aumenta', 'Struktura'])
-		self.assertEqual(self.menu('koordsuku'), ['Varanda', 'Dashboard', 'Grafik', 'Membru', 'Struktura'])
+			['Varanda', 'Rekap', 'Grafik', 'Membru', 'Aprovasaun', 'Struktura', 'Historia'])
+		self.assertEqual(self.menu('sekrsuku'), ['Varanda', 'Rekap', 'Grafik', 'Membru', 'Aumenta', 'Struktura'])
+		self.assertEqual(self.menu('koordsuku'), ['Varanda', 'Rekap', 'Grafik', 'Membru', 'Struktura'])
 
 	def test_active_menu_item(self):
 		self.login('presidente')
@@ -432,3 +432,42 @@ class LayoutAndReportTests(BaseCase):
 		self.assertEqual(get('?hakbit=2015'), {'FL00001'})
 		self.assertEqual(get('?hakbit=abc'), {'FL00001', 'FL00002'})
 		self.assertEqual(get('?village=abc'), {'FL00001', 'FL00002'})
+
+
+class HomeAndExtraApiTests(BaseCase):
+	def test_home_has_chart_canvases_and_local_chartjs(self):
+		self.login('presidente')
+		resp = self.client.get('/')
+		for cid in ('genderChart', 'ageChart', 'maritalChart', 'aprovasaunChart', 'statusChart',
+				'orgChart', 'sukuChart', 'aldeiaChart', 'hakbitChart'):
+			self.assertContains(resp, f'id="{cid}"')
+		self.assertContains(resp, 'js_custom/Chart.min.js')
+		self.assertNotContains(resp, 'cdn.jsdelivr')
+		self.assertNotContains(resp, 'https://')
+
+	def test_home_for_admin_has_no_charts(self):
+		self.login('admin')
+		resp = self.client.get('/')
+		self.assertNotContains(resp, 'genderChart')
+
+	def test_age_marital_hakbit_apis(self):
+		today = datetime.date.today()
+		self.make('X0000001', date_of_birth=today.replace(year=today.year - 20), marital='Casado/a',
+			data_hakbit=datetime.date(2018, 1, 1))
+		self.make('X0000002', date_of_birth=today.replace(year=today.year - 70))
+		self.make('X0000003', self.vb, self.b1, date_of_birth=today.replace(year=today.year - 20))
+		self.login('koordsuku')
+		age = self.client.get(reverse('api-age')).json()
+		self.assertEqual(dict(zip(age['label'], age['obj'])), {'< 18': 0, '18-25': 1, '26-35': 0, '36-45': 0,
+			'46-55': 0, '56-65': 0, '> 65': 1})
+		self.assertEqual(self.client.get(reverse('api-hakbit')).json(), {'label': ['2018'], 'obj': [1]})
+		self.assertEqual(sorted(self.client.get(reverse('api-marital')).json()['label']), ['Casado/a', 'Laiha'])
+		self.login('presidente')
+		self.assertEqual(sum(self.client.get(reverse('api-age')).json()['obj']), 3)
+		self.login('admin')
+		self.assertEqual(self.client.get(reverse('api-age')).status_code, 403)
+
+	def test_topbar_has_short_mobile_text(self):
+		self.login('presidente')
+		resp = self.client.get('/')
+		self.assertContains(resp, 'd-sm-none">Dom Aleixo</span>')

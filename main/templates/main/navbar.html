@@ -3,11 +3,11 @@
 <div class="topbar">
 	<div class="container">
 		<div class="tb-left">
-			<span><i class="fa fa-map-marker"></i> Postu Dom Aleixo, Dili</span>
-			{% if ano_ativu %}<span><i class="fa fa-calendar"></i> Tinan {{ ano_ativu }}</span>{% endif %}
+			<span><i class="fa fa-map-marker"></i> <span class="d-none d-sm-inline">Postu Dom Aleixo, Dili</span><span class="d-sm-none">Dom Aleixo</span></span>
+			{% if ano_ativu %}<span><i class="fa fa-calendar"></i> <span class="d-none d-sm-inline">Tinan </span>{{ ano_ativu }}</span>{% endif %}
 		</div>
 		<div class="tb-right">
-			{% if user.is_authenticated %}<span><i class="fa fa-user"></i> {{ user.username }}{% if nav_role and nav_role|lower != user.username|lower %}<span class="d-none d-md-inline"> &middot; {{ nav_role }}</span>{% endif %}</span>{% endif %}
+			{% if user.is_authenticated %}<span class="tb-user"><i class="fa fa-user"></i> {{ user.username }}{% if nav_role and nav_role|lower != user.username|lower %}<span class="d-none d-md-inline"> &middot; {{ nav_role }}</span>{% endif %}</span>{% endif %}
 		</div>
 	</div>
 </div>

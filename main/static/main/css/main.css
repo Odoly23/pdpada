@@ -35,7 +35,9 @@ body {
 .tb-left, .tb-right {
   display: flex; align-items: center; gap: 14px; white-space: nowrap;
 }
-@media(max-width:480px) { .tb-left span:last-child { display: none; } }
+/* teks topbar di HP sudah dipersingkat lewat template (d-sm-none / d-none d-sm-inline) */
+.tb-user { display: inline-block; max-width: 140px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+@media(min-width:768px) { .tb-user { max-width: none; } }
 
 /* ── NAVBAR ── */
 .main-navbar {
@@ -275,6 +277,8 @@ a { color: var(--navy); }
 a:hover { color: var(--navy-dk); }
 .card { border: 1px solid #dfe2f2; margin-bottom: 1rem; }
 .card-header { background-color: var(--navy); color: var(--white); font-weight: 600; letter-spacing: .02em; }
+.border-primary { border-color: var(--navy) !important; }
+.bg-steel { background-color: var(--navy); color: var(--white); }
 .card-header.bg-primary { background-color: var(--navy) !important; }
 .card-header.bg-warning { color: #212529; }
 .card-body p { margin-bottom: .5rem; }

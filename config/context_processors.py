@@ -30,7 +30,7 @@ def _menu(request, group):
 		items.append(_item(request, 'Historia', 'fa-history', 'historia-list'))
 		return items
 	if group in roles.VIEW_ROLES:
-		items.append(_item(request, 'Dashboard', 'fa-tachometer', 'report-dash'))
+		items.append(_item(request, 'Rekap', 'fa-table', 'report-dash'))
 		items.append(_item(request, 'Grafik', 'fa-bar-chart', 'report-chart'))
 		items.append(_item(request, 'Membru', 'fa-list', 'membro-list', names=('membro-list', 'membro-detail', 'membro-update')))
 		if group in roles.INPUT_ROLES:

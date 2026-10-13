@@ -1,3 +1,4 @@
+import datetime
 from django.db.models import Count
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import BasePermission, IsAuthenticated
@@ -55,3 +56,34 @@ class APIStatus(BaseAPI):
 	def get(self, request, format=None):
 		label, obj = self.grouped('status')
 		return Response({'label': label, 'obj': obj})
+
+
+class APIMarital(BaseAPI):
+	def get(self, request, format=None):
+		label, obj = self.grouped('marital')
+		return Response({'label': label, 'obj': obj})
+
+
+class APIHakbit(BaseAPI):
+	"""Membru tuir tinan tama PD (tinan data_hakbit); ne'ebé laiha data la konta."""
+	def get(self, request, format=None):
+		qs = membro_ativu(request.user).filter(data_hakbit__isnull=False)
+		rows = qs.values_list('data_hakbit__year').annotate(n=Count('id')).order_by('data_hakbit__year')
+		return Response({'label': [str(r[0]) for r in rows], 'obj': [r[1] for r in rows]})
+
+
+AGE_BINS = [(0, 17, '< 18'), (18, 25, '18-25'), (26, 35, '26-35'), (36, 45, '36-45'),
+	(46, 55, '46-55'), (56, 65, '56-65'), (66, 200, '> 65')]
+
+
+class APIAge(BaseAPI):
+	def get(self, request, format=None):
+		today = datetime.date.today()
+		counts = [0] * len(AGE_BINS)
+		for dob in membro_ativu(request.user).values_list('date_of_birth', flat=True):
+			age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+			for i, (lo, hi, _) in enumerate(AGE_BINS):
+				if lo <= age <= hi:
+					counts[i] += 1
+					break
+		return Response({'label': [b[2] for b in AGE_BINS], 'obj': counts})
