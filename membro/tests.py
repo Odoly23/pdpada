@@ -1,4 +1,5 @@
 import datetime
+import os
 from django.contrib.auth.models import Group, User
 from django.test import TestCase
 from django.urls import reverse
@@ -1234,13 +1235,102 @@ class MissingFilesTextWithFilesTests(UploadBase):
 
 
 class UpdateScriptTests(BaseCase):
-	def test_update_script_runs_migrate(self):
+	def test_update_script_runs_every_step(self):
 		import os
 		path = os.path.join(settings.BASE_DIR, 'update.sh')
 		self.assertTrue(os.access(path, os.X_OK))
 		content = open(path).read()
-		for step in ('git pull', 'pip install -r requirements.txt', 'migrate', 'collectstatic', 'set -euo pipefail'):
+		for step in ('git fetch', '--ff-only', 'pip install -r requirements.txt', 'migrate', 'collectstatic', 'manage.py check',
+				'set -euo pipefail', '--reset'):
 			self.assertIn(step, content)
+
+
+class UpdateScriptGitBehaviourTests(BaseCase):
+	"""Menjalankan update.sh sungguhan di repo git sementara (bagian aplikasi dilewati)."""
+
+	def sh(self, *args, cwd, check=True):
+		import subprocess
+		env = dict(os.environ, GIT_AUTHOR_NAME='t', GIT_AUTHOR_EMAIL='t@t', GIT_COMMITTER_NAME='t', GIT_COMMITTER_EMAIL='t@t',
+			UPDATE_SKIP_APP='1')
+		res = subprocess.run(args, cwd=cwd, env=env, capture_output=True, text=True)
+		if check:
+			self.assertEqual(res.returncode, 0, res.stderr + res.stdout)
+		return res
+
+	def setUp(self):
+		self.root = tempfile.mkdtemp(prefix='pdpada-upd-')
+		self.addCleanup(shutil.rmtree, self.root, ignore_errors=True)
+		self.origin = os.path.join(self.root, 'origin.git')
+		self.work = os.path.join(self.root, 'work')       # tempat developer
+		self.server = os.path.join(self.root, 'server')   # meniru PythonAnywhere
+		self.sh('git', 'init', '--bare', '-b', 'main', self.origin, cwd=self.root)
+		self.sh('git', 'clone', self.origin, self.work, cwd=self.root)
+		self.sh('git', 'checkout', '-b', 'main', cwd=self.work, check=False)
+		with open(os.path.join(self.work, 'a.txt'), 'w') as f:
+			f.write('satu\n')
+		shutil.copy(os.path.join(settings.BASE_DIR, 'update.sh'), os.path.join(self.work, 'update.sh'))
+		self.sh('git', 'add', '-A', cwd=self.work)
+		self.sh('git', 'commit', '-m', 'awal', cwd=self.work)
+		self.sh('git', 'push', '-u', 'origin', 'main', cwd=self.work)
+		self.sh('git', 'clone', self.origin, self.server, cwd=self.root)
+		with open(os.path.join(self.server, '.env'), 'w') as f:   # file tak dilacak (rahasia server)
+			f.write('RAHASIA=1\n')
+
+	def push_change(self, text='dua\n'):
+		with open(os.path.join(self.work, 'a.txt'), 'a') as f:
+			f.write(text)
+		self.sh('git', 'commit', '-am', 'ubah', cwd=self.work)
+		self.sh('git', 'push', cwd=self.work)
+
+	def head(self, cwd):
+		return self.sh('git', 'rev-parse', 'HEAD', cwd=cwd).stdout.strip()
+
+	def test_normal_update_fast_forwards(self):
+		self.push_change()
+		res = self.sh('bash', 'update.sh', cwd=self.server)
+		self.assertIn('Reload', res.stdout)
+		self.assertEqual(self.head(self.server), self.head(self.work))
+
+	def test_diverged_server_gets_clear_hint_and_is_not_modified(self):
+		self.sh('git', 'checkout', '-b', 'fitur', cwd=self.work)
+		with open(os.path.join(self.work, 'b.txt'), 'w') as f:
+			f.write('fitur\n')
+		self.sh('git', 'add', '-A', cwd=self.work)
+		self.sh('git', 'commit', '-m', 'fitur', cwd=self.work)
+		self.sh('git', 'push', '-u', 'origin', 'fitur', cwd=self.work)
+		# server menarik branch fitur ke main lokal -> commit gabungan lokal
+		self.sh('git', 'pull', '--no-rebase', '--no-edit', 'origin', 'fitur', cwd=self.server)
+		self.sh('git', 'checkout', 'main', cwd=self.work)
+		self.push_change('dari-main\n')
+		before = self.head(self.server)
+		res = self.sh('bash', 'update.sh', cwd=self.server, check=False)
+		self.assertNotEqual(res.returncode, 0)
+		self.assertIn('--reset', res.stderr)
+		self.assertEqual(self.head(self.server), before)
+
+	def test_reset_realigns_with_github_and_keeps_untracked_files(self):
+		self.sh('git', 'checkout', '-b', 'fitur', cwd=self.work)
+		with open(os.path.join(self.work, 'b.txt'), 'w') as f:
+			f.write('fitur\n')
+		self.sh('git', 'add', '-A', cwd=self.work)
+		self.sh('git', 'commit', '-m', 'fitur', cwd=self.work)
+		self.sh('git', 'push', '-u', 'origin', 'fitur', cwd=self.work)
+		self.sh('git', 'pull', '--no-rebase', '--no-edit', 'origin', 'fitur', cwd=self.server)
+		self.sh('git', 'checkout', 'main', cwd=self.work)
+		self.push_change('dari-main\n')
+		self.sh('bash', 'update.sh', '--reset', cwd=self.server)
+		self.assertEqual(self.head(self.server), self.head(self.work))
+		self.assertEqual(open(os.path.join(self.server, '.env')).read(), 'RAHASIA=1\n')  # tidak tersentuh
+
+	def test_reset_refuses_when_tracked_files_were_edited(self):
+		with open(os.path.join(self.server, 'a.txt'), 'a') as f:
+			f.write('EDIT-LOKAL\n')
+		self.push_change()
+		res = self.sh('bash', 'update.sh', '--reset', cwd=self.server, check=False)
+		self.assertNotEqual(res.returncode, 0)
+		self.assertIn('perubahan lokal', res.stderr)
+		self.assertIn('EDIT-LOKAL', open(os.path.join(self.server, 'a.txt')).read())  # tidak dihapus
+
 
 
 class LoginPageTests(BaseCase):

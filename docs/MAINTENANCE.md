@@ -49,7 +49,7 @@ Menambah indeks: tambahkan ke `Meta.indexes`, `python manage.py makemigrations`,
 |---|---|
 | Harian | `python manage.py backup_data` (PythonAnywhere: tab **Tasks**, jadwal harian). Berisi database dan folder `private/`, 14 salinan terakhir. Unduh salinan ke tempat lain secara berkala. |
 | Bulanan | Uji **pemulihan**: unzip cadangan di folder kosong, jalankan `python manage.py check` dengan database itu. Cadangan yang tidak pernah dipulihkan belum tentu bisa dipakai. |
-| Tiap pembaruan kode | `bash update.sh` (git pull, pip, **migrate**, collectstatic, check) lalu Reload. |
+| Tiap pembaruan kode | `bash update.sh` (git fetch + fast-forward, pip, **migrate**, collectstatic, check) lalu Reload. Jika git menolak karena riwayat berbeda: `bash update.sh --reset`. |
 | Tahunan | Ganti tinan ativu (Data Master), tinjau daftar user (nonaktifkan yang tidak dipakai), perbarui dependensi (bagian 7). |
 
 Pemantauan: `GET /healthz/` mengembalikan `{"status":"ok"}` (200) atau 503 jika database bermasalah; cocok untuk UptimeRobot atau sejenisnya. Log aplikasi: `logs/app.log` (berputar 5 MB x 5) dan error log server.

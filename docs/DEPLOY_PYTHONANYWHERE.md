@@ -103,6 +103,7 @@ application = get_wsgi_application()
 | Foto/PDF membru tidak muncul | file disajikan lewat halaman ber-login dari folder `private/`; cek folder itu ada dan dapat ditulis (`ls -la ~/pdpada/private`) |
 | `ModuleNotFoundError` | path virtualenv di tab Web salah |
 | `OperationalError: no such column ...` / `no such table ...` | **migrasi belum dijalankan** setelah `git pull`: `workon Env && python manage.py migrate`, lalu Reload (atau jalankan `bash update.sh`) |
+| `Not possible to fast-forward, aborting` saat `bash update.sh` | riwayat git server berbeda dari GitHub (biasanya karena `git pull` biasa membuat commit gabungan lokal). Jalankan `bash update.sh --reset` (menyamakan dengan GitHub; `.env`, database, `private/` dan `backups/` tidak tersentuh) |
 | `RuntimeError: DJANGO_SECRET_KEY wajib diisi` | `.env` belum terisi atau tidak di `/home/USERNAME/pdpada/.env` |
 
 Setiap mengubah kode atau `.env`: klik **Reload**.
@@ -126,6 +127,8 @@ pip install -r requirements.txt
 python manage.py migrate
 python manage.py collectstatic --noinput
 ```
+
+> Jangan memakai `git pull` biasa di server; gunakan `bash update.sh`. Server tidak boleh punya commit atau perubahan sendiri.
 
 > Setiap pembaruan bisa membawa migrasi baru. Jika `migrate` terlewat, halaman akan menampilkan `no such column`.
 
