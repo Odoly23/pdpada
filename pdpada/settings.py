@@ -38,6 +38,7 @@ INSTALLED_APPS = [
 	'users.apps.UsersConfig',
 	'membro.apps.MembroConfig',
 	'report.apps.ReportConfig',
+	'notification.apps.NotificationConfig',
 ]
 
 MIDDLEWARE = [

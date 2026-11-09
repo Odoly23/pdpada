@@ -10,5 +10,6 @@ urlpatterns = [
 	path('marital/', views.APIMarital.as_view(), name='api-marital'),
 	path('hakbit/', views.APIHakbit.as_view(), name='api-hakbit'),
 	path('age/', views.APIAge.as_view(), name='api-age'),
+	path('alokasaun/', views.APIAlokasaun.as_view(), name='api-alokasaun'),
 	path('organizasaun/', views.APIOrganizasaun.as_view(), name='api-organizasaun'),
 ]

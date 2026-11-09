@@ -5,10 +5,11 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from config import roles
 from config.decorators import allowed_users
-from config.user_utils import c_user_group, alokasaun_scope
+from config.user_utils import c_user_group, c_user_scope, alokasaun_scope
+from custom.models import Village, Aldeia, Organizasaun, Year
 from membro.forms import AlokasaunForm
 from membro.models import Alokasaun
-from membro.utils import log_historia
+from membro.utils import log_historia, apply_alokasaun_filters
 
 
 @login_required
@@ -16,6 +17,7 @@ from membro.utils import log_historia
 def AlokasaunList(request):
 	group = c_user_group(request.user)
 	objects = alokasaun_scope(request.user).select_related('membro', 'village', 'aldeia', 'organizasaun')
+	objects = apply_alokasaun_filters(objects, request.GET)
 	context = {
 		'group': group, 'objects': objects, 'can_aloka': group in roles.ALOKA_ROLES,
 		'title': 'Struktura no Pozisaun', 'legend': 'Struktura no Pozisaun'
@@ -82,3 +84,53 @@ def AlokasaunDel(request, pk):
 	obj.delete()
 	messages.warning(request, 'Hamoos ho Susesu!.')
 	return redirect('alokasaun-list')
+
+
+def _unit_scope(user):
+	"""Suku, aldeia dan organisasi yang masuk dalam wilayah user."""
+	group, scope = c_user_group(user), c_user_scope(user)
+	villages, aldeias, orgs = Village.objects.none(), Aldeia.objects.none(), Organizasaun.objects.none()
+	if group in roles.POSTU_ROLES:
+		villages, aldeias, orgs = Village.objects.all(), Aldeia.objects.all(), Organizasaun.objects.filter(is_active=True)
+	elif scope and group in roles.SUKU_ROLES and scope.village_id:
+		villages, aldeias = Village.objects.filter(pk=scope.village_id), Aldeia.objects.filter(village_id=scope.village_id)
+	elif scope and group in roles.ALDEIA_ROLES and scope.aldeia_id:
+		aldeias = Aldeia.objects.filter(pk=scope.aldeia_id)
+		villages = Village.objects.filter(pk=scope.aldeia.village_id)
+	elif scope and group in roles.ORG_ROLES and scope.organizasaun_id:
+		orgs = Organizasaun.objects.filter(pk=scope.organizasaun_id)
+	return villages, aldeias.select_related('village'), orgs
+
+
+@login_required
+@allowed_users(allowed_roles=roles.VIEW_ROLES)
+def AlokasaunDash(request):
+	"""Dashboard Struktura PD: siapa memegang posisi apa, dan kelengkapannya per suku/aldeia/organisasi."""
+	group = c_user_group(request.user)
+	villages, aldeias, orgs = _unit_scope(request.user)
+	aktivu = list(Alokasaun.objects.filter(ativu='Sim').select_related('membro'))
+	postu = {a.pozisaun: a for a in aktivu if a.nivel == 'Postu'}
+	suku = {(a.village_id, a.pozisaun): a for a in aktivu if a.nivel == 'Suku'}
+	org = {(a.organizasaun_id, a.pozisaun): a for a in aktivu if a.nivel == 'Organizasaun'}
+	aldeia_hold = {(a.aldeia_id, a.pozisaun): a for a in aktivu if a.nivel == 'Aldeia'}
+	aldeias = list(aldeias)
+	rows_suku = []
+	for v in villages:
+		mine = [a for a in aldeias if a.village_id == v.pk]
+		rows_suku.append({
+			'v': v, 'coord': suku.get((v.pk, 'Coordenador')), 'sekr': suku.get((v.pk, 'Sekretariu')),
+			'a_total': len(mine),
+			'a_coord': sum(1 for a in mine if (a.pk, 'Coordenador') in aldeia_hold),
+			'a_sekr': sum(1 for a in mine if (a.pk, 'Sekretariu') in aldeia_hold),
+		})
+	rows_aldeia = [{'a': a, 'coord': aldeia_hold.get((a.pk, 'Coordenador')), 'sekr': aldeia_hold.get((a.pk, 'Sekretariu'))} for a in aldeias]
+	rows_org = [{'o': o, 'coord': org.get((o.pk, 'Coordenador')), 'sekr': org.get((o.pk, 'Sekretariu'))} for o in orgs]
+	context = {
+		'group': group, 'show_postu': group in roles.POSTU_ROLES,
+		'can_aloka': group in roles.ALOKA_ROLES, 'can_link': group in roles.POSTU_ROLES,
+		'postu': [(p, postu.get(p)) for p in ('Presidente', 'Coordenador', 'Sekretariu')],
+		'rows_suku': rows_suku, 'rows_aldeia': rows_aldeia, 'rows_org': rows_org,
+		'ano_ativu_obj': Year.objects.filter(is_active=True).first(),
+		'title': 'Struktura PD', 'legend': 'Struktura PD'
+	}
+	return render(request, 'membro/alokasaun_dash.html', context)

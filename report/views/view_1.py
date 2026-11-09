@@ -28,6 +28,7 @@ def Dash(request):
 	)
 	context = {
 		'group': group, 'tot': tot,
+		'can_add': group in roles.INPUT_ROLES, 'can_aprova': group in roles.APROVA_ROLES,
 		'por_org': _rows(qs.filter(organizasaun__isnull=False), 'organizasaun_id', 'organizasaun__code'),
 		'por_suku': _rows(qs, 'village_id', 'village__name'),
 		'por_aldeia': _rows(qs, 'aldeia_id', 'aldeia__name'),

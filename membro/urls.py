@@ -8,6 +8,7 @@ urlpatterns = [
 	path('aprovasaun/bulk/', views.AprovasaunBulk, name='aprovasaun-bulk'),
 	path('aprovasaun/<str:hashid>/aprova/', views.AprovasaunAprova, name='aprovasaun-aprova'),
 	path('aprovasaun/<str:hashid>/rejeita/', views.AprovasaunRejeita, name='aprovasaun-rejeita'),
+	path('alokasaun/dash/', views.AlokasaunDash, name='alokasaun-dash'),
 	path('alokasaun/', views.AlokasaunList, name='alokasaun-list'),
 	path('alokasaun/add/', views.AlokasaunAdd, name='alokasaun-add'),
 	path('alokasaun/<int:pk>/edit/', views.AlokasaunUpdate, name='alokasaun-update'),

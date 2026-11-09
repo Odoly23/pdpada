@@ -33,6 +33,7 @@ Deploy ke PythonAnywhere: lihat [`docs/DEPLOY_PYTHONANYWHERE.md`](docs/DEPLOY_PY
 | `config` | `utils` (hash), `decorators` (`allowed_users`), `roles`, `user_utils` (scope), upload, command `seed_inisial` |
 | `users` | `UserScope` (wilayah user), kelola uzuáriu (Admin) |
 | `membro` | `Membro`, `Alokasaun` (posisi/kargu), `Historia` (log perubahan); views, forms, urls |
+| `notification` | notifikasi lonceng (API DRF `/api/notification/...`, polling 5 detik): approver = membru Pendente, sekjer = membru Rejeitadu |
 | `report` | rekap angka (`/report/`), grafik Highcharts (`/report/chart/`) + API (`/report/api/...`) |
 
 ## Tampilan
@@ -50,6 +51,10 @@ Deploy ke PythonAnywhere: lihat [`docs/DEPLOY_PYTHONANYWHERE.md`](docs/DEPLOY_PY
 | `koord_aldeia` / `sekr_aldeia` | aldeianya | sekr_aldeia | – | – |
 | `koord_org` / `sekr_org` | anggota organisasinya | – | – | – |
 | `admin` | tidak melihat data membru | – | – | uzuáriu, data master, tinan ativu, historia |
+
+**Notifikasi:** lonceng di navbar menampilkan badge jumlah *Hein Aprovasaun* (Presidente/Coordenador Postu) atau *Membru Rejeitadu* (Sekjer Suku/Aldeia) dan diperbarui otomatis tiap 5 detik.
+
+**Dashboard Struktura** (`/membro/alokasaun/dash/`): pemegang posisi Postu, Suku, Aldeia, Organizasaun yang aktif, kelengkapan aldeia (mis. 2/3 punya Coordenador), tautan ke daftar terfilter, dan grafik.
 
 Alur: sekretaris suku/aldeia input → status **Pendente** → Presidente atau Coordenador Postu **Aprova** atau **Rejeita** (wajib isi razaun). Data yang diedit (juga yang sudah Aprovadu) kembali **Pendente**. Setiap kria/edita/aprova/rejeita/aloka/hamoos tercatat di **Historia**.
 

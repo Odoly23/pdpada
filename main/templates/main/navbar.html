@@ -32,6 +32,17 @@
 				<li><a href="{{ it.url }}"{% if it.active %} class="active"{% endif %}><i class="fa {{ it.icon }}"></i> {{ it.label }}</a></li>
 				{% endif %}
 			{% endfor %}
+			{% if notif_items %}
+			<li class="dropdown">
+				<a class="notif-bell" id="notifDropdown" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-url="{% url 'api-notif-badge' %}" title="Notifikasaun"><i class="fa fa-bell"></i><span id="notifbadge" class="badge badge-danger">{% if notif_total %}{{ notif_total }}{% endif %}</span></a>
+				<div class="dropdown-menu dropdown-menu-right" aria-labelledby="notifDropdown">
+					<span class="dropdown-header">Notifikasaun</span>
+					{% for n in notif_items %}
+					<a class="dropdown-item" href="{{ n.url }}"><i class="fa fa-circle-o"></i> {{ n.label }} (<strong data-notif-key="{{ n.key }}">{{ n.count }}</strong>)</a>
+					{% endfor %}
+				</div>
+			</li>
+			{% endif %}
 			<li class="dropdown ml-2">
 				<a href="#" class="p-1" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" title="{{ user.username }}"><span class="av"><i class="fa fa-user"></i></span></a>
 				<div class="dropdown-menu dropdown-menu-right">
@@ -65,6 +76,7 @@
 				{% endif %}
 			{% endfor %}
 			<li><hr></li>
+			{% if notif_items %}<li><a href="{{ notif_items.0.url }}"><i class="fa fa-bell"></i>Notifikasaun<span id="notifbadge-sb" class="badge badge-danger">{% if notif_total %}{{ notif_total }}{% endif %}</span></a></li>{% endif %}
 			<li><a href="{% url 'change-password' %}"><i class="fa fa-key"></i>Password</a></li>
 			<li>
 				<form method="post" action="{% url 'logout' %}">{% csrf_token %}

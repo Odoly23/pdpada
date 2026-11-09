@@ -98,6 +98,12 @@ body {
   color: var(--white); display: flex; align-items: center; justify-content: center;
 }
 
+/* Lonceng notifikasi */
+.nav-links li a.notif-bell { position: relative; padding: 8px 12px; font-size: 1.05rem; }
+.nav-links li a.notif-bell .badge { position: absolute; top: 0; right: 0; font-size: .65rem; }
+.sb-body ul li a { position: relative; }
+.sb-body ul li a .badge { position: absolute; top: 4px; right: 10px; font-size: .55rem; }
+
 /* Hamburger — mobile only */
 .btn-ham {
   display: none; background: none;
@@ -317,3 +323,16 @@ table.dataTable thead th, table.dataTable thead td { border-bottom: 2px solid va
   .main-content { box-shadow: none; padding: 0; }
   body.sb-open .page-wrapper { margin-left: 0; }
 }
+
+/* tabel matriks (dashboard Struktura) */
+.th-base { background-color: #cfd6f7 !important; text-align: left; }
+.th-postu th, th.th-suku, .th-suku th { background-color: #b9c3f2 !important; text-align: center; }
+th.th-aldeia, .th-aldeia th { background-color: #d9defa !important; text-align: center; }
+td.th-suku-s { background-color: #dbe0fb; font-weight: 600; }
+td.th-aldeia-s { background-color: #eceffd; font-weight: 600; }
+
+/* tombol aksi di dalam header kartu (latar navy): dibuat terang agar terbaca */
+.card-header .btn-primary { background-color: var(--white); border-color: var(--white); color: var(--navy); font-weight: 600; }
+.card-header .btn-primary:hover, .card-header .btn-primary:focus { background-color: #dbe0fb; border-color: #dbe0fb; color: var(--navy-dk); }
+.card-header .btn-outline-primary { color: var(--white); border-color: var(--white); }
+.card-header .btn-outline-primary:hover { background-color: var(--white); color: var(--navy); }

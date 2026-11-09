@@ -2,6 +2,7 @@ from django.urls import reverse
 from config import roles
 from config.user_utils import c_user_group
 from custom.models import Year
+from notification.utils import notif_counts, notif_items
 
 ROLE_NAME = dict(roles.ROLE_LABELS)
 
@@ -37,16 +38,19 @@ def _menu(request, group):
 			items.append(_item(request, 'Aumenta', 'fa-plus', 'membro-add'))
 		if group in roles.APROVA_ROLES:
 			items.append(_item(request, 'Aprovasaun', 'fa-check-square-o', 'aprovasaun-list', names=('aprovasaun-list', 'aprovasaun-rejeita')))
-		items.append(_item(request, 'Struktura', 'fa-sitemap', 'alokasaun-list', names=('alokasaun-list', 'alokasaun-add', 'alokasaun-update')))
+		items.append(_item(request, 'Struktura', 'fa-sitemap', 'alokasaun-dash', names=('alokasaun-dash', 'alokasaun-list', 'alokasaun-add', 'alokasaun-update')))
 		if group in roles.HISTORIA_ROLES:
 			items.append(_item(request, 'Historia', 'fa-history', 'historia-list'))
 	return items
 
 
 def ano_ativu(request):
-	context = {'ano_ativu': Year.objects.filter(is_active=True).first(), 'nav_items': [], 'nav_role': ''}
+	context = {'ano_ativu': Year.objects.filter(is_active=True).first(), 'nav_items': [], 'nav_role': '', 'notif_items': [], 'notif_total': 0}
 	if request.user.is_authenticated:
 		group = c_user_group(request.user)
 		context['nav_role'] = ROLE_NAME.get(group, '')
 		context['nav_items'] = _menu(request, group)
+		_, counts = notif_counts(request.user)
+		context['notif_items'] = notif_items(group, counts)
+		context['notif_total'] = counts['total']
 	return context

@@ -14,6 +14,7 @@ urlpatterns = [
 	path('users/', include('users.urls')),
 	path('membro/', include('membro.urls')),
 	path('report/', include('report.urls')),
+	path('api/notification/', include('notification.urls')),
 ]
 
 if settings.DEBUG:

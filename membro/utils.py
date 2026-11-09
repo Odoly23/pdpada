@@ -1,4 +1,5 @@
-from membro.models import Membro, Historia
+from django.db.models import Q
+from membro.models import Membro, Historia, Alokasaun, POZISAUN_POR_NIVEL
 
 SNAPSHOT_FIELDS = ['nome', 'sex', 'place_of_birth', 'date_of_birth', 'marital', 'nu_eleitoral', 'nu_bi',
 	'telefone', 'image', 'village', 'aldeia', 'address', 'organizasaun', 'data_hakbit', 'status']
@@ -47,4 +48,22 @@ def apply_filters(qs, params):
 	hakbit = params.get('hakbit')
 	if hakbit and hakbit.isdigit():
 		qs = qs.filter(data_hakbit__year=int(hakbit))
+	return qs
+
+
+def apply_alokasaun_filters(qs, params):
+	"""Filter daftar alokasaun dari parameter GET (dipakai tautan di dashboard Struktura)."""
+	if params.get('nivel') in POZISAUN_POR_NIVEL:
+		qs = qs.filter(nivel=params['nivel'])
+	if params.get('pozisaun') in ('Presidente', 'Coordenador', 'Sekretariu'):
+		qs = qs.filter(pozisaun=params['pozisaun'])
+	if params.get('ativu') in ('Sim', 'Lae'):
+		qs = qs.filter(ativu=params['ativu'])
+	village = params.get('village')
+	if village and village.isdigit():
+		qs = qs.filter(Q(village_id=int(village)) | Q(aldeia__village_id=int(village)))
+	for key in ('aldeia', 'organizasaun'):
+		val = params.get(key)
+		if val and val.isdigit():
+			qs = qs.filter(**{f'{key}_id': int(val)})
 	return qs

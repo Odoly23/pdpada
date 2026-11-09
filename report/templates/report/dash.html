@@ -6,16 +6,25 @@
 		<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
 	</ol>
 	<div class="row">
-		<div class="col-md-12">
-			<div class="text-center mb-2 mt-1">
-				<h3 class="text-muted">{{ legend|upper }}{% if ano_ativu %} - TINAN {{ ano_ativu }}{% endif %}</h3>
-				<a class="btn btn-sm btn-outline-primary no-print" href="{% url 'report-chart' %}"><i class="fa fa-bar-chart"></i> Hare Grafik</a>
+		<div class="col-sm-12 mb-2">
+			<div class="card">
+				<div class="card-header bg-primary text-white text-center">REKAPITULASAUN MEMBRU PD <br/> POSTU DOM ALEIXO</div>
 			</div>
 		</div>
 	</div>
 	<div class="row">
 		<div class="col-sm-12">
 			<div class="card shadow-lg pt-0 rounded">
+				<div class="card-header">
+					{% if can_add %}<a class="btn btn-sm btn-primary mb-2" href="{% url 'membro-add' %}">Aumenta Membru <i class="fa fa-plus"></i></a>{% endif %}
+					<a class="btn btn-sm btn-secondary mb-2" href="{% url 'membro-list' %}">Lista Jeral Membru <i class="fa fa-list"></i></a>
+					{% if can_aprova %}<a class="btn btn-sm btn-warning mb-2" href="{% url 'aprovasaun-list' %}">Hein Aprovasaun{% if tot.pendente %} ({{ tot.pendente }}){% endif %} <i class="fa fa-check-square-o"></i></a>{% endif %}
+					<a class="btn btn-sm btn-danger mb-2" href="{% url 'report-chart' %}">Grafik Membru <i class="fa fa-bar-chart"></i></a>
+					<a class="btn btn-sm btn-outline-primary mb-2" href="{% url 'alokasaun-dash' %}">Struktura PD <i class="fa fa-sitemap"></i></a>
+				</div>
+				<div class="card">
+					<div class="card-header text-center">Membru Tinan Ativu {% if ano_ativu %}{{ ano_ativu }}{% endif %}</div>
+				</div>
 				<div class="card-body">
 					<div class="row">
 						<div class="col-md-4">
@@ -141,5 +150,20 @@
 				</div> <!--end row-->
 			</div> <!--end card-->
 		</div> <!--end col-->
+		<div class="col-md-12">
+			<div class="card">
+				<div class="card-header">Grafiku membru tinan ativu {% if ano_ativu %}{{ ano_ativu }}{% endif %}</div>
+				<div class="card-body">
+					<figure class="highcharts-figure"><div id="chart_suku"></div></figure>
+				</div>
+			</div>
+		</div>
 	</div> <!--end row-->
+{% endblock %}
+{% block scripts %}
+{% include 'main/highcharts_scripts.html' %}
+<script>
+	{% include 'chart/chart_base.js' %}
+	{% include 'chart/chart_suku.js' %}
+</script>
 {% endblock %}

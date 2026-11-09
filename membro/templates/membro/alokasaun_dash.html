@@ -1,0 +1,139 @@
+{% extends "main/layout.html" %}
+{% block content %}
+	<ol class="breadcrumb mb-2 mt-1">
+		<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+		<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
+	</ol>
+	<div class="row">
+		<div class="col-sm-12 mb-2">
+			<div class="card">
+				<div class="card-header bg-primary text-white text-center">STRUKTURA PARTIDO DEMOCRATICO <br/> POSTU DOM ALEIXO</div>
+			</div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-sm-12">
+			<div class="card shadow-lg pt-0 rounded">
+				<div class="card-header">
+					{% if can_aloka %}
+					<a class="btn btn-sm btn-primary mb-2" href="{% url 'alokasaun-add' %}">Aloka Pozisaun <i class="fa fa-plus"></i></a>
+					{% endif %}
+					<a class="btn btn-sm btn-secondary mb-2" href="{% url 'alokasaun-list' %}">Lista Jeral Pozisaun <i class="fa fa-list"></i></a>
+					<a class="btn btn-sm btn-danger mb-2" href="{% url 'report-dash' %}">Rekap Membru <i class="fa fa-table"></i></a>
+				</div>
+				<div class="card">
+					<div class="card-header text-center">Pozisaun Ativu {% if ano_ativu %}- Tinan {{ ano_ativu }}{% endif %}</div>
+				</div>
+				<div class="card-body">
+					{% if show_postu %}
+					<h6>Nivel Postu</h6>
+					<div class="table-responsive">
+					<table class="table table-sm table-bordered text-center">
+						<thead><tr class="th-postu"><th>Pozisaun</th><th>Naran</th><th>Desde</th></tr></thead>
+						<tbody>
+							{% for poz, a in postu %}
+							<tr>
+								<td>{{ poz }} Postu</td>
+								<td>{% if a %}{% if can_link %}<a href="{% url 'membro-detail' a.membro.hashed %}">{{ a.membro.nome }}</a>{% else %}{{ a.membro.nome }}{% endif %}{% else %}<span class="text-muted">– seidauk iha –</span>{% endif %}</td>
+								<td>{% if a %}{{ a.data_hahu|date:"d/m/Y" }}{% else %}–{% endif %}</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+					</div>
+					<hr>
+					{% endif %}
+
+					{% if rows_suku %}
+					<h6>Struktura Por Suku</h6>
+					<div class="table-responsive">
+					<table class="table table-sm table-bordered text-center">
+						<thead>
+							<tr>
+								<th rowspan="2" class="th-base align-middle">Nu.</th>
+								<th rowspan="2" class="th-base align-middle">Suku</th>
+								<th colspan="2" class="th-suku">Nivel Suku</th>
+								<th colspan="3" class="th-aldeia">Nivel Aldeia (ho pozisaun / total)</th>
+							</tr>
+							<tr>
+								<td class="th-suku-s">Coordenador</td><td class="th-suku-s">Sekretariu</td>
+								<td class="th-aldeia-s">Total Aldeia</td><td class="th-aldeia-s">Ho Coordenador</td><td class="th-aldeia-s">Ho Sekretariu</td>
+							</tr>
+						</thead>
+						<tbody>
+							{% for r in rows_suku %}
+							<tr>
+								<td>{{ forloop.counter }}</td>
+								<td class="text-left">{{ r.v.name }}</td>
+								<td>{% if r.coord %}<a href="{% url 'alokasaun-list' %}?nivel=Suku&pozisaun=Coordenador&village={{ r.v.id }}">{{ r.coord.membro.nome }}</a>{% else %}<span class="text-muted">–</span>{% endif %}</td>
+								<td>{% if r.sekr %}<a href="{% url 'alokasaun-list' %}?nivel=Suku&pozisaun=Sekretariu&village={{ r.v.id }}">{{ r.sekr.membro.nome }}</a>{% else %}<span class="text-muted">–</span>{% endif %}</td>
+								<td>{{ r.a_total }}</td>
+								<td><a href="{% url 'alokasaun-list' %}?nivel=Aldeia&pozisaun=Coordenador&village={{ r.v.id }}" class="{% if r.a_coord < r.a_total %}text-danger{% endif %}">{{ r.a_coord }}/{{ r.a_total }}</a></td>
+								<td><a href="{% url 'alokasaun-list' %}?nivel=Aldeia&pozisaun=Sekretariu&village={{ r.v.id }}" class="{% if r.a_sekr < r.a_total %}text-danger{% endif %}">{{ r.a_sekr }}/{{ r.a_total }}</a></td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+					</div>
+					<p class="text-muted"><small>Nu. mean aldeia sira ne'ebé seidauk iha Coordenador ka Sekretariu.</small></p>
+					<hr>
+					{% endif %}
+
+					{% if rows_aldeia %}
+					<h6>Struktura Por Aldeia</h6>
+					<div class="table-responsive">
+					<table class="table table-sm table-bordered text-center">
+						<thead><tr class="th-aldeia"><th>Nu.</th><th>Suku</th><th>Aldeia</th><th>Coordenador</th><th>Sekretariu</th></tr></thead>
+						<tbody>
+							{% for r in rows_aldeia %}
+							<tr>
+								<td>{{ forloop.counter }}</td>
+								<td class="text-left">{{ r.a.village.name }}</td>
+								<td class="text-left">{{ r.a.name }}</td>
+								<td>{% if r.coord %}{{ r.coord.membro.nome }}{% else %}<span class="text-muted">–</span>{% endif %}</td>
+								<td>{% if r.sekr %}{{ r.sekr.membro.nome }}{% else %}<span class="text-muted">–</span>{% endif %}</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+					</div>
+					<hr>
+					{% endif %}
+
+					{% if rows_org %}
+					<h6>Struktura Organizasaun</h6>
+					<div class="table-responsive">
+					<table class="table table-sm table-bordered text-center">
+						<thead><tr class="th-suku"><th>Organizasaun</th><th>Coordenador</th><th>Sekretariu</th></tr></thead>
+						<tbody>
+							{% for r in rows_org %}
+							<tr>
+								<td class="text-left"><strong>{{ r.o.code }}</strong></td>
+								<td>{% if r.coord %}{{ r.coord.membro.nome }}{% else %}<span class="text-muted">–</span>{% endif %}</td>
+								<td>{% if r.sekr %}{{ r.sekr.membro.nome }}{% else %}<span class="text-muted">–</span>{% endif %}</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+					</div>
+					{% endif %}
+				</div> <!--end card-body-->
+			</div> <!--end card-->
+		</div> <!--end col-->
+		<div class="col-md-12">
+			<div class="card">
+				<div class="card-header">Grafiku pozisaun ativu</div>
+				<div class="card-body">
+					<figure class="highcharts-figure"><div id="chart_alokasaun"></div></figure>
+				</div>
+			</div>
+		</div>
+	</div> <!--end row-->
+{% endblock %}
+{% block scripts %}
+{% include 'main/highcharts_scripts.html' %}
+<script>
+	{% include 'chart/chart_base.js' %}
+	{% include 'chart/chart_alokasaun.js' %}
+</script>
+{% endblock %}

@@ -471,3 +471,157 @@ class HomeAndExtraApiTests(BaseCase):
 		self.login('presidente')
 		resp = self.client.get('/')
 		self.assertContains(resp, 'd-sm-none">Dom Aleixo</span>')
+
+
+class NotificationTests(BaseCase):
+	def badge(self, user):
+		self.login(user)
+		resp = self.client.get(reverse('api-notif-badge'))
+		self.assertEqual(resp.status_code, 200)
+		return resp.json()
+
+	def test_requires_login(self):
+		self.client.logout()
+		self.assertIn(self.client.get(reverse('api-notif-badge')).status_code, (401, 403))
+
+	def test_approver_counts_pending(self):
+		self.make('NT00001'); self.make('NT00002', self.vb, self.b1)
+		self.make('NT00003', aprovasaun='Aprovadu'); self.make('NT00004', aprovasaun='Rejeitadu')
+		for u in ('presidente', 'koordpostu'):
+			self.assertEqual(self.badge(u), {'value': 2, 'pendente': 2, 'rejeitadu': 0}, u)
+		self.assertEqual(self.client.get(reverse('api-notif-pendente')).json(), {'value': 2})
+
+	def test_secretary_counts_rejected_in_own_scope_only(self):
+		self.make('NT00005', aprovasaun='Rejeitadu')
+		self.make('NT00006', self.vb, self.b1, aprovasaun='Rejeitadu')
+		self.make('NT00007')
+		self.assertEqual(self.badge('sekrsuku'), {'value': 1, 'pendente': 0, 'rejeitadu': 1})
+		self.assertEqual(self.client.get(reverse('api-notif-rejeitadu')).json(), {'value': 1})
+		self.assertEqual(self.badge('sekrsukub')['rejeitadu'], 1)
+
+	def test_other_roles_get_zero(self):
+		self.make('NT00008'); self.make('NT00009', aprovasaun='Rejeitadu')
+		for u in ('koordsuku', 'sekrpostu', 'koordorg', 'admin'):
+			self.assertEqual(self.badge(u)['value'], 0, u)
+
+	def test_bell_rendered_only_for_roles_with_notifications(self):
+		self.make('NT00010')
+		self.login('presidente')
+		resp = self.client.get('/')
+		self.assertContains(resp, 'id="notifDropdown"')
+		self.assertContains(resp, 'data-url="/api/notification/badge/"')
+		self.assertContains(resp, 'id="notifbadge"')
+		self.assertContains(resp, 'notification.js')
+		self.assertEqual([i['key'] for i in resp.context['notif_items']], ['pendente'])
+		self.login('sekrsuku')
+		self.assertEqual([i['key'] for i in self.client.get('/').context['notif_items']], ['rejeitadu'])
+		self.login('koordsuku')
+		self.assertNotContains(self.client.get('/'), 'id="notifDropdown"')
+		self.login('admin')
+		self.assertNotContains(self.client.get('/'), 'id="notifDropdown"')
+
+	def test_initial_badge_has_count_without_waiting_for_polling(self):
+		self.make('NT00011'); self.make('NT00012')
+		self.login('presidente')
+		self.assertContains(self.client.get('/'), '<span id="notifbadge" class="badge badge-danger">2</span>')
+
+
+class StrukturaDashTests(BaseCase):
+	def setUp(self):
+		self.m1 = self.make('ST00001', self.va, self.a1, aprovasaun='Aprovadu')
+		self.m2 = self.make('ST00002', self.va, self.a1, aprovasaun='Aprovadu')
+		self.mb = self.make('ST00003', self.vb, self.b1, aprovasaun='Aprovadu')
+		d = datetime.date(2026, 1, 1)
+		Alokasaun.objects.create(membro=self.m1, nivel='Suku', pozisaun='Coordenador', village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.m2, nivel='Aldeia', pozisaun='Coordenador', aldeia=self.a1, data_hahu=d)
+		Alokasaun.objects.create(membro=self.mb, nivel='Suku', pozisaun='Sekretariu', village=self.vb, data_hahu=d)
+		Alokasaun.objects.create(membro=self.m1, nivel='Postu', pozisaun='Presidente', data_hahu=d)
+
+	def dash(self, user):
+		self.login(user)
+		resp = self.client.get(reverse('alokasaun-dash'))
+		self.assertEqual(resp.status_code, 200)
+		return resp
+
+	def test_presidente_sees_full_matrix_with_coverage(self):
+		resp = self.dash('presidente')
+		rows = {r['v'].name: r for r in resp.context['rows_suku']}
+		self.assertEqual((rows['Suku A']['a_total'], rows['Suku A']['a_coord'], rows['Suku A']['a_sekr']), (2, 1, 0))
+		self.assertEqual(rows['Suku A']['coord'].membro, self.m1)
+		self.assertIsNone(rows['Suku A']['sekr'])
+		self.assertEqual(rows['Suku B']['sekr'].membro, self.mb)
+		self.assertEqual(dict(resp.context['postu'])['Presidente'].membro, self.m1)
+		self.assertContains(resp, 'Aloka Pozisaun')
+		self.assertContains(resp, 'Lista Jeral Pozisaun')
+		self.assertContains(resp, 'chart_alokasaun')
+
+	def test_suku_user_sees_only_own_suku_and_no_postu_table(self):
+		resp = self.dash('koordsuku')
+		self.assertEqual([r['v'].name for r in resp.context['rows_suku']], ['Suku A'])
+		self.assertEqual({r['a'].name for r in resp.context['rows_aldeia']}, {'A1', 'A2'})
+		self.assertFalse(resp.context['show_postu'])
+		self.assertNotContains(resp, 'Aloka Pozisaun')
+
+	def test_aldeia_user_scope(self):
+		resp = self.dash('sekraldeia')
+		self.assertEqual([r['a'].name for r in resp.context['rows_aldeia']], ['A1'])
+		self.assertEqual([r['v'].name for r in resp.context['rows_suku']], ['Suku A'])
+
+	def test_org_user_sees_only_own_org(self):
+		resp = self.dash('koordorg')
+		self.assertEqual([r['o'].code for r in resp.context['rows_org']], ['OJD'])
+		self.assertEqual(resp.context['rows_suku'], [])
+
+	def test_admin_forbidden(self):
+		self.login('admin')
+		self.assertEqual(self.client.get(reverse('alokasaun-dash')).status_code, 403)
+
+	def test_inactive_allocation_not_counted(self):
+		Alokasaun.objects.filter(pozisaun='Presidente').update(ativu='Lae')
+		self.assertIsNone(dict(self.dash('presidente').context['postu'])['Presidente'])
+
+	def test_list_filters_from_dash_links(self):
+		self.login('presidente')
+		get = lambda q: [(a.nivel, a.pozisaun) for a in self.client.get(reverse('alokasaun-list') + q).context['objects']]
+		self.assertEqual(get('?nivel=Suku&pozisaun=Coordenador&village=%d' % self.va.pk), [('Suku', 'Coordenador')])
+		self.assertEqual(get('?nivel=Aldeia&pozisaun=Coordenador&village=%d' % self.va.pk), [('Aldeia', 'Coordenador')])
+		self.assertEqual(get('?nivel=Aldeia&village=%d' % self.vb.pk), [])
+		self.assertEqual(len(get('?nivel=abc&village=xyz')), 4)
+
+	def test_scoped_list_filter_cannot_widen_scope(self):
+		self.login('koordsuku')
+		objs = self.client.get(reverse('alokasaun-list') + '?village=%d' % self.vb.pk).context['objects']
+		self.assertEqual(list(objs), [])
+
+	def test_menu_struktura_points_to_dash(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('alokasaun-dash'))
+		struktura = [i for i in resp.context['nav_items'] if i['label'] == 'Struktura'][0]
+		self.assertEqual(struktura['url'], reverse('alokasaun-dash'))
+		self.assertTrue(struktura['active'])
+
+	def test_alokasaun_api_scoped(self):
+		self.login('presidente')
+		data = self.client.get(reverse('api-alokasaun')).json()
+		self.assertEqual(dict(zip(data['label'], data['obj'])),
+			{'Postu · Presidente': 1, 'Suku · Coordenador': 1, 'Suku · Sekretariu': 1, 'Aldeia · Coordenador': 1})
+		self.login('koordsuku')
+		data = self.client.get(reverse('api-alokasaun')).json()
+		self.assertEqual(sum(data['obj']), 2)
+
+
+class RekapButtonsTests(BaseCase):
+	def test_buttons_per_role(self):
+		self.make('RK00001')
+		self.login('sekrsuku')
+		resp = self.client.get(reverse('report-dash'))
+		self.assertContains(resp, 'Aumenta Membru')
+		self.assertContains(resp, 'Lista Jeral Membru')
+		self.assertContains(resp, 'Grafik Membru')
+		self.assertNotContains(resp, 'href="/membro/aprovasaun/"')
+		self.assertContains(resp, 'chart_suku')
+		self.login('presidente')
+		resp = self.client.get(reverse('report-dash'))
+		self.assertContains(resp, 'Hein Aprovasaun (1)')
+		self.assertNotContains(resp, 'Aumenta Membru')
+		self.assertContains(resp, 'Membru Tinan Ativu 2026')
