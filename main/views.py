@@ -1,133 +1,119 @@
-from urllib.parse import urlencode
+import logging
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from django.db.models import Count, Q
-from django.http import HttpResponse
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.views import LoginView
+from django.core.cache import cache
+from django.db import connection
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 from config import roles
-from config.user_utils import c_user_group, c_user_scope, membro_ativu
-from custom.models import Village, Aldeia, Organizasaun, Year
-from report.utils import matrix_rows
+from config.user_utils import c_user_group
+from notification.utils import notif_counts
 
+logger = logging.getLogger('pdpada')
 ROLE_NAME = dict(roles.ROLE_LABELS)
 
-# Tabel dan grafik di Varanda mengikuti wilayah peran: (judul, parameter filter, field id, field nama)
-TABLES = {
-	'postu': [('Suku', 'village', 'village_id', 'village__name'), ('Organizasaun', 'organizasaun', 'organizasaun_id', 'organizasaun__code')],
-	'suku': [('Aldeia', 'aldeia', 'aldeia_id', 'aldeia__name')],
-	'aldeia': [('Organizasaun', 'organizasaun', 'organizasaun_id', 'organizasaun__code')],
-	'org': [('Suku', 'village', 'village_id', 'village__name')],
-}
-CHARTS = {  # (nama url API, judul grafik)
-	'postu': ('api-suku', 'Grafiku membru por suku'),
-	'suku': ('api-aldeia', 'Grafiku membru por aldeia'),
-	'aldeia': ('api-organizasaun', 'Grafiku membru por organizasaun'),
-	'org': ('api-suku', 'Grafiku membru por suku'),
-}
-HEAD = ['Total', 'Mane', 'Feto', 'Aprovadu', 'Pendente', 'Rejeitadu']
+LOGIN_MAX_FAILS = 5            # percobaan gagal sebelum dikunci
+LOGIN_LOCK_SECONDS = 15 * 60   # lama kunci (detik)
 
 
-def _level(group):
-	if group in roles.POSTU_ROLES:
-		return 'postu'
-	if group in roles.SUKU_ROLES:
-		return 'suku'
-	if group in roles.ALDEIA_ROLES:
-		return 'aldeia'
-	return 'org'
+class ThrottledLoginView(LoginView):
+	"""Login dengan pembatasan percobaan gagal per (alamat, username): 5 kali dalam 15 menit."""
+	template_name = 'home/login.html'
+	redirect_authenticated_user = True
+
+	def _key(self):
+		username = (self.request.POST.get('username') or '').strip().lower()[:150]
+		return f"login-fail:{self.request.META.get('REMOTE_ADDR', '')}:{username}"
+
+	def post(self, request, *args, **kwargs):
+		if cache.get(self._key(), 0) >= LOGIN_MAX_FAILS:
+			logger.warning('login diblokir sementara: %s', self._key())
+			form = AuthenticationForm(request=request)
+			return self.render_to_response(self.get_context_data(form=form, throttled=True), status=429)
+		return super().post(request, *args, **kwargs)
+
+	def form_invalid(self, form):
+		cache.add(self._key(), 0, LOGIN_LOCK_SECONDS)
+		try:
+			cache.incr(self._key())
+		except ValueError:  # kunci kedaluwarsa di antara dua panggilan
+			cache.set(self._key(), 1, LOGIN_LOCK_SECONDS)
+		return super().form_invalid(form)
+
+	def form_valid(self, form):
+		cache.delete(self._key())
+		return super().form_valid(form)
 
 
-def _cells(row, key=None):
-	"""Enam sel angka (nilai, tautan ke daftar membru terfilter)."""
-	base = reverse('membro-list')
+def _tiles(group, counts):
+	"""Pintasan beranda sesuai peran: (judul, keterangan, ikon, url, badge)."""
+	tiles = []
 
-	def link(extra=None):
-		params = {}
-		if key:
-			params[key] = row['id']
-		if extra:
-			params.update(extra)
-		return base + ('?' + urlencode(params) if params else '')
-	return [
-		(row['total'], link()), (row['mane'], link({'sex': 'Mane'})), (row['feto'], link({'sex': 'Feto'})),
-		(row['aprovadu'], link({'aprovasaun': 'Aprovadu'})), (row['pendente'], link({'aprovasaun': 'Pendente'})),
-		(row['rejeitadu'], link({'aprovasaun': 'Rejeitadu'})),
-	]
+	def add(title, desc, icon, url, badge=0):
+		tiles.append({'title': title, 'desc': desc, 'icon': icon, 'url': url, 'badge': badge})
 
-
-def _banner(group, scope):
-	"""Dua baris judul banner: peran dan wilayahnya."""
-	name = ROLE_NAME.get(group, '').upper()
-	if group in roles.POSTU_ROLES:
-		return name, 'POSTU DOM ALEIXO'
-	if scope and group in roles.SUKU_ROLES and scope.village_id:
-		return name, f'SUKU {scope.village.name.upper()}'
-	if scope and group in roles.ALDEIA_ROLES and scope.aldeia_id:
-		return name, f'ALDEIA {scope.aldeia.name.upper()} · SUKU {scope.aldeia.village.name.upper()}'
-	if scope and group in roles.ORG_ROLES and scope.organizasaun_id:
-		return name, f'ORGANIZASAUN {scope.organizasaun.code}'
-	return name, 'SGDM-PDPADA'
-
-
-def _member_context(user, group):
-	scope = c_user_scope(user)
-	qs = membro_ativu(user)
-	level = _level(group)
-	tot = qs.aggregate(
-		total=Count('id'), mane=Count('id', filter=Q(sex='Mane')), feto=Count('id', filter=Q(sex='Feto')),
-		aprovadu=Count('id', filter=Q(aprovasaun='Aprovadu')), pendente=Count('id', filter=Q(aprovasaun='Pendente')),
-		rejeitadu=Count('id', filter=Q(aprovasaun='Rejeitadu')))
-	tables = []
-	for title, key, id_field, name_field in TABLES[level]:
-		rows = matrix_rows(qs, id_field, name_field)
-		tables.append({
-			'title': title, 'rows': [dict(r, cells=_cells(r, key)) for r in rows],
-			'total_cells': _cells(dict(tot, id=0)),
-		})
-	line1, line2 = _banner(group, scope)
-	chart_name, chart_title = CHARTS[level]
-	return {
-		'kind': 'member', 'tot': tot, 'tables': tables, 'head': HEAD, 'banner': (line1, line2),
-		'can_add': group in roles.INPUT_ROLES, 'can_aprova': group in roles.APROVA_ROLES,
-		'chart_url': reverse(chart_name), 'chart_title': chart_title,
-	}
-
-
-def _admin_context():
-	by_role = {r['groups__name']: r['n'] for r in User.objects.filter(is_active=True).values('groups__name').annotate(n=Count('id'))}
-	return {
-		'kind': 'admin', 'banner': ('ADMIN', 'SGDM-PDPADA'),
-		'users_by_role': [(label, by_role.get(key, 0)) for key, label in roles.ROLE_LABELS],
-		'master': [
-			('Suku', Village.objects.count(), reverse('master-list', args=['suku'])),
-			('Aldeia', Aldeia.objects.count(), reverse('master-list', args=['aldeia'])),
-			('Organizasaun', Organizasaun.objects.filter(is_active=True).count(), reverse('master-list', args=['organizasaun'])),
-			('Tinan', Year.objects.count(), reverse('master-list', args=['ano'])),
-		],
-		'users_total': sum(by_role.values()),
-	}
+	if group == roles.ADMIN:
+		add('Painel Admin', 'Sumariu uzuáriu no data master', 'fa-tachometer', reverse('user-painel'))
+		add('Uzuáriu', 'Kria no jere konta ho peran no wilayah', 'fa-users', reverse('user-list'))
+		add('Suku no Aldeia', 'Rejistu wilayah Postu Dom Aleixo', 'fa-map-marker', reverse('master-list', args=['suku']))
+		add('Organizasaun', 'OJD, OPD, MPD no seluk', 'fa-flag', reverse('master-list', args=['organizasaun']))
+		add('Tinan Ativu', 'Troka tinan ne\'ebé uza ba relatoriu', 'fa-calendar', reverse('master-list', args=['ano']))
+		add('Historia', 'Rekorda mudansa dadus tomak', 'fa-history', reverse('historia-list'))
+		return tiles
+	if group not in roles.VIEW_ROLES:
+		return tiles
+	add('Painel Membru', 'Total, sexu no aprovasaun tuir wilayah', 'fa-tachometer', reverse('membro-painel'))
+	add('Lista Membru', 'Hare, filtra no hili dadus membru', 'fa-list', reverse('membro-list'))
+	if group in roles.INPUT_ROLES:
+		add('Aumenta Membru', 'Rejistu membru foun', 'fa-user-plus', reverse('membro-add'))
+		add('Membru Rejeitadu', 'Koriji dadus ne\'ebé rejeitadu', 'fa-exclamation-triangle',
+			reverse('membro-list') + '?aprovasaun=Rejeitadu&ano=hotu', counts['rejeitadu'])
+	if group in roles.APROVA_ROLES:
+		add('Hein Aprovasaun', 'Aprova ka rejeita membru foun', 'fa-check-square-o', reverse('aprovasaun-list'), counts['pendente'])
+	add('Pesquiza', 'Buka membru ho lalais', 'fa-search', reverse('membro-cari'))
+	if group in roles.DUPLIKAT_ROLES:
+		add('Dupla Potensial', 'Verifika membru ne\'ebé bele dupla', 'fa-clone', reverse('membro-dupla'))
+	add('Relatoriu Tabular', 'Tabela rekapitulasaun ho tautan', 'fa-table', reverse('report-dash'))
+	add('Relatoriu Grafiku', 'Grafiku membru tuir kategoria', 'fa-bar-chart', reverse('report-chart'))
+	add('Struktura PD', 'Coordenador no Sekretariu tuir nivel', 'fa-sitemap', reverse('alokasaun-dash'))
+	if group in roles.HISTORIA_ROLES:
+		add('Historia', 'Rekorda mudansa dadus', 'fa-history', reverse('historia-list'))
+	return tiles
 
 
 @login_required
 def home(request):
+	"""Beranda ringan: sambutan, pencarian, dan pintasan sesuai peran (tanpa query berat)."""
 	group = c_user_group(request.user)
+	_, counts = notif_counts(request.user)
 	context = {
-		'group': group, 'title': 'Varanda', 'legend': 'Varanda',
-		'meta_description': 'Varanda SGDM-PDPADA: rekapitulasaun membru Partido Democratico, Postu Dom Aleixo.',
+		'group': group, 'role_label': ROLE_NAME.get(group, ''),
+		'tiles': _tiles(group, counts), 'can_search': group in roles.VIEW_ROLES, 'notif_counts': counts,
+		'title': 'Varanda', 'legend': 'Varanda',
+		'meta_description': 'SGDM-PDPADA: Sistema Jestaun Dadus Membru Partido Democratico, Postu Administrativu Dom Aleixo, Dili.',
 	}
-	if group == roles.ADMIN:
-		context.update(_admin_context())
-	elif group in roles.VIEW_ROLES:
-		context.update(_member_context(request.user, group))
-	else:
-		context['kind'] = 'norole'
 	return render(request, 'home/home.html', context)
 
 
 def robots_txt(request):
 	"""Sistem privat: larang semua mesin pencari."""
 	return HttpResponse('User-agent: *\nDisallow: /\n', content_type='text/plain')
+
+
+def healthz(request):
+	"""Pemeriksaan kesehatan untuk pemantauan (tanpa login, tanpa data sensitif)."""
+	try:
+		with connection.cursor() as cursor:
+			cursor.execute('SELECT 1')
+			cursor.fetchone()
+		db = 'ok'
+	except Exception:  # noqa: BLE001 - laporan kesehatan harus selalu menjawab
+		logger.exception('healthz: database tidak dapat diakses')
+		db = 'error'
+	status = 200 if db == 'ok' else 503
+	return JsonResponse({'app': 'SGDM-PDPADA', 'status': 'ok' if db == 'ok' else 'error', 'database': db}, status=status)
 
 
 def error_403(request, exception=None):

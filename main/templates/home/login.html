@@ -18,7 +18,9 @@
 					LOGIN
 				</div>
 				<div class="card-body">
-					{% if form.errors %}
+					{% if throttled %}
+						<div class="alert alert-warning p-2" role="alert">Tentativa gagal barak liu. Hein minutu 15 no koko fali.</div>
+					{% elif form.errors %}
 						<div class="alert alert-danger p-2" role="alert">Username ka password la loos.</div>
 					{% endif %}
 					<form method="POST" novalidate>

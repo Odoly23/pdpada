@@ -129,6 +129,16 @@ python manage.py collectstatic --noinput
 
 > Setiap pembaruan bisa membawa migrasi baru. Jika `migrate` terlewat, halaman akan menampilkan `no such column`.
 
+## 8. Cadangan harian dan pemantauan
+
+Tab **Tasks** → *Create a scheduled task* (harian), perintah:
+
+```
+cd /home/USERNAME/pdpada && /home/USERNAME/.virtualenvs/Env/bin/python manage.py backup_data
+```
+
+Hasilnya `~/pdpada/backups/pdpada-*.zip` (14 terakhir; berisi database + foto + PDF eleitoral). Unduh salinan ke tempat lain secara berkala. Pemantauan: `https://USERNAME.pythonanywhere.com/healthz/` harus menjawab `{"status":"ok"}`. Panduan lengkap: `docs/MAINTENANCE.md`.
+
 ## Catatan akun gratis
 
 - Web app harus diperpanjang dengan tombol **Run until...** di tab Web (jadwal sekitar tiap 3 bulan).

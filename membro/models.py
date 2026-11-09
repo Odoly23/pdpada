@@ -53,6 +53,23 @@ class Membro(HashedModel):
 
 	class Meta:
 		ordering = ['nome']
+		# Indeks mengikuti query nyata: daftar/dashboard per wilayah + status, pencarian nama,
+		# deteksi dobel (nama + tanggal lahir). nu_eleitoral dan hashed sudah unik (terindeks).
+		indexes = [
+			models.Index(fields=['nome', 'date_of_birth'], name='membro_nome_dob_idx'),
+			models.Index(fields=['year', 'aprovasaun'], name='membro_year_aprov_idx'),
+			models.Index(fields=['village', 'aprovasaun'], name='membro_vil_aprov_idx'),
+			models.Index(fields=['aldeia', 'aprovasaun'], name='membro_ald_aprov_idx'),
+			models.Index(fields=['organizasaun', 'aprovasaun'], name='membro_org_aprov_idx'),
+			models.Index(fields=['date_of_birth'], name='membro_dob_idx'),
+			models.Index(fields=['telefone'], name='membro_telefone_idx'),
+		]
+		# Integritas di level database (bukan hanya form): nilai pilihan harus valid
+		constraints = [
+			models.CheckConstraint(condition=models.Q(sex__in=[c[0] for c in SEXU]), name='membro_sex_valid'),
+			models.CheckConstraint(condition=models.Q(aprovasaun__in=[c[0] for c in APROVASAUN]), name='membro_aprovasaun_valid'),
+			models.CheckConstraint(condition=models.Q(status__in=[c[0] for c in STATUS]), name='membro_status_valid'),
+		]
 
 	def __str__(self):
 		template = '{0.nome} ({0.nu_eleitoral})'
@@ -80,6 +97,12 @@ class Alokasaun(models.Model):
 
 	class Meta:
 		ordering = ['-ativu', 'nivel', 'pozisaun']
+		indexes = [models.Index(fields=['ativu', 'nivel', 'pozisaun'], name='aloka_ativu_niv_poz_idx')]
+		constraints = [
+			models.CheckConstraint(condition=models.Q(nivel__in=[c[0] for c in NIVEL]), name='aloka_nivel_valid'),
+			models.CheckConstraint(condition=models.Q(pozisaun__in=[c[0] for c in POZISAUN]), name='aloka_pozisaun_valid'),
+			models.CheckConstraint(condition=models.Q(ativu__in=['Sim', 'Lae']), name='aloka_ativu_valid'),
+		]
 
 	def unit(self):
 		return self.village or self.aldeia or self.organizasaun
@@ -100,6 +123,10 @@ class Historia(models.Model):
 
 	class Meta:
 		ordering = ['-datetime', '-id']
+		indexes = [
+			models.Index(fields=['-datetime'], name='historia_datetime_idx'),
+			models.Index(fields=['aksaun', '-datetime'], name='historia_aksaun_idx'),
+		]
 
 	def __str__(self):
 		template = '{0.datetime:%Y-%m-%d %H:%M} {0.aksaun} {0.membro_nome}'

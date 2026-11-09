@@ -17,31 +17,41 @@ def _item(request, label, icon, name, args=(), names=(), match_kwargs=None):
 	return {'label': label, 'icon': icon, 'url': url, 'active': active, 'children': []}
 
 
+def _dropdown(label, icon, children):
+	"""Menu induk dengan anak; aktif jika salah satu anak aktif."""
+	return {'label': label, 'icon': icon, 'url': '#', 'children': children, 'active': any(c['active'] for c in children)}
+
+
 def _menu(request, group):
 	items = [_item(request, 'Varanda', 'fa-home', 'home')]
 	if group == roles.ADMIN:
+		items.append(_item(request, 'Painel', 'fa-tachometer', 'user-painel'))
 		items.append(_item(request, 'Uzuáriu', 'fa-users', 'user-list', names=('user-list', 'user-add', 'user-update')))
-		master = {'label': 'Data Master', 'icon': 'fa-database', 'url': '#', 'active': False, 'children': []}
-		for tipu, label, icon in [('suku', 'Suku', 'fa-map-marker'), ('aldeia', 'Aldeia', 'fa-map-o'),
-				('organizasaun', 'Organizasaun', 'fa-flag'), ('ano', 'Tinan Ativu', 'fa-calendar')]:
-			master['children'].append(_item(request, label, icon, 'master-list', args=(tipu,),
-				names=('master-list', 'master-add', 'master-update'), match_kwargs={'tipu': tipu}))
-		master['active'] = any(c['active'] for c in master['children'])
-		items.append(master)
+		master = [_item(request, label, icon, 'master-list', args=(tipu,), names=('master-list', 'master-add', 'master-update'),
+				match_kwargs={'tipu': tipu})
+			for tipu, label, icon in [('suku', 'Suku', 'fa-map-marker'), ('aldeia', 'Aldeia', 'fa-map-o'),
+				('organizasaun', 'Organizasaun', 'fa-flag'), ('ano', 'Tinan Ativu', 'fa-calendar')]]
+		items.append(_dropdown('Data Master', 'fa-database', master))
 		items.append(_item(request, 'Historia', 'fa-history', 'historia-list'))
 		return items
 	if group in roles.VIEW_ROLES:
-		rel = {'label': 'Relatoriu', 'icon': 'fa-list', 'url': '#', 'active': False, 'children': [
-			_item(request, 'Tabular', 'fa-table', 'report-dash'),
-			_item(request, 'Grafiku', 'fa-bar-chart', 'report-chart')]}
-		rel['active'] = any(c['active'] for c in rel['children'])
-		items.append(rel)
-		items.append(_item(request, 'Membru', 'fa-list', 'membro-list', names=('membro-list', 'membro-detail', 'membro-update')))
+		items.append(_item(request, 'Painel', 'fa-tachometer', 'membro-painel'))
+		membru = [
+			_item(request, 'Lista Membru', 'fa-list', 'membro-list', names=('membro-list', 'membro-detail', 'membro-update')),
+			_item(request, 'Pesquiza', 'fa-search', 'membro-cari'),
+		]
 		if group in roles.INPUT_ROLES:
-			items.append(_item(request, 'Aumenta', 'fa-plus', 'membro-add'))
+			membru.append(_item(request, 'Aumenta Membru', 'fa-user-plus', 'membro-add'))
 		if group in roles.APROVA_ROLES:
-			items.append(_item(request, 'Aprovasaun', 'fa-check-square-o', 'aprovasaun-list', names=('aprovasaun-list', 'aprovasaun-rejeita')))
-		items.append(_item(request, 'Struktura', 'fa-sitemap', 'alokasaun-dash', names=('alokasaun-dash', 'alokasaun-list', 'alokasaun-add', 'alokasaun-update')))
+			membru.append(_item(request, 'Hein Aprovasaun', 'fa-check-square-o', 'aprovasaun-list', names=('aprovasaun-list', 'aprovasaun-rejeita')))
+		if group in roles.DUPLIKAT_ROLES:
+			membru.append(_item(request, 'Dupla Potensial', 'fa-clone', 'membro-dupla'))
+		items.append(_dropdown('Membru', 'fa-users', membru))
+		items.append(_dropdown('Relatoriu', 'fa-list', [
+			_item(request, 'Tabular', 'fa-table', 'report-dash'),
+			_item(request, 'Grafiku', 'fa-bar-chart', 'report-chart')]))
+		items.append(_item(request, 'Struktura', 'fa-sitemap', 'alokasaun-dash',
+			names=('alokasaun-dash', 'alokasaun-list', 'alokasaun-add', 'alokasaun-update')))
 		if group in roles.HISTORIA_ROLES:
 			items.append(_item(request, 'Historia', 'fa-history', 'historia-list'))
 	return items

@@ -381,12 +381,12 @@ class LayoutAndReportTests(BaseCase):
 		return [i['label'] for i in resp.context['nav_items']]
 
 	def test_menu_per_role(self):
-		self.assertEqual(self.menu('admin'), ['Varanda', 'Uzuáriu', 'Data Master', 'Historia'])
+		self.assertEqual(self.menu('admin'), ['Varanda', 'Painel', 'Uzuáriu', 'Data Master', 'Historia'])
 		self.assertEqual(self.menu('presidente'),
-			['Varanda', 'Relatoriu', 'Membru', 'Aprovasaun', 'Struktura', 'Historia'])
-		self.assertEqual(self.menu('sekrsuku'), ['Varanda', 'Relatoriu', 'Membru', 'Aumenta', 'Struktura'])
-		self.assertEqual(self.menu('sekrorg'), ['Varanda', 'Relatoriu', 'Membru', 'Aumenta', 'Struktura'])
-		self.assertEqual(self.menu('koordsuku'), ['Varanda', 'Relatoriu', 'Membru', 'Struktura'])
+			['Varanda', 'Painel', 'Membru', 'Relatoriu', 'Struktura', 'Historia'])
+		self.assertEqual(self.menu('sekrsuku'), ['Varanda', 'Painel', 'Membru', 'Relatoriu', 'Struktura'])
+		self.assertEqual(self.menu('sekrorg'), ['Varanda', 'Painel', 'Membru', 'Relatoriu', 'Struktura'])
+		self.assertEqual(self.menu('koordsuku'), ['Varanda', 'Painel', 'Membru', 'Relatoriu', 'Struktura'])
 
 	def test_active_menu_item(self):
 		self.login('presidente')
@@ -622,7 +622,7 @@ import shutil
 import tempfile
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import override_settings
+from django.test import override_settings, TransactionTestCase
 from PIL import Image
 from unittest import mock
 from pypdf import PdfWriter
@@ -933,7 +933,7 @@ class ReplaceAndDeleteFilesTests(UploadBase):
 		self.assertNotRegex(h.detalhe, r'[0-9a-f]{64}')
 
 
-class VarandaTests(BaseCase):
+class PainelTests(BaseCase):
 	def setUp(self):
 		self.opd = Organizasaun.objects.create(code='OPD', name='OPD')
 		self.make('VR00001', self.va, self.a1, organizasaun=self.org, sex='Mane', aprovasaun='Aprovadu')
@@ -942,7 +942,7 @@ class VarandaTests(BaseCase):
 
 	def home(self, user):
 		self.login(user)
-		resp = self.client.get('/')
+		resp = self.client.get(reverse('membro-painel'))
 		self.assertEqual(resp.status_code, 200)
 		return resp
 
@@ -1015,20 +1015,6 @@ class VarandaTests(BaseCase):
 		self.assertNotContains(resp, 'Chart.min.js')
 		self.assertNotContains(resp, 'https://')
 
-	def test_admin_home_has_no_member_data(self):
-		resp = self.home('admin')
-		self.assertEqual(resp.context['kind'], 'admin')
-		self.assertNotIn('tables', resp.context)
-		roles_count = dict(resp.context['users_by_role'])
-		self.assertEqual(roles_count['Sekretariu Organizasaun'], 1)
-		self.assertEqual(resp.context['users_total'], 10)
-		self.assertNotContains(resp, 'chart_home')
-		self.assertNotContains(resp, 'Membru Por')
-
-	def test_user_without_role_gets_notice(self):
-		User.objects.create_user('tanpa', password='Teste-12345!')
-		self.client.login(username='tanpa', password='Teste-12345!')
-		self.assertContains(self.client.get('/'), 'seidauk iha peran')
 
 
 class SekrOrgInputTests(BaseCase):
@@ -1122,7 +1108,7 @@ class MetaTagTests(BaseCase):
 		self.login('presidente')
 		resp = self.client.get('/')
 		self.assertContains(resp, '<title>SGDM-PDPADA - Varanda</title>')
-		self.assertContains(resp, 'content="Varanda SGDM-PDPADA: rekapitulasaun membru')
+		self.assertContains(resp, 'content="SGDM-PDPADA: Sistema Jestaun Dadus Membru Partido Democratico')
 		self.assertContains(resp, 'property="og:url" content="http://testserver/"')
 
 	def test_robots_txt_disallows_everything(self):
@@ -1302,3 +1288,460 @@ class LoginPageTests(BaseCase):
 	def test_logged_in_user_is_redirected_from_login(self):
 		self.login('presidente')
 		self.assertEqual(self.client.get(reverse('login')).status_code, 302)
+
+
+# ---------------------------------------------------------------- beranda, painel admin, fitur baru
+import csv
+from django.core.cache import cache
+from django.core.management import call_command
+from django.core.management.base import CommandError
+from django.db import IntegrityError, connection
+from django.test.utils import CaptureQueriesContext
+import zipfile
+from pathlib import Path
+from django.db import transaction
+
+
+class LandingTests(BaseCase):
+	def tiles(self, user):
+		self.login(user)
+		resp = self.client.get('/')
+		self.assertEqual(resp.status_code, 200)
+		return resp, {t['title']: t for t in resp.context['tiles']}
+
+	def test_hero_has_title_full_flag_and_welcome(self):
+		resp, _ = self.tiles('presidente')
+		for needle in ('SISTEMA JESTAUN', 'SGDM-PDPADA', "Hanoin &middot; Hari'i &middot; Hametin", 'Bainhira,', 'Presidente Postu',
+				'width="592" height="337"', 'bandeira_pd.png', 'Tinan 2026'):
+			self.assertContains(resp, needle)
+		self.assertNotContains(resp, 'logo_pd')
+
+	def test_tiles_for_approver(self):
+		self.make('LD00001'); self.make('LD00002')
+		_, tiles = self.tiles('presidente')
+		self.assertEqual(tiles['Hein Aprovasaun']['badge'], 2)
+		for t in ('Painel Membru', 'Lista Membru', 'Pesquiza', 'Dupla Potensial', 'Relatoriu Tabular', 'Relatoriu Grafiku', 'Struktura PD', 'Historia'):
+			self.assertIn(t, tiles)
+		self.assertNotIn('Aumenta Membru', tiles)
+
+	def test_tiles_for_secretaries_and_viewers(self):
+		self.make('LD00003', aprovasaun='Rejeitadu')
+		for u in ('sekrsuku', 'sekraldeia', 'sekrorg'):
+			_, tiles = self.tiles(u)
+			self.assertIn('Aumenta Membru', tiles, u)
+			self.assertIn('Membru Rejeitadu', tiles, u)
+			self.assertNotIn('Hein Aprovasaun', tiles, u)
+			self.assertNotIn('Dupla Potensial', tiles, u)
+		self.assertEqual(self.tiles('sekrsuku')[1]['Membru Rejeitadu']['badge'], 1)
+		_, tiles = self.tiles('koordsuku')
+		self.assertNotIn('Aumenta Membru', tiles)
+		self.assertNotIn('Historia', tiles)
+
+	def test_admin_tiles_have_no_member_features(self):
+		resp, tiles = self.tiles('admin')
+		self.assertEqual(set(tiles), {'Painel Admin', 'Uzuáriu', 'Suku no Aldeia', 'Organizasaun', 'Tinan Ativu', 'Historia'})
+		self.assertFalse(resp.context['can_search'])
+		self.assertNotContains(resp, 'id="search-q"')
+
+	def test_search_box_only_for_member_roles(self):
+		resp, _ = self.tiles('presidente')
+		self.assertContains(resp, 'id="search-q"')
+		self.assertContains(resp, 'data-url="/membro/api/cari/"')
+
+	def test_user_without_role_gets_notice(self):
+		User.objects.create_user('tanpa', password='Teste-12345!')
+		self.client.login(username='tanpa', password='Teste-12345!')
+		self.assertContains(self.client.get('/'), 'seidauk iha peran')
+
+	def test_landing_is_lightweight(self):
+		self.login('presidente')
+		with CaptureQueriesContext(connection) as ctx:
+			self.client.get('/')
+		self.assertLessEqual(len(ctx), 12)
+		self.assertFalse(any('GROUP BY' in q['sql'] for q in ctx.captured_queries))
+
+	def test_requires_login(self):
+		self.client.logout()
+		self.assertEqual(self.client.get('/').status_code, 302)
+
+
+class PainelAdminTests(BaseCase):
+	def test_admin_panel_content(self):
+		self.login('admin')
+		resp = self.client.get(reverse('user-painel'))
+		self.assertEqual(resp.status_code, 200)
+		self.assertEqual(dict(resp.context['users_by_role'])['Sekretariu Organizasaun'], 1)
+		self.assertEqual(resp.context['users_total'], 10)
+		self.assertNotContains(resp, 'Membru Por')
+
+	def test_only_admin(self):
+		for u in ('presidente', 'sekrsuku', 'koordorg'):
+			self.login(u)
+			self.assertEqual(self.client.get(reverse('user-painel')).status_code, 403, u)
+
+	def test_member_panel_forbidden_for_admin(self):
+		self.login('admin')
+		self.assertEqual(self.client.get(reverse('membro-painel')).status_code, 403)
+
+
+class SearchTests(BaseCase):
+	def setUp(self):
+		self.m1 = self.make('SR00001', self.va, self.a1, nome='Maria da Silva', telefone='77001234')
+		self.m2 = self.make('SR00002', self.va, self.a2, nome='Jose Maria Soares')
+		self.m3 = self.make('SR00003', self.vb, self.b1, nome='Maria Gomes', telefone='77001234')
+		self.m4 = self.make('SR00004', self.va, self.a1, nome='<script>alert(1)</script> Hacker')
+
+	def names(self, user, q, url=None):
+		self.login(user)
+		resp = self.client.get(url or reverse('membro-cari'), {'q': q})
+		self.assertEqual(resp.status_code, 200)
+		return resp, {m.nu_eleitoral for m in resp.context['objects']}
+
+	def test_name_search_all_words_any_order_case_insensitive(self):
+		self.assertEqual(self.names('presidente', 'maria silva')[1], {'SR00001'})
+		self.assertEqual(self.names('presidente', 'SILVA MARIA')[1], {'SR00001'})
+		self.assertEqual(self.names('presidente', 'maria')[1], {'SR00001', 'SR00002', 'SR00003'})
+
+	def test_eleitoral_prefix_and_phone(self):
+		self.assertEqual(self.names('presidente', 'sr0000')[1], {'SR00001', 'SR00002', 'SR00003', 'SR00004'})
+		self.assertEqual(self.names('presidente', 'SR00002')[1], {'SR00002'})
+		self.assertEqual(self.names('presidente', '77001234')[1], {'SR00001', 'SR00003'})
+		self.assertEqual(self.names('presidente', '+670 7700 1234')[1], {'SR00001', 'SR00003'})
+
+	def test_results_limited_to_user_scope(self):
+		self.assertEqual(self.names('koordsuku', 'maria')[1], {'SR00001', 'SR00002'})  # Suku B tidak terlihat
+		self.assertEqual(self.names('sekraldeia', 'maria')[1], {'SR00001'})
+		self.assertEqual(self.names('koordorg', 'maria')[1], set())
+
+	def test_short_query_and_empty_query(self):
+		resp, found = self.names('presidente', 'm')
+		self.assertEqual(found, set())
+		self.assertContains(resp, 'Hakerek karakter 2 ka liu')
+		resp, found = self.names('presidente', '')
+		self.assertEqual(found, set())
+		self.assertNotContains(resp, 'rezultadu')
+
+	def test_html_in_names_is_escaped(self):
+		resp, _ = self.names('presidente', 'hacker')
+		self.assertNotContains(resp, '<script>alert(1)</script>')
+		self.assertContains(resp, '&lt;script&gt;')
+
+	def test_api_returns_max_8_with_detail_url(self):
+		for i in range(10):
+			self.make(f'SR1000{i}', nome=f'Pedro Teste {i}')
+		self.login('presidente')
+		data = self.client.get(reverse('api-membro-cari'), {'q': 'pedro teste'}).json()
+		self.assertEqual(len(data), 8)
+		self.assertEqual(set(data[0]), {'nome', 'nu_eleitoral', 'suku', 'aldeia', 'status', 'aprovasaun', 'url'})
+		self.assertTrue(data[0]['url'].startswith('/membro/'))
+
+	def test_api_scope_and_permissions(self):
+		self.login('koordsuku')
+		self.assertEqual({d['nu_eleitoral'] for d in self.client.get(reverse('api-membro-cari'), {'q': 'maria'}).json()}, {'SR00001', 'SR00002'})
+		self.login('admin')
+		self.assertEqual(self.client.get(reverse('api-membro-cari'), {'q': 'maria'}).status_code, 403)
+		self.client.logout()
+		self.assertIn(self.client.get(reverse('api-membro-cari'), {'q': 'maria'}).status_code, (401, 403))
+
+	def test_page_forbidden_for_admin(self):
+		self.login('admin')
+		self.assertEqual(self.client.get(reverse('membro-cari')).status_code, 403)
+
+
+class ExportTests(BaseCase):
+	def setUp(self):
+		self.make('EX00001', self.va, self.a1, nome='Ana Satu', sex='Feto', aprovasaun='Aprovadu')
+		self.make('EX00002', self.vb, self.b1, nome='=HYPERLINK("http://jahat")', sex='Mane')
+		self.make('EX00003', self.va, self.a2, nome='+cmd|calc', sex='Mane')
+
+	def rows(self, user, query=''):
+		self.login(user)
+		resp = self.client.get(reverse('membro-export') + query)
+		self.assertEqual(resp.status_code, 200)
+		body = b''.join(resp.streaming_content).decode('utf-8')
+		return resp, list(csv.reader(io.StringIO(body.lstrip('﻿'))))
+
+	def test_roles(self):
+		for u in ('presidente', 'koordpostu', 'sekrpostu'):
+			self.assertEqual(self.rows(u)[0].status_code, 200, u)
+		for u in ('sekrsuku', 'koordsuku', 'sekraldeia', 'koordorg', 'sekrorg', 'admin'):
+			self.login(u)
+			self.assertEqual(self.client.get(reverse('membro-export')).status_code, 403, u)
+		self.client.logout()
+		self.assertEqual(self.client.get(reverse('membro-export')).status_code, 302)
+
+	def test_headers_bom_and_complete_content(self):
+		resp, rows = self.rows('presidente')
+		self.assertEqual(resp['Content-Type'], 'text/csv; charset=utf-8')
+		self.assertRegex(resp['Content-Disposition'], r'^attachment; filename="membru-\d{8}-\d{4}\.csv"$')
+		self.assertEqual(resp['Cache-Control'], 'private, no-store')
+		self.assertEqual(rows[0][:3], ['Nu. Eleitoral', 'Naran', 'Sexu'])
+		self.assertEqual({r[0] for r in rows[1:]}, {'EX00001', 'EX00002', 'EX00003'})
+
+	def test_bom_present(self):
+		self.login('presidente')
+		raw = b''.join(self.client.get(reverse('membro-export')).streaming_content)
+		self.assertTrue(raw.startswith(b'\xef\xbb\xbf'))
+
+	def test_respects_filters_like_the_list(self):
+		_, rows = self.rows('presidente', '?sex=Feto')
+		self.assertEqual({r[0] for r in rows[1:]}, {'EX00001'})
+		_, rows = self.rows('presidente', '?village=%d' % self.va.pk)
+		self.assertEqual({r[0] for r in rows[1:]}, {'EX00001', 'EX00003'})
+		self.login('presidente')
+		listed = {m.nu_eleitoral for m in self.client.get(reverse('membro-list') + '?village=%d' % self.va.pk).context['objects']}
+		self.assertEqual(listed, {r[0] for r in rows[1:]})
+
+	def test_formula_injection_is_neutralised(self):
+		_, rows = self.rows('presidente')
+		names = {r[0]: r[1] for r in rows[1:]}
+		self.assertEqual(names['EX00002'], "'=HYPERLINK(\"http://jahat\")")
+		self.assertEqual(names['EX00003'], "'+cmd|calc")
+
+	def test_export_is_audited(self):
+		self.rows('presidente', '?sex=Mane')
+		h = Historia.objects.get(aksaun='Ekspor')
+		self.assertEqual(h.user, self.users['presidente'])
+		self.assertIn('2 membru', h.detalhe)
+		self.assertIn('sex=Mane', h.detalhe)
+
+	def test_button_only_for_export_roles(self):
+		self.login('presidente')
+		self.assertContains(self.client.get(reverse('membro-list')), 'Ekspor CSV')
+		self.login('sekrsuku')
+		self.assertNotContains(self.client.get(reverse('membro-list')), 'Ekspor CSV')
+
+
+class DuplicateReviewTests(BaseCase):
+	def setUp(self):
+		dob = datetime.date(1985, 7, 7)
+		self.d1 = self.make('DP00001', self.va, self.a1, nome='Joao Pereira', date_of_birth=dob)
+		self.d2 = self.make('DP00002', self.vb, self.b1, nome='JOAO PEREIRA', date_of_birth=dob)
+		self.other_dob = self.make('DP00003', nome='Joao Pereira', date_of_birth=datetime.date(1990, 1, 1))
+		self.t1 = self.make('DP00004', nome='Rosa Lopes', telefone='77889900')
+		self.t2 = self.make('DP00005', self.vb, self.b1, nome='Elena Cruz', telefone='77889900')
+		self.single = self.make('DP00006', nome='Unik Sekali', telefone='71112222')
+
+	def page(self, user='presidente'):
+		self.login(user)
+		resp = self.client.get(reverse('membro-dupla'))
+		self.assertEqual(resp.status_code, 200)
+		return resp
+
+	def test_groups_by_name_and_birth_date_case_insensitive(self):
+		groups = self.page().context['groups_nome']
+		self.assertEqual(len(groups), 1)
+		self.assertEqual({m.nu_eleitoral for m in groups[0]}, {'DP00001', 'DP00002'})  # tanggal lahir lain tidak ikut
+
+	def test_groups_by_phone(self):
+		groups = self.page().context['groups_tel']
+		self.assertEqual(len(groups), 1)
+		self.assertEqual({m.nu_eleitoral for m in groups[0]}, {'DP00004', 'DP00005'})
+
+	def test_unique_records_not_listed(self):
+		resp = self.page()
+		listed = {m.nu_eleitoral for g in resp.context['groups_nome'] + resp.context['groups_tel'] for m in g}
+		self.assertNotIn('DP00006', listed)
+
+	def test_clean_data_shows_success_notice(self):
+		Membro.objects.all().delete()
+		self.make('DP10001', nome='Sendiri Aja')
+		resp = self.page()
+		self.assertContains(resp, 'Laiha membru ho naran no data moris hanesan')
+		self.assertContains(resp, "Laiha Nu. Telemovel ne'ebé uza dala barak")
+
+	def test_roles(self):
+		for u in ('presidente', 'koordpostu'):
+			self.assertEqual(self.page(u).status_code, 200)
+		for u in ('sekrpostu', 'sekrsuku', 'koordsuku', 'sekrorg', 'admin'):
+			self.login(u)
+			self.assertEqual(self.client.get(reverse('membro-dupla')).status_code, 403, u)
+
+	def test_query_count_does_not_grow_with_number_of_groups(self):
+		self.login('presidente')
+
+		def count():
+			with CaptureQueriesContext(connection) as ctx:
+				self.client.get(reverse('membro-dupla'))
+			return len(ctx)
+		before = count()
+		for i in range(15):  # 15 pasangan dobel baru
+			dob = datetime.date(1970, 1, 1) + datetime.timedelta(days=i)
+			self.make(f'DQ{i:04d}A', nome=f'Pasangan {i}', date_of_birth=dob)
+			self.make(f'DQ{i:04d}B', self.vb, self.b1, nome=f'pasangan {i}', date_of_birth=dob)
+		self.assertEqual(count(), before)
+
+
+class DatabaseIntegrityTests(BaseCase):
+	def test_expected_indexes_exist_in_database(self):
+		with connection.cursor() as cursor:
+			membro = connection.introspection.get_constraints(cursor, 'membro_membro')
+			aloka = connection.introspection.get_constraints(cursor, 'membro_alokasaun')
+			historia = connection.introspection.get_constraints(cursor, 'membro_historia')
+			year = connection.introspection.get_constraints(cursor, 'custom_year')
+		for name in ('membro_nome_dob_idx', 'membro_year_aprov_idx', 'membro_vil_aprov_idx', 'membro_ald_aprov_idx',
+				'membro_org_aprov_idx', 'membro_dob_idx', 'membro_telefone_idx'):
+			self.assertIn(name, membro)
+		self.assertIn('aloka_ativu_niv_poz_idx', aloka)
+		self.assertIn('historia_datetime_idx', historia)
+		self.assertIn('historia_aksaun_idx', historia)
+		self.assertTrue(any(c['columns'] == ['hashed'] and c['unique'] for c in membro.values()))
+		self.assertTrue(any(c['columns'] == ['is_active'] and c['index'] for c in year.values()))
+
+	def test_database_rejects_invalid_choices(self):
+		m = self.make('DB00001')
+		for field, bad in (('sex', 'X'), ('aprovasaun', 'Mungkin'), ('status', 'Entah')):
+			with self.assertRaises(IntegrityError), transaction.atomic():
+				Membro.objects.filter(pk=m.pk).update(**{field: bad})
+		with self.assertRaises(IntegrityError), transaction.atomic():
+			Alokasaun.objects.create(membro=m, nivel='Negara', pozisaun='Coordenador', data_hahu=datetime.date(2026, 1, 1))
+		with self.assertRaises(IntegrityError), transaction.atomic():
+			Alokasaun.objects.create(membro=m, nivel='Postu', pozisaun='Raja', data_hahu=datetime.date(2026, 1, 1))
+
+	def test_hashed_is_unique(self):
+		a, b = self.make('DB00002'), self.make('DB00003')
+		with self.assertRaises(IntegrityError), transaction.atomic():
+			Membro.objects.filter(pk=b.pk).update(hashed=a.hashed)
+
+	def test_hashed_is_filled_for_all_hashed_models(self):
+		self.assertEqual(len(self.make('DB00004').hashed), 64)
+		self.assertEqual(len(Organizasaun.objects.create(code='XYZ', name='XYZ').hashed), 64)
+
+
+class LoginThrottleTests(BaseCase):
+	def setUp(self):
+		cache.clear()
+		self.addCleanup(cache.clear)
+
+	def attempt(self, user='presidente', password='salah'):
+		return self.client.post(reverse('login'), {'username': user, 'password': password})
+
+	def test_blocks_after_five_failures_even_with_correct_password(self):
+		for _ in range(5):
+			self.assertEqual(self.attempt().status_code, 200)
+		blocked = self.attempt(password='Teste-12345!')
+		self.assertEqual(blocked.status_code, 429)
+		self.assertContains(blocked, 'Tentativa gagal barak liu', status_code=429)
+		self.assertNotIn('_auth_user_id', self.client.session)
+
+	def test_other_username_is_not_affected(self):
+		for _ in range(5):
+			self.attempt('presidente')
+		self.assertEqual(self.attempt('koordpostu', 'Teste-12345!').status_code, 302)
+
+	def test_successful_login_resets_counter(self):
+		for _ in range(4):
+			self.attempt()
+		self.assertEqual(self.attempt(password='Teste-12345!').status_code, 302)
+		self.client.logout()
+		for _ in range(4):
+			self.assertEqual(self.attempt().status_code, 200)
+		self.assertEqual(self.attempt(password='Teste-12345!').status_code, 302)
+
+	def test_username_is_case_insensitive_for_throttling(self):
+		for u in ('Presidente', 'PRESIDENTE', 'presidente', 'presidente ', 'PresiDente'):
+			self.attempt(u)
+		self.assertEqual(self.attempt('presidente', 'Teste-12345!').status_code, 429)
+
+	def test_normal_error_message_still_shown_before_lock(self):
+		self.assertContains(self.attempt(), 'Username ka password la loos.')
+
+
+class HealthCheckTests(BaseCase):
+	def test_ok_without_login_and_without_sensitive_data(self):
+		resp = self.client.get('/healthz/')
+		self.assertEqual(resp.status_code, 200)
+		self.assertEqual(resp.json(), {'app': 'SGDM-PDPADA', 'status': 'ok', 'database': 'ok'})
+
+	def test_reports_503_when_database_fails(self):
+		with mock.patch('main.views.connection.cursor', side_effect=Exception('db mati')):
+			resp = self.client.get('/healthz/')
+		self.assertEqual(resp.status_code, 503)
+		self.assertEqual(resp.json()['status'], 'error')
+		self.assertNotIn('db mati', resp.content.decode())
+
+
+@override_settings(PRIVATE_ROOT=PRIVATE_TMP)
+class BackupCommandTests(TransactionTestCase):
+	"""Tanpa transaksi pembungkus (TransactionTestCase): backup SQLite butuh koneksi tanpa transaksi terbuka."""
+
+	def setUp(self):
+		mun = Municipality.objects.create(name='Dili')
+		post = AdministrativePost.objects.create(municipality=mun, name='Dom Aleixo')
+		village = Village.objects.create(administrativepost=post, name='Suku A')
+		self.aldeia = Aldeia.objects.create(village=village, name='A1')
+		year = Year.objects.create(year=2026, is_active=True)
+		Membro.objects.create(nome='Ana Cadangan', sex='Feto', date_of_birth=datetime.date(1990, 1, 1), nu_eleitoral='BK00001',
+			village=village, aldeia=self.aldeia, year=year)
+		for sub, name in (('foto', 'a.jpg'), ('eleitoral', 'b.pdf')):
+			target = Path(PRIVATE_TMP) / sub
+			target.mkdir(parents=True, exist_ok=True)
+			(target / name).write_bytes(b'isi ' + name.encode())
+		self.folder = tempfile.mkdtemp(prefix='pdpada-bk-')
+		self.addCleanup(shutil.rmtree, self.folder, ignore_errors=True)
+		self.addCleanup(shutil.rmtree, PRIVATE_TMP, ignore_errors=True)
+
+	def run_backup(self, keep=14):
+		out = io.StringIO()
+		call_command('backup_data', dir=self.folder, keep=keep, stdout=out)
+		return out.getvalue()
+
+	def test_zip_contains_consistent_database_and_private_files(self):
+		self.run_backup()
+		files = list(Path(self.folder).glob('pdpada-*.zip'))
+		self.assertEqual(len(files), 1)
+		self.assertEqual(oct(files[0].stat().st_mode & 0o777), '0o600')
+		with zipfile.ZipFile(files[0]) as z:
+			names = z.namelist()
+			self.assertIn('db.sqlite3', names)
+			self.assertIn('private/foto/a.jpg', names)
+			self.assertIn('private/eleitoral/b.pdf', names)
+			self.assertIsNone(z.testzip())
+			with tempfile.TemporaryDirectory() as tmp:
+				z.extract('db.sqlite3', tmp)
+				import sqlite3
+				db = sqlite3.connect(Path(tmp) / 'db.sqlite3')
+				self.assertEqual(db.execute("SELECT nome FROM membro_membro WHERE nu_eleitoral='BK00001'").fetchone()[0], 'Ana Cadangan')
+				self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0], 'ok')
+				db.close()
+
+	def test_rotation_keeps_only_newest(self):
+		for stamp in ('20200101-000001', '20200101-000002', '20200101-000003'):
+			(Path(self.folder) / f'pdpada-{stamp}.zip').write_bytes(b'x')
+		self.run_backup(keep=2)
+		names = sorted(p.name for p in Path(self.folder).glob('pdpada-*.zip'))
+		self.assertEqual(len(names), 2)
+		self.assertNotIn('pdpada-20200101-000001.zip', names)
+
+	def test_refuses_non_sqlite_and_invalid_keep(self):
+		with override_settings(DATABASES={'default': {'ENGINE': 'django.db.backends.mysql', 'NAME': 'x'}}):
+			with self.assertRaises(CommandError):
+				call_command('backup_data', stdout=io.StringIO())
+		with self.assertRaises(CommandError):
+			call_command('backup_data', keep=0, stdout=io.StringIO())
+
+	def test_works_without_private_folder(self):
+		shutil.rmtree(PRIVATE_TMP, ignore_errors=True)
+		self.run_backup()
+		with zipfile.ZipFile(next(Path(self.folder).glob('pdpada-*.zip'))) as z:
+			self.assertEqual(z.namelist(), ['db.sqlite3'])
+
+
+class BackupGuardTests(BaseCase):
+	def test_refuses_to_run_inside_open_transaction(self):
+		with self.assertRaises(CommandError) as ctx:
+			call_command('backup_data', stdout=io.StringIO())
+		self.assertIn('transaksi', str(ctx.exception))
+
+
+class ProductionSettingsTests(BaseCase):
+	def test_session_and_security_settings(self):
+		self.assertEqual(settings.SESSION_COOKIE_AGE, 12 * 3600)
+		self.assertTrue(settings.SESSION_COOKIE_HTTPONLY)
+		self.assertEqual(settings.SECURE_REFERRER_POLICY, 'same-origin')
+		self.assertTrue(settings.SECURE_CONTENT_TYPE_NOSNIFF)
+		self.assertEqual(settings.SECURE_HSTS_SECONDS, 0)
+
+	def test_logging_configured_for_application_logger(self):
+		self.assertIn('pdpada', settings.LOGGING['loggers'])
+		self.assertIn('console', settings.LOGGING['handlers'])

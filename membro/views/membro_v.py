@@ -10,22 +10,18 @@ from config.user_utils import c_user_group, membro_scope
 from custom.models import Year, Village, Aldeia, Organizasaun
 from membro.forms import MembroForm
 from membro.models import Membro, Alokasaun
-from membro.utils import snapshot, diff_snapshot, log_historia, apply_filters
+from membro.utils import snapshot, diff_snapshot, log_historia, membro_listing
 
 
 @login_required
 @allowed_users(allowed_roles=roles.VIEW_ROLES)
 def MembroList(request):
 	group = c_user_group(request.user)
-	objects = membro_scope(request.user).select_related('village', 'aldeia', 'organizasaun')
-	ano = Year.objects.filter(is_active=True).first()
-	semua_ano = request.GET.get('ano') == 'hotu'
-	if ano and not semua_ano:
-		objects = objects.filter(year=ano)
-	objects = apply_filters(objects, request.GET)
+	objects, semua_ano = membro_listing(request.user, request.GET)
 	context = {
 		'group': group, 'objects': objects, 'semua_ano': semua_ano,
 		'can_add': group in roles.INPUT_ROLES, 'can_aprova': group in roles.APROVA_ROLES,
+		'can_export': group in roles.EXPORT_ROLES,
 		'title': 'Lista Membru', 'legend': 'Lista Membru'
 	}
 	return render(request, 'membro/list.html', context)

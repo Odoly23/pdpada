@@ -26,6 +26,15 @@ Setelah login sebagai `admin`: isi **Data Master** (Suku dan Aldeia di Postu Dom
 
 Deploy ke PythonAnywhere: lihat [`docs/DEPLOY_PYTHONANYWHERE.md`](docs/DEPLOY_PYTHONANYWHERE.md). Data demo fiktif untuk presentasi: `python manage.py seed_demo --password '...'` (hapus dengan `--hapus`).
 
+## Fitur utama
+
+- **Varanda** (beranda): hero dengan bendera utuh, pencarian cepat, dan kartu pintasan sesuai peran. **Painel** (`/membro/painel/`): banner peran, tabel matriks bertaut, dan grafik.
+- **Pesquiza**: cari membru berdasarkan nama, Nu. Eleitoral, atau telepon, dengan saran otomatis; hanya dalam wilayah user.
+- **Ekspor CSV penuh** (peran Postu): sesuai filter dan wilayah, aman dari formula injection, tercatat di Historia.
+- **Dupla Potensial** (Presidente/Coordenador Postu): nama + tanggal lahir sama, atau nomor telepon sama.
+- **Backup** (`python manage.py backup_data`), **health check** (`/healthz/`), batas percobaan login, log berputar.
+- Database: indeks sesuai query nyata dan `CheckConstraint` untuk nilai pilihan. Lihat [`docs/MAINTENANCE.md`](docs/MAINTENANCE.md).
+
 ## Struktur
 
 | App | Isi |

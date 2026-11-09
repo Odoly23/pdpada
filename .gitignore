@@ -7,3 +7,5 @@ staticfiles/
 venv/
 .venv/
 private/
+backups/
+logs/

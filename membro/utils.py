@@ -1,5 +1,10 @@
 import datetime
+import re
+from functools import reduce
+from operator import and_
 from django.db.models import Q
+from config.user_utils import membro_scope
+from custom.models import Year
 from membro.models import Membro, Historia, Alokasaun, POZISAUN_POR_NIVEL
 
 SNAPSHOT_FIELDS = ['nome', 'sex', 'place_of_birth', 'date_of_birth', 'marital', 'nu_eleitoral',
@@ -91,3 +96,48 @@ def apply_alokasaun_filters(qs, params):
 		if val and val.isdigit():
 			qs = qs.filter(**{f'{key}_id': int(val)})
 	return qs
+
+
+def membro_listing(user, params):
+	"""Queryset daftar membru untuk user: wilayah + tinan ativu (kecuali ano=hotu) + filter GET.
+	Dipakai bersama oleh daftar dan ekspor CSV agar keduanya selalu sama."""
+	qs = membro_scope(user).select_related('village', 'aldeia', 'organizasaun')
+	ano = Year.objects.filter(is_active=True).first()
+	semua_ano = params.get('ano') == 'hotu'
+	if ano and not semua_ano:
+		qs = qs.filter(year=ano)
+	return apply_filters(qs, params), semua_ano
+
+
+SEARCH_MIN = 2
+
+
+def search_membro(user, q, limit=50):
+	"""Cari membru dalam wilayah user: semua kata ada di naran, awalan Nu. Eleitoral, atau Nu. Telemovel."""
+	q = ' '.join((q or '').split())
+	if len(q) < SEARCH_MIN:
+		return Membro.objects.none()
+	cond = reduce(and_, [Q(nome__icontains=word) for word in q.split()])
+	cond |= Q(nu_eleitoral__istartswith=q)
+	digits = re.sub(r'\D', '', q)
+	if digits.startswith('670') and len(digits) > 9:  # nomor disimpan tanpa kode negara (+670)
+		digits = digits[3:]
+	if len(digits) >= 6:
+		cond |= Q(telefone__contains=digits)
+	return membro_scope(user).filter(cond).select_related('village', 'aldeia', 'organizasaun').order_by('nome')[:limit]
+
+
+CSV_HEADER = ['Nu. Eleitoral', 'Naran', 'Sexu', 'Data Moris', 'Idade', 'Estado Civil', 'Nu. Telemovel', 'Suku', 'Aldeia',
+	'Hela Fatin', 'Organizasaun', 'Data Hakbit', 'Status', 'Aprovasaun', 'Tinan']
+
+
+def csv_safe(value):
+	"""Cegah CSV/formula injection: sel berawalan = + - @ dianggap rumus oleh Excel."""
+	text = '' if value is None else str(value)
+	return "'" + text if text[:1] in ('=', '+', '-', '@', '\t', '\r') else text
+
+
+def csv_row(m):
+	return [csv_safe(v) for v in (
+		m.nu_eleitoral, m.nome, m.sex, m.date_of_birth, m.age(), m.marital or '', m.telefone or '', m.village, m.aldeia,
+		m.address or '', m.organizasaun or '', m.data_hakbit or '', m.status, m.aprovasaun, m.year or '')]

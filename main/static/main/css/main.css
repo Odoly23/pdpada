@@ -352,3 +352,37 @@ tr.th-amber th { background-color: rgb(255, 187, 0) !important; color: #000 !imp
 .login-flag { display: block; width: 100%; max-width: 560px; height: auto; margin: 0 auto; object-fit: contain;
 	border: 1px solid #dfe2f2; border-radius: 6px; box-shadow: 0 6px 22px rgba(11,30,138,.25); }
 .login-motto { color: var(--navy); font-style: italic; letter-spacing: .08em; }
+
+/* pencarian dan saran */
+.search-suggest { position: absolute; left: 0; right: 0; top: 100%; z-index: 1030; background: #fff; border-radius: 0 0 6px 6px; max-height: 320px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.15); }
+.search-suggest .list-group-item { border-left: 3px solid var(--navy); }
+
+/* ---- Beranda (Varanda) ---- */
+.hero { border: 0; color: #fff; overflow: visible; /* daftar saran pencarian harus bisa keluar dari kartu */
+	background: radial-gradient(1200px 400px at 85% -10%, rgba(255,255,255,.14), transparent 60%), linear-gradient(135deg, #0b1e8a 0%, #071260 100%); }
+.hero .card-body { padding: 2rem; }
+.hero-eyebrow { font-size: .8rem; letter-spacing: .14em; opacity: .85; margin-bottom: .5rem; }
+.hero-title { font-family: Cambria, Georgia, serif; font-weight: 700; font-size: 2.3rem; line-height: 1.15; margin-bottom: .4rem; }
+.hero-sub { font-size: 1.15rem; letter-spacing: .3em; font-weight: 300; margin-bottom: .8rem; opacity: .95; }
+.hero-motto { font-style: italic; color: #ffd24d; letter-spacing: .08em; margin-bottom: 0; }
+.hero-flag { max-width: 380px; border: 2px solid rgba(255,255,255,.85); box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+.hero-rule { border-top: 1px solid rgba(255,255,255,.25); margin: 1.4rem 0 1rem; }
+.welcome-hi { font-size: 1.05rem; margin-right: .6rem; }
+.chip { display: inline-block; padding: .2rem .7rem; border-radius: 999px; background: #fff; color: var(--navy); font-size: .8rem; font-weight: 600; margin-left: .25rem; }
+.chip-soft { background: rgba(255,255,255,.18); color: #fff; font-weight: 400; }
+.chip-alert { background: #dc3545; color: #fff; text-decoration: none; }
+.chip-alert:hover { background: #bb2d3b; color: #fff; text-decoration: none; }
+.hero-search .form-control, .hero-search .input-group-text { border: 0; }
+.hero-search .btn-primary { background: #ffbb00; border-color: #ffbb00; color: #000; font-weight: 600; }
+.hero-search .search-suggest { color: #212529; text-align: left; }
+
+.tile { display: flex; align-items: center; gap: .9rem; padding: 1rem 1.1rem; background: #fff; border: 1px solid #dfe2f2; border-radius: 10px;
+	color: #212529; text-decoration: none; height: 100%; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+.tile:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(11,30,138,.18); border-color: var(--navy); color: #212529; text-decoration: none; }
+.tile-icon { flex: 0 0 auto; width: 46px; height: 46px; border-radius: 50%; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+.tile-body { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
+.tile-title { font-weight: 700; color: var(--navy); }
+.tile-desc { font-size: .82rem; color: #6c757d; }
+.tile-go { color: #adb5bd; font-size: 1.4rem; }
+.tile:hover .tile-go { color: var(--navy); }
+@media (max-width: 575px) { .hero .card-body { padding: 1.25rem; } .hero-title { font-size: 1.7rem; } }
