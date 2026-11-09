@@ -1,0 +1,4 @@
+<option value="">---------</option>
+{% for data in villages %}
+<option value="{{ data.pk }}">{{ data.name }}</option>
+{% endfor %}

@@ -1,0 +1,40 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1">
+	<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+	<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
+</ol>
+<div class="row">
+	<div class="col-sm-12">
+		<div class="card shadow-lg pt-0 rounded">
+			<div class="card-header">{{ legend|upper }}</div>
+			<div class="card-body">
+				<div class="mb-2 no-print">
+					<a class="btn btn-sm btn-outline-primary" href="{% url 'historia-list' %}">Hotu</a>
+					{% for a in aksauns %}<a class="btn btn-sm btn-outline-primary" href="?aksaun={{ a|urlencode }}">{{ a }}</a>{% endfor %}
+				</div>
+				<p class="text-muted"><small>Mostra to'o {{ limite }} rejistu ikus.</small></p>
+				<section id="no-more-tables">
+					<table class="table table-sm" id="example" width="100%" cellspacing="0">
+						<thead><tr><th>Data</th><th>Aksaun</th><th>Membru</th><th>Husi</th><th>Detalhe</th></tr></thead>
+						<tbody>
+							{% for h in objects %}
+							<tr>
+								<td data-title="Data">{{ h.datetime|date:"d/m/Y H:i" }}</td>
+								<td data-title="Aksaun">{{ h.aksaun }}</td>
+								<td data-title="Membru">{% if h.membro and group != 'admin' %}<a href="{% url 'membro-detail' h.membro.hashed %}">{{ h.membro_nome }}</a>{% else %}{{ h.membro_nome }}{% endif %}</td>
+								<td data-title="Husi">{{ h.user.get_username|default:"-" }}</td>
+								<td data-title="Detalhe" class="pre-wrap">{{ h.detalhe }}</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</section>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
+{% block scripts %}
+{% include 'main/datatable_full.html' %}
+{% endblock %}

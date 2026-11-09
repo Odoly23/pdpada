@@ -1,0 +1,53 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1">
+	<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+	<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
+</ol>
+<div class="row">
+	<div class="col-sm-12">
+		<div class="card shadow-lg pt-0 rounded">
+			<div class="card-header">{{ legend|upper }}</div>
+			<div class="card-body">
+				<form method="post" action="{% url 'aprovasaun-bulk' %}">{% csrf_token %}
+					<button class="btn btn-sm btn-primary mb-2" type="submit" onclick="return confirm('Aprova membru ne\'ebé hili?');"><i class="fa fa-check"></i> Aprova ne'ebé Hili</button>
+					<section id="no-more-tables">
+						<table class="table table-sm" id="example" width="100%" cellspacing="0">
+							<thead>
+								<tr>
+									<th class="no-export"><input type="checkbox" id="check-all" title="Hili hotu"></th>
+									<th>Nu. Eleitoral</th><th>Naran</th><th>Sexu</th><th>Suku</th><th>Aldeia</th><th>Organizasaun</th><th class="no-export">#</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for obj in objects %}
+								<tr>
+									<td><input type="checkbox" name="hashid" value="{{ obj.hashed }}"></td>
+									<td data-title="Nu. Eleitoral">{{ obj.nu_eleitoral }}</td>
+									<td data-title="Naran"><a href="{% url 'membro-detail' obj.hashed %}">{{ obj.nome }}</a></td>
+									<td data-title="Sexu">{{ obj.sex }}</td>
+									<td data-title="Suku">{{ obj.village }}</td>
+									<td data-title="Aldeia">{{ obj.aldeia }}</td>
+									<td data-title="Organizasaun">{{ obj.organizasaun|default_if_none:"-" }}</td>
+									<td>
+										<a class="btn btn-sm btn-danger" href="{% url 'aprovasaun-rejeita' obj.hashed %}" title="Rejeita"><i class="fa fa-times"></i></a>
+									</td>
+								</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+					</section>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script type="text/javascript">
+	$(document).ready(function () {
+		$('#example').DataTable({ order: [[2, 'asc']], columnDefs: [{ targets: [0, 7], orderable: false }] });
+		$('#check-all').on('change', function () { $('input[name=hashid]').prop('checked', this.checked); });
+	});
+</script>
+{% endblock %}

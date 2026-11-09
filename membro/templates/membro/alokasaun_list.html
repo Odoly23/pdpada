@@ -1,0 +1,51 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1">
+	<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+	<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
+</ol>
+<div class="row">
+	<div class="col-sm-12">
+		<div class="card shadow-lg pt-0 rounded">
+			<div class="card-header">{{ legend|upper }}</div>
+			<div class="card-body">
+				{% if can_aloka %}<a class="btn btn-sm btn-primary mb-2" href="{% url 'alokasaun-add' %}">Aloka Pozisaun <i class="fa fa-plus"></i></a>{% endif %}
+				<section id="no-more-tables">
+					<table class="table table-sm" id="example" width="100%" cellspacing="0">
+						<thead>
+							<tr><th>Nu.</th><th>Naran</th><th>Pozisaun</th><th>Nivel</th><th>Unidade</th><th>Data Hahu</th><th>Data Termina</th><th>Ativu</th>{% if can_aloka %}<th>#</th>{% endif %}</tr>
+						</thead>
+						<tbody>
+							{% for obj in objects %}
+							<tr>
+								<td data-title="Nu.">{{ forloop.counter }}</td>
+								<td data-title="Naran"><a href="{% url 'membro-detail' obj.membro.hashed %}">{{ obj.membro.nome }}</a></td>
+								<td data-title="Pozisaun">{{ obj.pozisaun }}</td>
+								<td data-title="Nivel">{{ obj.nivel }}</td>
+								<td data-title="Unidade">{{ obj.unit|default:"Postu Dom Aleixo" }}</td>
+								<td data-title="Data Hahu">{{ obj.data_hahu|date:"d/m/Y" }}</td>
+								<td data-title="Data Termina">{{ obj.data_termina|date:"d/m/Y"|default:"-" }}</td>
+								<td data-title="Ativu">{{ obj.ativu }}</td>
+								{% if can_aloka %}
+								<td>
+									<a class="btn btn-sm btn-success" href="{% url 'alokasaun-update' obj.pk %}" title="Edita"><i class="fa fa-edit"></i></a>
+									<form class="d-inline" method="post" action="{% url 'alokasaun-del' obj.pk %}" onsubmit="return confirm('Ita boot Hakarak Hamoos?');">{% csrf_token %}
+										<button class="btn btn-sm btn-danger" type="submit" title="Hamoos"><i class="fa fa-times"></i></button>
+									</form>
+								</td>
+								{% endif %}
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</section>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script type="text/javascript">
+	$(document).ready(function () { $('#example').DataTable(); });
+</script>
+{% endblock %}

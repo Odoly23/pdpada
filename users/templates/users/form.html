@@ -1,0 +1,15 @@
+{% extends "main/form.html" %}
+{% block form_scripts %}
+<script type="text/javascript">
+	// tampilkan kolom wilayah sesuai peran yang dipilih
+	function toggleScope() {
+		var g = $('#id_group').val() || '';
+		$('.scope-village').toggle(g.indexOf('_suku') > -1);
+		$('.scope-aldeia').toggle(g.indexOf('_aldeia') > -1);
+		$('.scope-organizasaun').toggle(g.indexOf('_org') > -1);
+		if (g.indexOf('_aldeia') > -1) { $('.scope-village').show(); }
+	}
+	$('#id_group').on('change', toggleScope);
+	toggleScope();
+</script>
+{% endblock %}

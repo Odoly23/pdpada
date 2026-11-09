@@ -1,0 +1,15 @@
+{% extends "main/form.html" %}
+{% block form_scripts %}
+<script type="text/javascript">
+	// tampilkan unit (suku/aldeia/organizasaun) sesuai nivel
+	function toggleUnit() {
+		var n = ($('#id_nivel').val() || '').toLowerCase();
+		$('.unit-suku, .unit-aldeia, .unit-organizasaun').hide();
+		if (n === 'suku') { $('.unit-suku').show(); }
+		if (n === 'aldeia') { $('.unit-aldeia').show(); }
+		if (n === 'organizasaun') { $('.unit-organizasaun').show(); }
+	}
+	$('#id_nivel').on('change', toggleUnit);
+	toggleUnit();
+</script>
+{% endblock %}

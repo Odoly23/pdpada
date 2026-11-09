@@ -1,0 +1,42 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1">
+	<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+	<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
+</ol>
+<div class="row">
+	<div class="col-sm-12">
+		<div class="card shadow-lg pt-0 rounded">
+			<div class="card-header">{{ legend|upper }}</div>
+			<div class="card-body">
+				<a class="btn btn-sm btn-primary mb-2" href="{% url 'user-add' %}">Aumenta <i class="fa fa-plus"></i></a>
+				<section id="no-more-tables">
+					<table class="table table-sm" id="example" width="100%" cellspacing="0">
+						<thead>
+							<tr><th>Nu.</th><th>Username</th><th>Naran</th><th>Peran</th><th>Suku/Aldeia/Organizasaun</th><th>Ativu</th><th>#</th></tr>
+						</thead>
+						<tbody>
+							{% for row in objects %}
+							<tr>
+								<td data-title="Nu.">{{ forloop.counter }}</td>
+								<td data-title="Username">{{ row.obj.username }}</td>
+								<td data-title="Naran">{{ row.obj.first_name }}</td>
+								<td data-title="Peran">{{ row.role }}</td>
+								<td data-title="Wilayah">{{ row.wilayah }}</td>
+								<td data-title="Ativu">{% if row.obj.is_active %}Sim{% else %}Lae{% endif %}</td>
+								<td><a class="btn btn-sm btn-success" href="{% url 'user-update' row.obj.pk %}" title="Edita"><i class="fa fa-edit"></i></a></td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</section>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script type="text/javascript">
+	$(document).ready(function () { $('#example').DataTable(); });
+</script>
+{% endblock %}
