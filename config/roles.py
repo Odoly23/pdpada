@@ -28,7 +28,7 @@ ALDEIA_ROLES = [KOORD_ALDEIA, SEKR_ALDEIA]
 ORG_ROLES = [KOORD_ORG, SEKR_ORG]
 
 # Hak akses
-INPUT_ROLES = [SEKR_SUKU, SEKR_ALDEIA]            # input dan edit data membru
+INPUT_ROLES = [SEKR_SUKU, SEKR_ALDEIA, SEKR_ORG]  # input dan edit data membru
 APROVA_ROLES = [PRESIDENTE, KOORD_POSTU]          # aprova atau rejeita
 ALOKA_ROLES = [PRESIDENTE]                        # aloka pozisaun (coordenador, dll)
 HISTORIA_ROLES = [ADMIN, PRESIDENTE, KOORD_POSTU]  # lee historia mudansa data

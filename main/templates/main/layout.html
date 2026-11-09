@@ -1,16 +1,49 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="tet">
+<html lang="tet" dir="ltr">
 	<head>
 		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
 		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 		{% if title %}
 			<title>SGDM-PDPADA - {{ title }}</title>
 		{% else %}
 			<title>SGDM-PDPADA</title>
 		{% endif %}
+		<meta name="description" content="{% if meta_description %}{{ meta_description }}{% else %}SGDM-PDPADA: Sistema Jestaun Dadus Membru Partido Democratico, Postu Administrativu Dom Aleixo, Munisipiu Dili, Timor-Leste.{% endif %}">
+		<meta name="keywords" content="Partido Democratico, PD, Dom Aleixo, Dili, Timor-Leste, membru, jestaun dadus, SGDM-PDPADA">
+		<meta name="author" content="Partido Democratico - Postu Dom Aleixo">
+		<meta name="application-name" content="SGDM-PDPADA">
+		<meta name="generator" content="Django">
+		<!-- Sistema privat: jangan diindeks mesin pencari -->
+		<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+		<meta name="googlebot" content="noindex, nofollow">
+		<meta name="referrer" content="same-origin">
+		<meta name="format-detection" content="telephone=no">
+		<meta name="color-scheme" content="light">
+		<meta name="theme-color" content="#0b1e8a">
+		<meta name="msapplication-TileColor" content="#0b1e8a">
+		<meta name="mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+		<meta name="apple-mobile-web-app-title" content="SGDM-PDPADA">
+		<!-- Open Graph / Twitter (pratinjau saat tautan dibagikan) -->
+		<meta property="og:type" content="website">
+		<meta property="og:site_name" content="SGDM-PDPADA">
+		<meta property="og:locale" content="tet_TL">
+		<meta property="og:title" content="{% if title %}SGDM-PDPADA - {{ title }}{% else %}SGDM-PDPADA{% endif %}">
+		<meta property="og:description" content="{% if meta_description %}{{ meta_description }}{% else %}Sistema Jestaun Dadus Membru Partido Democratico, Postu Dom Aleixo.{% endif %}">
+		<meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+		<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'main/images/logo_pd.png' %}">
+		<meta property="og:image:alt" content="Logo Partido Democratico">
+		<meta name="twitter:card" content="summary">
+		<meta name="twitter:title" content="{% if title %}SGDM-PDPADA - {{ title }}{% else %}SGDM-PDPADA{% endif %}">
+		<meta name="twitter:description" content="Sistema Jestaun Dadus Membru Partido Democratico, Postu Dom Aleixo.">
+		<meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'main/images/logo_pd.png' %}">
+		<link rel="icon" type="image/png" href="{% static 'main/images/favicon.png' %}">
+		<link rel="shortcut icon" href="{% static 'main/images/favicon.ico' %}">
+		<link rel="apple-touch-icon" href="{% static 'main/images/logo_pd.png' %}">
 		<link rel="stylesheet" href="{% static 'main/css/bootstrap.min.css' %}">
-		<link rel="icon" href="{% static 'main/images/favicon.png' %}">
 		<link rel="stylesheet" href="{% static 'main/font-awesome/css/font-awesome.min.css' %}">
 		<link href="{% static 'main/css/main.css' %}" rel="stylesheet">
 		<link href="{% static 'main/css/table-responsive.css' %}" rel="stylesheet" media="screen">

@@ -336,3 +336,7 @@ td.th-aldeia-s { background-color: #eceffd; font-weight: 600; }
 .card-header .btn-primary:hover, .card-header .btn-primary:focus { background-color: #dbe0fb; border-color: #dbe0fb; color: var(--navy-dk); }
 .card-header .btn-outline-primary { color: var(--white); border-color: var(--white); }
 .card-header .btn-outline-primary:hover { background-color: var(--white); color: var(--navy); }
+
+/* baris TOTAL: angka di tengah, label di kiri */
+tr.th-base td { text-align: center; background-color: #cfd6f7; }
+tr.th-base td.text-left { text-align: left; }

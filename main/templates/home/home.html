@@ -2,141 +2,122 @@
 {% load static %}
 {% block content %}
 	<ol class="breadcrumb mb-2 mt-1">
-		<li class="breadcrumb-item"><a href="{% url 'home' %}">DASHBOARD</a></li>
+		<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
 	</ol>
-	{% if not group %}
+	{% if kind == 'norole' %}
 		<div class="alert alert-warning">Konta ida ne'e seidauk iha peran. Kontaktu Admin.</div>
-	{% elif group == 'admin' %}
-		<div class="text-center mb-3 mt-1"><h3 class="text-muted">BAINHIRA, {{ user.first_name|default:user.username|upper }}</h3></div>
-		<p class="text-center">Admin jere uzuáriu, data master (suku, aldeia, organizasaun), tinan ativu no hare historia mudansa data.</p>
-		<div class="text-center">
-			<a class="btn btn-primary" href="{% url 'user-list' %}"><i class="fa fa-users"></i> Uzuáriu</a>
-			<a class="btn btn-primary" href="{% url 'master-list' 'ano' %}"><i class="fa fa-calendar"></i> Tinan Ativu</a>
-			<a class="btn btn-primary" href="{% url 'historia-list' %}"><i class="fa fa-history"></i> Historia</a>
-		</div>
 	{% else %}
-		<div class="row">
-			<div class="col-6 col-md-3"><div class="text-center mb-2"><span class="stat-label">Total Membru</span><h4 class="stat-number"><a href="{% url 'membro-list' %}">{{ counts.total }}</a></h4></div></div>
-			<div class="col-6 col-md-3"><div class="text-center mb-2"><span class="stat-label">Hein Aprovasaun</span><h4 class="stat-number"><a href="{% url 'membro-list' %}?aprovasaun=Pendente">{{ counts.pendente }}</a></h4></div></div>
-			<div class="col-6 col-md-3"><div class="text-center mb-2"><span class="stat-label">Aprovadu</span><h4 class="stat-number"><a href="{% url 'membro-list' %}?aprovasaun=Aprovadu">{{ counts.aprovadu }}</a></h4></div></div>
-			<div class="col-6 col-md-3"><div class="text-center mb-2"><span class="stat-label">Rejeitadu</span><h4 class="stat-number"><a href="{% url 'membro-list' %}?aprovasaun=Rejeitadu">{{ counts.rejeitadu }}</a></h4></div></div>
+	<div class="row">
+		<div class="col-sm-12 mb-2">
+			<div class="card">
+				<div class="card-header bg-primary text-white text-center">{{ banner.0 }} <br/> {{ banner.1 }}</div>
+			</div>
 		</div>
-		<hr/>
-		<div class="row">
-			<div class="col-sm-4">
-				<div class="card shadow-lg pt-1 border-primary rounded">
-					<div class="card-header">Sexu</div>
-					<div class="card-body">
-						<div style="width: 100%; height: 200px;">
-							<canvas id="genderChart"></canvas>
-						</div>
-					</div>
+	</div>
+	<div class="row">
+		<div class="col-sm-12">
+			<div class="card shadow-lg pt-0 rounded">
+				<div class="card-header">
+				{% if kind == 'admin' %}
+					<a class="btn btn-sm btn-primary mb-2" href="{% url 'user-add' %}">Aumenta Uzuáriu <i class="fa fa-plus"></i></a>
+					<a class="btn btn-sm btn-secondary mb-2" href="{% url 'user-list' %}">Lista Uzuáriu <i class="fa fa-users"></i></a>
+					<a class="btn btn-sm btn-outline-primary mb-2" href="{% url 'master-list' 'suku' %}">Data Master <i class="fa fa-database"></i></a>
+					<a class="btn btn-sm btn-danger mb-2" href="{% url 'historia-list' %}">Historia <i class="fa fa-history"></i></a>
+				{% else %}
+					{% if can_add %}<a class="btn btn-sm btn-primary mb-2" href="{% url 'membro-add' %}">Aumenta Membru <i class="fa fa-plus"></i></a>{% endif %}
+					<a class="btn btn-sm btn-secondary mb-2" href="{% url 'membro-list' %}">Lista Jeral Membru <i class="fa fa-list"></i></a>
+					{% if can_aprova %}<a class="btn btn-sm btn-warning mb-2" href="{% url 'aprovasaun-list' %}">Hein Aprovasaun{% if tot.pendente %} ({{ tot.pendente }}){% endif %} <i class="fa fa-check-square-o"></i></a>{% endif %}
+					<a class="btn btn-sm btn-danger mb-2" href="{% url 'report-dash' %}">Rekap Membru <i class="fa fa-table"></i></a>
+					<a class="btn btn-sm btn-outline-primary mb-2" href="{% url 'report-chart' %}">Grafik <i class="fa fa-bar-chart"></i></a>
+					<a class="btn btn-sm btn-outline-primary mb-2" href="{% url 'alokasaun-dash' %}">Struktura PD <i class="fa fa-sitemap"></i></a>
+				{% endif %}
 				</div>
-			</div><!--end col-->
-			<div class="col-sm-4">
-				<div class="card shadow-lg pt-1 border-primary rounded">
-					<div class="card-header">Idade</div>
-					<div class="card-body">
-						<div style="width: 100%; height: 200px;">
-							<canvas id="ageChart"></canvas>
-						</div>
-					</div>
+				<div class="card">
+					<div class="card-header text-center">{% if kind == 'admin' %}Sumariu Sistema{% else %}Membru Tinan Ativu {% if ano_ativu %}{{ ano_ativu }}{% endif %}{% endif %}</div>
 				</div>
-			</div><!--end col-->
-			<div class="col-sm-4">
-				<div class="card shadow-lg pt-1 border-primary rounded">
-					<div class="card-header">Estado Civil</div>
-					<div class="card-body">
-						<div style="width: 100%; height: 200px;">
-							<canvas id="maritalChart"></canvas>
-						</div>
+				<div class="card-body text-center">
+				{% if kind == 'admin' %}
+					<div class="row">
+						{% for label, n, url in master %}
+						<div class="col-6 col-md-3"><div class="mb-2 mt-1"><span class="stat-label">{{ label }}</span><h4 class="stat-number"><a href="{{ url }}">{{ n }}</a></h4></div></div>
+						{% endfor %}
 					</div>
-				</div>
-			</div><!--end col-->
-		</div><!--end row-->
-		<hr/>
-		<div class="row">
-			<div class="col-sm-4">
-				<div class="card shadow-lg pt-1 border-primary rounded">
-					<div class="card-header bg-steel">Aprovasaun</div>
-					<div class="card-body">
-						<div style="width: 100%; height: 300px;">
-							<canvas id="aprovasaunChart"></canvas>
-						</div>
+					<hr>
+					<div class="row justify-content-center"><div class="col-md-7">
+					<table class="table table-sm table-bordered text-center">
+						<thead><tr class="th-suku"><th class="text-left">Uzuáriu Ativu Por Peran</th><th>Total</th></tr></thead>
+						<tbody>
+							{% for label, n in users_by_role %}<tr><td class="text-left">{{ label }}</td><td>{{ n }}</td></tr>{% endfor %}
+							<tr class="th-base"><td class="text-left"><strong>TOTAL</strong></td><td><a href="{% url 'user-list' %}"><strong>{{ users_total }}</strong></a></td></tr>
+						</tbody>
+					</table>
+					</div></div>
+				{% else %}
+					<div class="row">
+						<div class="col-6 col-md-3"><div class="mb-2 mt-1"><span class="stat-label">Total Membru</span><h4 class="stat-number"><a href="{% url 'membro-list' %}">{{ tot.total }}</a></h4></div></div>
+						<div class="col-6 col-md-3"><div class="mb-2 mt-1"><span class="stat-label">Hein Aprovasaun</span><h4 class="stat-number"><a href="{% url 'membro-list' %}?aprovasaun=Pendente">{{ tot.pendente }}</a></h4></div></div>
+						<div class="col-6 col-md-3"><div class="mb-2 mt-1"><span class="stat-label">Aprovadu</span><h4 class="stat-number"><a href="{% url 'membro-list' %}?aprovasaun=Aprovadu">{{ tot.aprovadu }}</a></h4></div></div>
+						<div class="col-6 col-md-3"><div class="mb-2 mt-1"><span class="stat-label">Rejeitadu</span><h4 class="stat-number"><a href="{% url 'membro-list' %}?aprovasaun=Rejeitadu">{{ tot.rejeitadu }}</a></h4></div></div>
 					</div>
-				</div>
-			</div><!--end col-->
-			<div class="col-sm-4">
-				<div class="card shadow-lg pt-1 border-primary rounded">
-					<div class="card-header bg-steel">Status</div>
-					<div class="card-body">
-						<div style="width: 100%; height: 300px;">
-							<canvas id="statusChart"></canvas>
-						</div>
+					{% for t in tables %}
+					<hr>
+					<h6 class="text-left">Membru Por {{ t.title }}</h6>
+					<div class="table-responsive">
+					<table class="table table-sm table-bordered text-center">
+						<thead>
+							<tr>
+								<th rowspan="2" class="th-base align-middle text-left">{{ t.title }}</th>
+								<th rowspan="2" class="th-base align-middle">Total</th>
+								<th colspan="2" class="th-suku">Sexu</th>
+								<th colspan="3" class="th-aldeia">Aprovasaun</th>
+							</tr>
+							<tr>
+								<td class="th-suku-s">Mane</td><td class="th-suku-s">Feto</td>
+								<td class="th-aldeia-s">Aprovadu</td><td class="th-aldeia-s">Pendente</td><td class="th-aldeia-s">Rejeitadu</td>
+							</tr>
+						</thead>
+						<tbody>
+							{% for r in t.rows %}
+							<tr>
+								<td class="text-left">{{ r.name }}</td>
+								{% for v, u in r.cells %}<td>{% if v %}<a href="{{ u }}">{{ v }}</a>{% else %}<span class="text-muted">0</span>{% endif %}</td>{% endfor %}
+							</tr>
+							{% empty %}
+							<tr><td colspan="7" class="text-muted">Laiha data iha tinan ativu.</td></tr>
+							{% endfor %}
+							{% if t.rows %}
+							<tr class="th-base">
+								<td class="text-left"><strong>TOTAL</strong></td>
+								{% for v, u in t.total_cells %}<td><a href="{{ u }}"><strong>{{ v }}</strong></a></td>{% endfor %}
+							</tr>
+							{% endif %}
+						</tbody>
+					</table>
 					</div>
+					{% endfor %}
+				{% endif %}
+				</div> <!--end card-body-->
+			</div> <!--end card-->
+		</div> <!--end col-->
+		{% if kind == 'member' %}
+		<div class="col-md-12">
+			<div class="card">
+				<div class="card-header">{{ chart_title }} {% if ano_ativu %}- tinan {{ ano_ativu }}{% endif %}</div>
+				<div class="card-body">
+					<figure class="highcharts-figure"><div id="chart_home"></div></figure>
 				</div>
-			</div><!--end col-->
-			<div class="col-sm-4">
-				<div class="card shadow-lg pt-1 border-primary rounded">
-					<div class="card-header bg-steel">Organizasaun</div>
-					<div class="card-body">
-						<div style="width: 100%; height: 300px;">
-							<canvas id="orgChart"></canvas>
-						</div>
-					</div>
-				</div>
-			</div><!--end col-->
-		</div><!--end row-->
-		<hr/>
-		<div class="row">
-			<div class="col-sm-4">
-				<div class="card shadow-lg pt-1 border-primary rounded">
-					<div class="card-header bg-steel">Suku</div>
-					<div class="card-body">
-						<div style="width: 100%; height: 300px;">
-							<canvas id="sukuChart"></canvas>
-						</div>
-					</div>
-				</div>
-			</div><!--end col-->
-			<div class="col-sm-4">
-				<div class="card shadow-lg pt-1 border-primary rounded">
-					<div class="card-header bg-steel">Aldeia</div>
-					<div class="card-body">
-						<div style="width: 100%; height: 300px;">
-							<canvas id="aldeiaChart"></canvas>
-						</div>
-					</div>
-				</div>
-			</div><!--end col-->
-			<div class="col-sm-4">
-				<div class="card shadow-lg pt-1 border-primary rounded">
-					<div class="card-header bg-steel">Tinan Tama PD</div>
-					<div class="card-body">
-						<div style="width: 100%; height: 300px;">
-							<canvas id="hakbitChart"></canvas>
-						</div>
-					</div>
-				</div>
-			</div><!--end col-->
-		</div><!--end row-->
+			</div>
+		</div>
+		{% endif %}
+	</div> <!--end row-->
 	{% endif %}
 {% endblock %}
 {% block scripts %}
-{% if group and group != 'admin' %}
-<!-- Charts (lokal, offline) -->
-<script src="{% static 'main/js_custom/Chart.min.js' %}"></script>
+{% if kind == 'member' %}
+{% include 'main/highcharts_scripts.html' %}
 <script>
-	{% include 'home_chart/myoption.js' %}
-	{% include 'home_chart/h_gender.js' %}
-	{% include 'home_chart/h_age.js' %}
-	{% include 'home_chart/h_marital.js' %}
-	{% include 'home_chart/h_aprovasaun.js' %}
-	{% include 'home_chart/h_status.js' %}
-	{% include 'home_chart/h_org.js' %}
-	{% include 'home_chart/h_suku.js' %}
-	{% include 'home_chart/h_aldeia.js' %}
-	{% include 'home_chart/h_hakbit.js' %}
+	{% include 'chart/chart_base.js' %}
+	drawChart('chart_home', "{{ chart_url }}", { type: 'column', name: 'Membru' });
 </script>
 {% endif %}
 {% endblock %}

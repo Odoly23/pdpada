@@ -59,6 +59,15 @@ class MembroForm(forms.ModelForm):
 			self.fields['aldeia'].queryset = Aldeia.objects.filter(village_id=scope.village_id)
 			self.fields['village'].initial = scope.village_id
 			self.fields['village'].disabled = True
+		elif group == roles.SEKR_ORG and scope and scope.organizasaun_id:
+			# anggota organisasi bisa berasal dari suku/aldeia mana pun di Postu; organisasi terkunci
+			self.fields['organizasaun'].queryset = Organizasaun.objects.filter(pk=scope.organizasaun_id)
+			self.fields['organizasaun'].empty_label = None
+			self.fields['organizasaun'].initial = scope.organizasaun_id
+			self.fields['organizasaun'].disabled = True
+			village_id = self.data.get('village') if self.is_bound else (self.instance.village_id if self.instance.pk else None)
+			valid = str(village_id).isdigit() if village_id else False
+			self.fields['aldeia'].queryset = Aldeia.objects.filter(village_id=village_id) if valid else Aldeia.objects.none()
 		elif group == roles.SEKR_ALDEIA and scope and scope.aldeia_id:
 			self.fields['village'].queryset = Village.objects.filter(pk=scope.aldeia.village_id)
 			self.fields['aldeia'].queryset = Aldeia.objects.filter(pk=scope.aldeia_id)
@@ -69,6 +78,7 @@ class MembroForm(forms.ModelForm):
 		self.helper = FormHelper()
 		self.helper.form_method = 'post'
 		self.helper.form_id = 'membroForm'
+		self.helper.attrs = {'data-aldeias-url': reverse('ajax_load_aldeias')}  # dropdown Suku -> Aldeia
 		self.helper.layout = Layout(
 			Row(
 				Column('nome', css_class='form-group col-md-6 mb-0'),

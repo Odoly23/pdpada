@@ -55,6 +55,28 @@
 			</div>
 		</div>
 	</div>
+	<div class="row">
+		<div class="col-md-6">
+			<div class="card">
+				<div class="card-header">Membru Bazeia Idade</div>
+				<div class="card-body"><figure class="highcharts-figure"><div id="chart_umur"></div></figure></div>
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="card">
+				<div class="card-header">Membru Bazeia Estado Civil</div>
+				<div class="card-body"><figure class="highcharts-figure"><div id="chart_marital"></div></figure></div>
+			</div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-md-12">
+			<div class="card">
+				<div class="card-header">Membru Tuir Tinan Tama PD</div>
+				<div class="card-body"><figure class="highcharts-figure"><div id="chart_hakbit"></div></figure></div>
+			</div>
+		</div>
+	</div>
 {% endblock %}
 {% block scripts %}
 <script src="{% static 'main/js_custom/highcharts.js' %}"></script>
@@ -71,5 +93,8 @@
 	{% include 'chart/chart_org.js' %}
 	{% include 'chart/chart_status.js' %}
 	{% include 'chart/chart_aldeia.js' %}
+	{% include 'chart/chart_umur.js' %}
+	{% include 'chart/chart_marital.js' %}
+	{% include 'chart/chart_hakbit.js' %}
 </script>
 {% endblock %}

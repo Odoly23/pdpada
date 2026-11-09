@@ -38,7 +38,7 @@ Deploy ke PythonAnywhere: lihat [`docs/DEPLOY_PYTHONANYWHERE.md`](docs/DEPLOY_PY
 
 ## Tampilan
 
-`main/static/main/css/main.css` memuat variabel warna (`--navy`, `--navy-dk`) di bagian atas. Menu navbar desktop dan sidebar mobile berasal dari satu definisi per peran di `config/context_processors.py`. Halaman home berisi 9 grafik Chart.js (skrip di `main/templates/home_chart/`, library lokal `js_custom/Chart.min.js`). Halaman Grafik memakai Highcharts `styledMode`; warna di `main/static/main/js_custom/chart.css` (`--highcharts-color-N`). Ekspor grafik berjalan offline (tanpa server Highcharts).
+`main/static/main/css/main.css` memuat variabel warna (`--navy`, `--navy-dk`) di bagian atas. Menu navbar desktop dan sidebar mobile berasal dari satu definisi per peran di `config/context_processors.py`. Varanda (home) menampilkan banner peran, bar tombol, tabel matriks bertaut (Suku/Aldeia/Organizasaun sesuai peran) dan grafik. Semua grafik memakai Highcharts `styledMode` (halaman Grafik berisi 9 grafik); warna di `main/static/main/js_custom/chart.css` (`--highcharts-color-N`). Ekspor grafik berjalan offline (tanpa server Highcharts).
 
 ## Peran dan hak akses
 
@@ -49,7 +49,8 @@ Deploy ke PythonAnywhere: lihat [`docs/DEPLOY_PYTHONANYWHERE.md`](docs/DEPLOY_PY
 | `sekr_postu` | semua | – | – | – |
 | `koord_suku` / `sekr_suku` | sukunya | sekr_suku | – | – |
 | `koord_aldeia` / `sekr_aldeia` | aldeianya | sekr_aldeia | – | – |
-| `koord_org` / `sekr_org` | anggota organisasinya | – | – | – |
+| `koord_org` | anggota organisasinya | – | – | – |
+| `sekr_org` (Sekretariu OJD/OPD/MPD/organisasi lain) | anggota organisasinya | ya (organisasi terkunci ke organisasinya, suku/aldeia bebas di Postu) | – | – |
 | `admin` | tidak melihat data membru | – | – | uzuáriu, data master, tinan ativu, historia |
 
 **Notifikasi:** lonceng di navbar menampilkan badge jumlah *Hein Aprovasaun* (Presidente/Coordenador Postu) atau *Membru Rejeitadu* (Sekjer Suku/Aldeia) dan diperbarui otomatis tiap 5 detik.

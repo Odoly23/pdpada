@@ -20,6 +20,7 @@ USERS = [
 	('demo_sekrsuku', roles.SEKR_SUKU, {'v': 0}),
 	('demo_sekraldeia', roles.SEKR_ALDEIA, {'a': 0}),
 	('demo_koordorg', roles.KOORD_ORG, {'o': 'OJD'}),
+	('demo_sekrorg', roles.SEKR_ORG, {'o': 'OJD'}),
 ]
 NAMA = ['Joao', 'Maria', 'Jose', 'Ana', 'Pedro', 'Lucia', 'Antonio', 'Rosa', 'Tomas', 'Marta', 'Carlos', 'Julia',
 	'Paulo', 'Sandra', 'Miguel', 'Elena', 'Domingos', 'Teresa', 'Armando', 'Filomena']

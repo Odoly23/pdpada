@@ -44,7 +44,10 @@ def apply_filters(qs, params):
 	for key in FILTER_IDS:
 		val = params.get(key)
 		if val and val.isdigit():
-			qs = qs.filter(**{f'{key}_id': int(val)})
+			if key == 'organizasaun' and int(val) == 0:  # 0 = membru laiha organizasaun
+				qs = qs.filter(organizasaun__isnull=True)
+			else:
+				qs = qs.filter(**{f'{key}_id': int(val)})
 	hakbit = params.get('hakbit')
 	if hakbit and hakbit.isdigit():
 		qs = qs.filter(data_hakbit__year=int(hakbit))

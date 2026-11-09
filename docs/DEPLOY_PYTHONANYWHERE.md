@@ -50,7 +50,7 @@ python manage.py collectstatic --noinput
 python manage.py seed_demo --password 'PasswordDemoYangKuat2026!'
 ```
 
-Membuat 3 suku, 9 aldeia, 60 membru fiktif, dan user `demo_presidente`, `demo_koordpostu`, `demo_sekrpostu`, `demo_koordsuku`, `demo_sekrsuku`, `demo_sekraldeia`, `demo_koordorg` (semua memakai password di atas). Hapus semuanya sebelum dipakai sungguhan:
+Membuat 3 suku, 9 aldeia, 60 membru fiktif, dan 8 user: `demo_presidente`, `demo_koordpostu`, `demo_sekrpostu`, `demo_koordsuku`, `demo_sekrsuku`, `demo_sekraldeia`, `demo_koordorg`, `demo_sekrorg` (semua memakai password di atas). Hapus semuanya sebelum dipakai sungguhan:
 
 ```bash
 python manage.py seed_demo --hapus
