@@ -22,6 +22,8 @@ Untuk MySQL: `DB_ENGINE=mysql` + `DB_*` di `.env` dan `pip install mysqlclient`.
 
 Setelah login sebagai `admin`: isi **Data Master** (Suku dan Aldeia di Postu Dom Aleixo, nama lengkap Organizasaun), lalu buat **Uzuáriu** untuk tiap peran.
 
+Deploy ke PythonAnywhere: lihat [`docs/DEPLOY_PYTHONANYWHERE.md`](docs/DEPLOY_PYTHONANYWHERE.md). Data demo fiktif untuk presentasi: `python manage.py seed_demo --password '...'` (hapus dengan `--hapus`).
+
 ## Struktur
 
 | App | Isi |

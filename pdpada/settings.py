@@ -18,6 +18,8 @@ if not SECRET_KEY:
 		raise RuntimeError('DJANGO_SECRET_KEY wajib diisi jika DEBUG=False')
 
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',') if h.strip()]
+# Contoh: https://USERNAME.pythonanywhere.com (wajib untuk login/form lewat HTTPS)
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()]
 
 INSTALLED_APPS = [
 	'django.contrib.admin',
