@@ -10,7 +10,7 @@ from config.user_utils import c_user_group, membro_scope
 from custom.models import Year, Village, Aldeia, Organizasaun
 from membro.forms import MembroForm
 from membro.models import Membro, Alokasaun
-from membro.utils import snapshot, diff_snapshot, log_historia, membro_listing
+from membro.utils import snapshot, diff_snapshot, log_historia, membro_listing, aprovasaun_filters
 
 
 @login_required
@@ -22,6 +22,7 @@ def MembroList(request):
 		'group': group, 'objects': objects, 'semua_ano': semua_ano,
 		'can_add': group in roles.INPUT_ROLES, 'can_aprova': group in roles.APROVA_ROLES,
 		'can_export': group in roles.EXPORT_ROLES,
+		'filters': aprovasaun_filters(request.user, request.GET),
 		'title': 'Lista Membru', 'legend': 'Lista Membru'
 	}
 	return render(request, 'membro/list.html', context)

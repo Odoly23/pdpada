@@ -1,0 +1,8 @@
+{# Tombol filter berwarna. Variabel: filters = [{label, url, icon, kind, count, active}] #}
+<div class="filter-bar no-print" role="group" aria-label="Filtru">
+	{% for f in filters %}
+	<a class="btn-filter btn-filter-{{ f.kind }}{% if f.active %} active{% endif %}" href="{{ f.url }}"{% if f.active %} aria-current="true"{% endif %}>
+		<i class="fa {{ f.icon }}"></i> {{ f.label }}{% if f.count is not None %} <span class="count">{{ f.count }}</span>{% endif %}
+	</a>
+	{% endfor %}
+</div>

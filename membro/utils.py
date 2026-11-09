@@ -2,7 +2,8 @@ import datetime
 import re
 from functools import reduce
 from operator import and_
-from django.db.models import Q
+from django.db.models import Count, Q
+from urllib.parse import urlencode
 from config.user_utils import membro_scope
 from custom.models import Year
 from membro.models import Membro, Historia, Alokasaun, POZISAUN_POR_NIVEL
@@ -141,3 +142,33 @@ def csv_row(m):
 	return [csv_safe(v) for v in (
 		m.nu_eleitoral, m.nome, m.sex, m.date_of_birth, m.age(), m.marital or '', m.telefone or '', m.village, m.aldeia,
 		m.address or '', m.organizasaun or '', m.data_hakbit or '', m.status, m.aprovasaun, m.year or '')]
+
+
+APROVASAUN_BUTTONS = [  # (nilai filter, label, ikon, warna)
+	('Pendente', 'Pendente', 'fa-clock-o', 'warn'),
+	('Aprovadu', 'Aprovadu', 'fa-check-circle', 'ok'),
+	('Rejeitadu', 'Rejeitadu', 'fa-times-circle', 'bad'),
+]
+
+
+def aprovasaun_filters(user, get):
+	"""Tombol filter status aprovasaun untuk daftar membru: dengan hitungan, status aktif, dan filter lain dipertahankan.
+	Hitungan memakai filter lain (suku, jenis kelamin, ...) kecuali aprovasaun itu sendiri."""
+	params = get.copy()
+	params.pop('aprovasaun', None)
+	base, _ = membro_listing(user, params)
+	counts = dict(base.order_by().values_list('aprovasaun').annotate(n=Count('id')))
+	current = get.get('aprovasaun', '')
+	known = {b[0] for b in APROVASAUN_BUTTONS}
+
+	def url(value=None):
+		q = params.copy()
+		if value:
+			q['aprovasaun'] = value
+		return '?' + q.urlencode() if q else '?'
+
+	filters = [{'label': 'Hotu', 'url': url(), 'icon': 'fa-th-list', 'kind': 'all', 'count': sum(counts.values()),
+		'active': current not in known}]
+	for value, label, icon, kind in APROVASAUN_BUTTONS:
+		filters.append({'label': label, 'url': url(value), 'icon': icon, 'kind': kind, 'count': counts.get(value, 0), 'active': current == value})
+	return filters

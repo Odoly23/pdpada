@@ -1214,8 +1214,10 @@ class MissingFilesTextTests(BaseCase):
 		self.assertContains(detail, 'Seidauk upload fotu')
 		self.assertNotContains(detail, 'Hare PDF')
 		lst = self.client.get(reverse('membro-list'))
-		self.assertContains(lst, 'ELEITORAL (PDF)')
-		self.assertContains(lst, 'Seidauk upload')
+		self.assertContains(lst, 'DOKUMENTU')
+		self.assertContains(lst, 'Seidauk upload fotu')
+		self.assertContains(lst, 'Seidauk upload eleitoral')
+		self.assertContains(lst, 'class="doc no"')
 
 
 class MissingFilesTextWithFilesTests(UploadBase):
@@ -1226,7 +1228,9 @@ class MissingFilesTextWithFilesTests(UploadBase):
 		detail = self.client.get(reverse('membro-detail', args=[m.hashed]))
 		self.assertNotContains(detail, 'Seidauk upload')
 		self.assertContains(detail, 'Hare PDF')
-		self.assertNotContains(self.client.get(reverse('membro-list')), 'Seidauk upload')
+		lst = self.client.get(reverse('membro-list'))
+		self.assertNotContains(lst, 'Seidauk upload')
+		self.assertContains(lst, 'class="doc ok"')
 
 
 class UpdateScriptTests(BaseCase):
@@ -1745,3 +1749,130 @@ class ProductionSettingsTests(BaseCase):
 	def test_logging_configured_for_application_logger(self):
 		self.assertIn('pdpada', settings.LOGGING['loggers'])
 		self.assertIn('console', settings.LOGGING['handlers'])
+
+
+class FilterButtonsAndTablesTests(BaseCase):
+	def setUp(self):
+		self.make('FB00001', self.va, self.a1, sex='Mane', aprovasaun='Pendente')
+		self.make('FB00002', self.va, self.a2, sex='Feto', aprovasaun='Pendente')
+		self.make('FB00003', self.va, self.a1, sex='Mane', aprovasaun='Aprovadu')
+		self.make('FB00004', self.vb, self.b1, sex='Mane', aprovasaun='Rejeitadu')
+
+	def filters(self, user, query=''):
+		self.login(user)
+		resp = self.client.get(reverse('membro-list') + query)
+		self.assertEqual(resp.status_code, 200)
+		return resp, {f['label']: f for f in resp.context['filters']}
+
+	# ---- daftar membru
+	def test_member_list_has_coloured_buttons_with_counts(self):
+		resp, f = self.filters('presidente')
+		self.assertEqual({k: v['count'] for k, v in f.items()}, {'Hotu': 4, 'Pendente': 2, 'Aprovadu': 1, 'Rejeitadu': 1})
+		self.assertContains(resp, 'class="btn-filter btn-filter-all active"')
+		self.assertContains(resp, 'btn-filter-warn')
+		self.assertContains(resp, 'btn-filter-ok')
+		self.assertContains(resp, 'btn-filter-bad')
+		self.assertContains(resp, '<span class="count">4</span>')
+
+	def test_active_button_follows_query(self):
+		for value in ('Pendente', 'Aprovadu', 'Rejeitadu'):
+			resp, f = self.filters('presidente', f'?aprovasaun={value}')
+			self.assertEqual([k for k, v in f.items() if v['active']], [value])
+			listed = {m.aprovasaun for m in resp.context['objects']}
+			self.assertEqual(listed, {value})
+
+	def test_invalid_value_falls_back_to_hotu(self):
+		_, f = self.filters('presidente', '?aprovasaun=bukan-status')
+		self.assertEqual([k for k, v in f.items() if v['active']], ['Hotu'])
+
+	def test_other_filters_are_kept_and_counted(self):
+		_, f = self.filters('presidente', '?sex=Mane&aprovasaun=Pendente')
+		self.assertEqual({k: v['count'] for k, v in f.items()}, {'Hotu': 3, 'Pendente': 1, 'Aprovadu': 1, 'Rejeitadu': 1})
+		self.assertIn('sex=Mane', f['Aprovadu']['url'])
+		self.assertIn('aprovasaun=Aprovadu', f['Aprovadu']['url'])
+		self.assertNotIn('aprovasaun', f['Hotu']['url'])
+		self.assertIn('sex=Mane', f['Hotu']['url'])
+
+	def test_counts_respect_user_scope(self):
+		_, f = self.filters('koordsuku')
+		self.assertEqual({k: v['count'] for k, v in f.items()}, {'Hotu': 3, 'Pendente': 2, 'Aprovadu': 1, 'Rejeitadu': 0})
+
+	def test_member_list_has_no_search_builder(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-list'))
+		for needle in ('searchBuilder', 'SearchBuilder', 'Custom Search Builder', 'Add Condition', 'dtsb'):
+			self.assertNotContains(resp, needle)
+		self.assertContains(resp, 'datatable_defaults.js')
+
+	# ---- historia
+	def test_historia_buttons_with_counts_and_active_state(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('historia-list'))
+		f = {x['label']: x for x in resp.context['filters']}
+		self.assertEqual(f['Hotu']['count'], Historia.objects.count())
+		self.assertTrue(f['Hotu']['active'])
+		self.assertTrue(all(x['kind'] in ('all', 'info', 'warn', 'ok', 'bad', 'dark') for x in f.values()))
+		self.assertNotContains(resp, 'Custom Search Builder')
+		self.assertContains(resp, 'btn-filter')
+
+	def test_historia_filter_by_action_and_style(self):
+		self.login('sekrsuku')
+		self.client.post(reverse('membro-add'), self.form_data(nu='FB10001'))
+		m = Membro.objects.get(nu_eleitoral='FB10001')
+		self.login('presidente')
+		self.client.post(reverse('aprovasaun-aprova', args=[m.hashed]))
+		resp = self.client.get(reverse('historia-list'), {'aksaun': 'Aprova'})
+		f = {x['label']: x for x in resp.context['filters']}
+		self.assertTrue(f['Aprova']['active'])
+		self.assertFalse(f['Hotu']['active'])
+		self.assertEqual((f['Aprova']['icon'], f['Aprova']['kind']), ('fa-check-circle', 'ok'))
+		self.assertEqual((f['Kria']['icon'], f['Kria']['kind']), ('fa-plus-circle', 'info'))
+		self.assertEqual({h.aksaun for h in resp.context['objects']}, {'Aprova'})
+		self.assertEqual(f['Aprova']['url'], '/membro/historia/?aksaun=Aprova')
+
+	def test_historia_unknown_action_param_is_safe(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('historia-list'), {'aksaun': '<script>x</script>'})
+		self.assertEqual(resp.status_code, 200)
+		self.assertNotContains(resp, '<script>x</script>')
+		self.assertEqual(list(resp.context['objects']), [])
+
+	def test_historia_action_with_space_in_name_links_correctly(self):
+		Historia.objects.create(aksaun='Hare Dokumentu', membro_nome='x', user=self.users['presidente'])
+		self.login('presidente')
+		f = {x['label']: x for x in self.client.get(reverse('historia-list')).context['filters']}
+		self.assertEqual(f['Hare Dokumentu']['url'], '/membro/historia/?aksaun=Hare+Dokumentu')
+		resp = self.client.get(f['Hare Dokumentu']['url'])
+		self.assertEqual([h.aksaun for h in resp.context['objects']], ['Hare Dokumentu'])
+
+	# ---- tabel
+	def test_search_builder_assets_removed(self):
+		import os
+		base = os.path.join(settings.BASE_DIR, 'main/static/main')
+		for rel in ('datatables/js/dataTables.searchBuilder.min.js', 'datatables/js/searchBuilder.bootstrap4.min.js',
+				'datatables/css/searchBuilder.bootstrap4.min.css'):
+			self.assertFalse(os.path.exists(os.path.join(base, rel)), rel)
+		init = open(os.path.join(base, 'js_custom/datatable_init.js')).read()
+		self.assertNotIn('searchBuilder', init)
+		for label in ('Excel', 'PDF', 'Imprime', 'Kolona'):
+			self.assertIn(label, init)
+
+	def test_tetun_texts_for_all_tables(self):
+		import os
+		path = os.path.join(settings.BASE_DIR, 'main/static/main/js_custom/datatable_defaults.js')
+		text = open(path, encoding='utf-8').read()
+		for needle in ('Buka:', 'Hatudu _MENU_ rejistu', "Laiha rejistu ne'ebé hetan", 'Tuir mai', 'Molok'):
+			self.assertIn(needle, text)
+		self.login('presidente')
+		for name in ('membro-list', 'historia-list', 'aprovasaun-list', 'alokasaun-list'):
+			resp = self.client.get(reverse(name))
+			self.assertContains(resp, 'js_custom/datatable_defaults.js', msg_prefix=name)
+			self.assertNotContains(resp, 'searchBuilder', msg_prefix=name)
+		self.login('admin')
+		for url in (reverse('user-list'), reverse('master-list', args=['suku'])):
+			self.assertNotContains(self.client.get(url), 'searchBuilder')
+
+	def test_defaults_script_loads_after_datatables_in_layout(self):
+		self.login('presidente')
+		html = self.client.get('/').content.decode()
+		self.assertLess(html.index('jquery.dataTables.min.js'), html.index('datatable_defaults.js'))

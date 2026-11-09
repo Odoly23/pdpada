@@ -14,15 +14,12 @@
 					{% if can_aprova %}<a class="btn btn-sm btn-warning" href="{% url 'aprovasaun-list' %}">Hein Aprovasaun <i class="fa fa-check-square-o"></i></a>{% endif %}
 					{% if can_export %}<a class="btn btn-sm btn-success" href="{% url 'membro-export' %}?{{ request.GET.urlencode }}" title="Ekspor CSV kompletu tuir filtru">Ekspor CSV <i class="fa fa-download"></i></a>{% endif %}
 					<a class="btn btn-sm btn-outline-primary" href="{% url 'membro-cari' %}">Pesquiza <i class="fa fa-search"></i></a>
-					<a class="btn btn-sm btn-outline-primary" href="{% url 'membro-list' %}">Hotu</a>
-					<a class="btn btn-sm btn-outline-primary" href="?aprovasaun=Pendente">Pendente</a>
-					<a class="btn btn-sm btn-outline-primary" href="?aprovasaun=Aprovadu">Aprovadu</a>
-					<a class="btn btn-sm btn-outline-primary" href="?aprovasaun=Rejeitadu">Rejeitadu</a>
 					{% if ano_ativu %}
 						{% if semua_ano %}<a class="btn btn-sm btn-link" href="{% url 'membro-list' %}">Tinan ativu deit</a>
 						{% else %}<a class="btn btn-sm btn-link" href="?ano=hotu">Tinan hotu</a>{% endif %}
 					{% endif %}
 				</div>
+				{% include 'main/filter_bar.html' %}
 				<section id="no-more-tables">
 					<table id="example" class="table table-sm responsive" style="width:100%">
 						<thead>
@@ -36,8 +33,7 @@
 								<th>ALDEIA</th>
 								<th>ORGANIZASAUN</th>
 								<th>STATUS</th>
-								<th>FOTU</th>
-								<th>ELEITORAL (PDF)</th>
+								<th>DOKUMENTU</th>
 								<th>APROVASAUN</th>
 								<th class="no-export">#</th>
 							</tr>
@@ -54,8 +50,10 @@
 								<td data-title="Aldeia">{{ obj.aldeia }}</td>
 								<td data-title="Organizasaun">{{ obj.organizasaun|default_if_none:"-" }}</td>
 								<td data-title="Status">{{ obj.status }}</td>
-								<td data-title="Fotu">{% if obj.image %}<span class="text-success">Iha</span>{% else %}<span class="text-muted">Seidauk upload</span>{% endif %}</td>
-								<td data-title="Eleitoral (PDF)">{% if obj.file_eleitoral %}<span class="text-success">Iha</span>{% else %}<span class="text-muted">Seidauk upload</span>{% endif %}</td>
+								<td data-title="Dokumentu">
+									{% if obj.image %}<span class="doc ok" title="Fotu iha"><i class="fa fa-camera"></i><span class="sr-only">Fotu iha. </span></span>{% else %}<span class="doc no" title="Seidauk upload fotu"><i class="fa fa-camera"></i><span class="sr-only">Seidauk upload fotu. </span></span>{% endif %}
+									{% if obj.file_eleitoral %}<span class="doc ok" title="Kartaun eleitoral iha"><i class="fa fa-file-pdf-o"></i><span class="sr-only">Eleitoral iha.</span></span>{% else %}<span class="doc no" title="Seidauk upload eleitoral"><i class="fa fa-file-pdf-o"></i><span class="sr-only">Seidauk upload eleitoral.</span></span>{% endif %}
+								</td>
 								<td data-title="Aprovasaun"><span class="badge badge-{{ obj.aprovasaun|lower }}">{{ obj.aprovasaun }}</span></td>
 								<td><a class="btn btn-sm btn-primary" href="{% url 'membro-detail' obj.hashed %}" title="Detalha"><i class="fa fa-eye"></i></a></td>
 							</tr>
