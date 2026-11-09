@@ -1,8 +1,8 @@
 from django.db.models import Q
 from membro.models import Membro, Historia, Alokasaun, POZISAUN_POR_NIVEL
 
-SNAPSHOT_FIELDS = ['nome', 'sex', 'place_of_birth', 'date_of_birth', 'marital', 'nu_eleitoral', 'nu_bi',
-	'telefone', 'image', 'village', 'aldeia', 'address', 'organizasaun', 'data_hakbit', 'status']
+SNAPSHOT_FIELDS = ['nome', 'sex', 'place_of_birth', 'date_of_birth', 'marital', 'nu_eleitoral',
+	'telefone', 'image', 'file_eleitoral', 'village', 'aldeia', 'address', 'organizasaun', 'data_hakbit', 'status']
 
 FILTER_CHOICES = {
 	'aprovasaun': ['Pendente', 'Aprovadu', 'Rejeitadu'],
@@ -18,8 +18,8 @@ def snapshot(membro):
 	for name in SNAPSHOT_FIELDS:
 		field = Membro._meta.get_field(name)
 		val = getattr(membro, name)
-		if name == 'image':
-			val = val.name if val else None
+		if name in ('image', 'file_eleitoral'):
+			val = ('iha …' + val.name.rsplit('/', 1)[-1][:8]) if val else None  # nama file = hash, tampilkan ringkas
 		data[str(field.verbose_name)] = '-' if val in (None, '') else str(val)
 	return data
 

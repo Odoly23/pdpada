@@ -82,7 +82,7 @@ application = get_wsgi_application()
 | URL | Directory |
 |---|---|
 | `/static/` | `/home/USERNAME/pdpada/staticfiles` |
-| `/media/` | `/home/USERNAME/pdpada/media` |
+| `/media/` | `/home/USERNAME/pdpada/media` (opsional; foto dan PDF eleitoral kini ada di folder privat `private/`, jangan dipetakan) |
 
 6. Aktifkan **Force HTTPS**.
 7. Klik **Reload**, lalu buka `https://USERNAME.pythonanywhere.com`.
@@ -100,13 +100,15 @@ application = get_wsgi_application()
 | `DisallowedHost` / Bad Request (400) | `DJANGO_ALLOWED_HOSTS` salah di `.env` |
 | `CSRF verification failed` (403) saat login | isi `DJANGO_CSRF_TRUSTED_ORIGINS=https://USERNAME.pythonanywhere.com` |
 | Halaman tanpa gaya/ikon/grafik | jalankan `collectstatic`, cek pemetaan `/static/` |
-| Foto membru tidak muncul | cek pemetaan `/media/` |
+| Foto/PDF membru tidak muncul | file disajikan lewat halaman ber-login dari folder `private/`; cek folder itu ada dan dapat ditulis (`ls -la ~/pdpada/private`) |
 | `ModuleNotFoundError` | path virtualenv di tab Web salah |
 | `RuntimeError: DJANGO_SECRET_KEY wajib diisi` | `.env` belum terisi atau tidak di `/home/USERNAME/pdpada/.env` |
 
 Setiap mengubah kode atau `.env`: klik **Reload**.
 
 ## 7. Update versi baru
+
+Pembaruan terbaru menambah paket `pypdf` (pemeriksaan PDF) dan migrasi baru (hapus No. BI, tambah file eleitoral), jadi `pip install -r requirements.txt` dan `migrate` wajib dijalankan.
 
 ```bash
 cd ~/pdpada && git pull
@@ -121,4 +123,4 @@ lalu **Reload** di tab Web.
 ## Catatan akun gratis
 
 - Web app harus diperpanjang dengan tombol **Run until...** di tab Web (jadwal sekitar tiap 3 bulan).
-- Cadangan data: unduh `~/pdpada/db.sqlite3` dan folder `~/pdpada/media/` lewat tab **Files**.
+- Cadangan data: unduh `~/pdpada/db.sqlite3` dan folder `~/pdpada/private/` (foto dan kartu eleitoral) lewat tab **Files**.

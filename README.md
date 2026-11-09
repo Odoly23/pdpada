@@ -56,6 +56,8 @@ Deploy ke PythonAnywhere: lihat [`docs/DEPLOY_PYTHONANYWHERE.md`](docs/DEPLOY_PY
 
 **Dashboard Struktura** (`/membro/alokasaun/dash/`): pemegang posisi Postu, Suku, Aldeia, Organizasaun yang aktif, kelengkapan aldeia (mis. 2/3 punya Coordenador), tautan ke daftar terfilter, dan grafik.
 
+**Upload dan keamanan file:** foto (JPEG/PNG, maks. 2 MB) dan kartu eleitoral (PDF, maks. 5 MB) diperiksa **isinya**, bukan hanya ekstensi. Foto didekode lalu dienkode ulang sebagai JPEG baru (EXIF dan data tambahan terbuang, maks. 1600 px). PDF harus valid, tidak terenkripsi, maks. 20 halaman, dan tanpa JavaScript, lampiran, atau aksi peluncuran. Nama file selalu dibuat baru: HMAC-SHA256 dari token acak (64 hex). File disimpan di folder privat `private/` (bukan `media/`), tidak punya URL publik, dan hanya bisa dibuka lewat `/membro/<hashid>/file/<foto|eleitoral>/` oleh user yang berhak melihat membru tersebut. Pembukaan PDF eleitoral tercatat di Historia. Field No. BI sudah dihapus; identitas pemilih memakai Nu. Eleitoral.
+
 Alur: sekretaris suku/aldeia input → status **Pendente** → Presidente atau Coordenador Postu **Aprova** atau **Rejeita** (wajib isi razaun). Data yang diedit (juga yang sudah Aprovadu) kembali **Pendente**. Setiap kria/edita/aprova/rejeita/aloka/hamoos tercatat di **Historia**.
 
 Satu membru = satu Nu. Eleitoral (unik) dan satu organisasi. Nu. Eleitoral ganda ditolak dengan notifikasi *DUPLIKADU*; nama + data moris yang sama memunculkan peringatan.

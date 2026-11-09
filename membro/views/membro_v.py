@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.http import FileResponse, Http404
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
@@ -86,6 +87,7 @@ def MembroUpdate(request, hashid):
 	group = c_user_group(request.user)
 	obj = get_object_or_404(membro_scope(request.user), hashed=hashid)
 	old = snapshot(obj)
+	old_files = {'image': obj.image.name, 'file_eleitoral': obj.file_eleitoral.name}
 	if request.method == 'POST':
 		form = MembroForm(request.POST, request.FILES, instance=obj, user=request.user)
 		if form.is_valid():
@@ -100,6 +102,9 @@ def MembroUpdate(request, hashid):
 			instance.datetime = timezone.now()
 			instance.user = request.user
 			instance.save()
+			for name, old_name in old_files.items():  # file lama yang diganti dihapus dari penyimpanan
+				if old_name and old_name != getattr(instance, name).name:
+					Membro._meta.get_field(name).storage.delete(old_name)
 			log_historia(request.user, instance, 'Edita', diff_snapshot(old, snapshot(instance)) or 'Fotu troka')
 			messages.success(request, 'Data membru atualiza ona. Hein aprovasaun foun.')
 			return redirect('membro-detail', hashid)
@@ -122,6 +127,34 @@ def MembroDel(request, hashid):
 	log_historia(request.user, None, 'Hamoos', f'Data membru hamoos: {nome}', nome=nome)
 	if obj.image:
 		obj.image.delete(save=False)
+	if obj.file_eleitoral:
+		obj.file_eleitoral.delete(save=False)
 	obj.delete()
 	messages.warning(request, 'Hamoos ho Susesu!.')
 	return redirect('membro-list')
+
+
+@login_required
+@allowed_users(allowed_roles=roles.VIEW_ROLES)
+def MembroFile(request, hashid, kind):
+	"""Sajikan foto/PDF eleitoral dari penyimpanan privat, hanya untuk yang berhak melihat membru ini."""
+	obj = get_object_or_404(membro_scope(request.user), hashed=hashid)
+	if kind == 'foto':
+		fieldfile, ctype, name = obj.image, 'image/jpeg', 'foto.jpg'
+	elif kind == 'eleitoral':
+		fieldfile, ctype, name = obj.file_eleitoral, 'application/pdf', 'kartaun-eleitoral.pdf'
+	else:
+		raise Http404
+	if not fieldfile:
+		raise Http404
+	try:
+		handle = fieldfile.storage.open(fieldfile.name, 'rb')
+	except (FileNotFoundError, OSError):
+		raise Http404
+	if kind == 'eleitoral':
+		log_historia(request.user, obj, 'Hare Dokumentu', 'Kartaun Eleitoral (PDF)')
+	response = FileResponse(handle, content_type=ctype)
+	response['Content-Disposition'] = f'inline; filename="{name}"'
+	response['X-Content-Type-Options'] = 'nosniff'
+	response['Cache-Control'] = 'private, no-store'
+	return response

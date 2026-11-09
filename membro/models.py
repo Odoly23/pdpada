@@ -3,7 +3,9 @@ from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
 from django.db import models
 from config.models import HashedModel
-from config.upload_utils import upload_foto, validate_image_size
+from config.file_utils import validate_image_content, validate_pdf_content, validate_pdf_size
+from config.storage import private_storage
+from config.upload_utils import upload_foto, upload_eleitoral, validate_image_size
 from custom.models import Village, Aldeia, Organizasaun, Year
 
 SEXU = [('Mane', 'Mane'), ('Feto', 'Feto')]
@@ -29,11 +31,12 @@ class Membro(HashedModel):
 	marital = models.CharField(choices=MARITAL, max_length=15, null=True, blank=True, verbose_name="Estado Civil")
 	nu_eleitoral = models.CharField(max_length=30, unique=True, verbose_name="Nu. Eleitoral",
 			validators=[RegexValidator(r'^[A-Za-z0-9\-/]{4,30}$', 'Deit letra, numeru, "-" no "/" (4 to 30 karakter).')])
-	nu_bi = models.CharField(max_length=30, null=True, blank=True, verbose_name="Nu. BI")
 	telefone = models.CharField(max_length=20, null=True, blank=True, verbose_name="Nu. Telemovel",
 			validators=[RegexValidator(r'^[0-9+\- ]{7,20}$', 'Nu. telemovel la loos.')])
-	image = models.ImageField(upload_to=upload_foto, null=True, blank=True, verbose_name="Fotu",
-			validators=[validate_image_size])
+	image = models.ImageField(upload_to=upload_foto, storage=private_storage, null=True, blank=True, verbose_name="Fotu",
+			validators=[validate_image_size, validate_image_content])
+	file_eleitoral = models.FileField(upload_to=upload_eleitoral, storage=private_storage, null=True, blank=True,
+			verbose_name="Kartaun Eleitoral (PDF)", validators=[validate_pdf_size, validate_pdf_content])
 	village = models.ForeignKey(Village, on_delete=models.PROTECT, verbose_name="Suku")
 	aldeia = models.ForeignKey(Aldeia, on_delete=models.PROTECT, verbose_name="Aldeia")
 	address = models.CharField(max_length=100, null=True, blank=True, verbose_name="Hela Fatin")

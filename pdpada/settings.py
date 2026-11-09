@@ -109,6 +109,13 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
+# File sensitif (foto dan kartu eleitoral): di luar MEDIA_ROOT, tanpa URL publik.
+# Dilayani hanya lewat view ber-izin; ikut dicadangkan bersama database.
+PRIVATE_ROOT = os.environ.get('DJANGO_PRIVATE_ROOT') or os.path.join(BASE_DIR, 'private')
+
+# Batas ukuran upload (byte) yang disimpan di memori sebelum ke file sementara
+FILE_UPLOAD_MAX_MEMORY_SIZE = 2621440
+
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap4'
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 

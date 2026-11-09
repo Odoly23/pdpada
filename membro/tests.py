@@ -625,3 +625,321 @@ class RekapButtonsTests(BaseCase):
 		self.assertContains(resp, 'Hein Aprovasaun (1)')
 		self.assertNotContains(resp, 'Aumenta Membru')
 		self.assertContains(resp, 'Membru Tinan Ativu 2026')
+
+
+# ---------------------------------------------------------------- upload foto / PDF eleitoral
+import io
+import re
+import shutil
+import tempfile
+from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
+from PIL import Image
+from unittest import mock
+from pypdf import PdfWriter
+from pypdf.generic import DictionaryObject, NameObject, TextStringObject
+
+PRIVATE_TMP = tempfile.mkdtemp(prefix='pdpada-private-')
+
+
+def img_bytes(fmt='PNG', size=(40, 30), mode='RGB', color=(10, 80, 200), trailer=b'', exif_make=None):
+	buf = io.BytesIO()
+	img = Image.new(mode, size, color if mode in ('RGB', 'RGBA') else 128)
+	kw = {}
+	if exif_make:
+		ex = Image.Exif()
+		ex[0x010F] = exif_make  # tag Make
+		kw['exif'] = ex.tobytes()
+	img.save(buf, fmt, **kw)
+	return buf.getvalue() + trailer
+
+
+def pdf_bytes(pages=1, js=False, encrypt=False):
+	w = PdfWriter()
+	for _ in range(pages):
+		w.add_blank_page(72, 72)
+	if js:  # OpenAction JavaScript di root dokumen
+		action = DictionaryObject({NameObject('/S'): NameObject('/JavaScript'), NameObject('/JS'): TextStringObject("app.alert('x')")})
+		w._root_object[NameObject('/OpenAction')] = w._add_object(action)
+	if encrypt:
+		w.encrypt('rahasia', algorithm='RC4-128')
+	buf = io.BytesIO()
+	w.write(buf)
+	return buf.getvalue()
+
+
+@override_settings(PRIVATE_ROOT=PRIVATE_TMP)
+class UploadBase(BaseCase):
+	@classmethod
+	def tearDownClass(cls):
+		super().tearDownClass()
+		shutil.rmtree(PRIVATE_TMP, ignore_errors=True)
+
+	def post_member(self, nu='UP00001', image=None, pdf=None, **kw):
+		self.login('sekrsuku')
+		data = self.form_data(nu=nu, **kw)
+		if image is not None:
+			data['image'] = image
+		if pdf is not None:
+			data['file_eleitoral'] = pdf
+		return self.client.post(reverse('membro-add'), data)
+
+	def jpg(self, name='foto.jpg', **kw):
+		return SimpleUploadedFile(name, img_bytes('JPEG', **kw), content_type='image/jpeg')
+
+	def pdf(self, name='kartaun.pdf', **kw):
+		return SimpleUploadedFile(name, pdf_bytes(**kw), content_type='application/pdf')
+
+
+class NuBiRemovedTests(BaseCase):
+	def test_nu_bi_field_is_gone(self):
+		from membro.forms import MembroForm
+		self.assertNotIn('nu_bi', [f.name for f in Membro._meta.get_fields()])
+		self.assertNotIn('nu_bi', MembroForm(user=self.users['sekrsuku']).fields)
+		self.make('BI00001')
+		self.login('presidente')
+		m = Membro.objects.get(nu_eleitoral='BI00001')
+		self.assertNotContains(self.client.get(reverse('membro-detail', args=[m.hashed])), 'Nu. BI')
+
+
+class PhotoUploadTests(UploadBase):
+	def test_valid_photo_is_reencoded_and_renamed_with_new_hash(self):
+		resp = self.post_member(image=SimpleUploadedFile('Foto Asli Saya.PNG', img_bytes('PNG', mode='RGBA'), content_type='image/png'))
+		self.assertEqual(resp.status_code, 302)
+		m = Membro.objects.get(nu_eleitoral='UP00001')
+		self.assertRegex(m.image.name, r'^foto/[0-9a-f]{64}\.jpg$')
+		self.assertNotIn('asli', m.image.name.lower())
+		with Image.open(m.image.path) as stored:
+			self.assertEqual(stored.format, 'JPEG')
+
+	def test_same_file_gets_different_name_each_time(self):
+		self.post_member(nu='UP00002', image=self.jpg())
+		self.post_member(nu='UP00003', image=self.jpg())
+		a = Membro.objects.get(nu_eleitoral='UP00002').image.name
+		b = Membro.objects.get(nu_eleitoral='UP00003').image.name
+		self.assertNotEqual(a, b)
+
+	def test_exif_metadata_is_stripped(self):
+		self.post_member(image=self.jpg(exif_make='SPIONASE'))
+		m = Membro.objects.get(nu_eleitoral='UP00001')
+		with Image.open(m.image.path) as stored:
+			self.assertEqual(len(stored.getexif()), 0)
+		self.assertNotIn(b'SPIONASE', open(m.image.path, 'rb').read())
+
+	def test_appended_payload_is_removed(self):
+		payload = b'<?php system($_GET["c"]); ?>PK\x03\x04'
+		up = SimpleUploadedFile('x.jpg', img_bytes('JPEG', trailer=payload), content_type='image/jpeg')
+		self.post_member(image=up)
+		m = Membro.objects.get(nu_eleitoral='UP00001')
+		data = open(m.image.path, 'rb').read()
+		self.assertNotIn(b'<?php', data)
+		self.assertNotIn(b'PK\x03\x04', data)
+
+	def test_error_message_is_in_tetun(self):
+		resp = self.post_member(image=SimpleUploadedFile('foto.jpg', b'bukan gambar', content_type='image/jpeg'))
+		self.assertContains(resp, "Fotu la válidu")
+		self.assertNotContains(resp, 'Upload a valid image')
+
+	def test_fake_image_with_jpg_extension_is_rejected(self):
+		for content in (b'ini hanya teks biasa', b'<html><script>alert(1)</script></html>', b'%PDF-1.4 palsu', b'\xff\xd8\xff palsu'):
+			resp = self.post_member(image=SimpleUploadedFile('foto.jpg', content, content_type='image/jpeg'))
+			self.assertEqual(resp.status_code, 200)
+			self.assertFalse(Membro.objects.filter(nu_eleitoral='UP00001').exists())
+
+	def test_gif_and_webp_formats_are_rejected(self):
+		for fmt in ('GIF', 'WEBP'):
+			up = SimpleUploadedFile('foto.jpg', img_bytes(fmt), content_type='image/jpeg')
+			self.post_member(image=up)
+			self.assertFalse(Membro.objects.filter(nu_eleitoral='UP00001').exists(), fmt)
+
+	def test_oversize_photo_is_rejected(self):
+		big = SimpleUploadedFile('besar.jpg', img_bytes('JPEG') + b'\0' * (2 * 1024 * 1024 + 10), content_type='image/jpeg')
+		self.post_member(image=big)
+		self.assertFalse(Membro.objects.filter(nu_eleitoral='UP00001').exists())
+
+	def test_too_many_pixels_is_rejected(self):
+		up = SimpleUploadedFile('raksasa.png', img_bytes('PNG', size=(5100, 5100), mode='L'), content_type='image/png')
+		self.post_member(image=up)
+		self.assertFalse(Membro.objects.filter(nu_eleitoral='UP00001').exists())
+
+	def test_large_photo_is_scaled_down(self):
+		up = SimpleUploadedFile('lebar.png', img_bytes('PNG', size=(3000, 1500)), content_type='image/png')
+		self.post_member(image=up)
+		with Image.open(Membro.objects.get(nu_eleitoral='UP00001').image.path) as stored:
+			self.assertEqual(max(stored.size), 1600)
+
+
+class EleitoralPdfTests(UploadBase):
+	def test_valid_pdf_is_stored_with_hashed_name(self):
+		resp = self.post_member(pdf=self.pdf(name='KARTAUN ELEITORAL SAYA.pdf'))
+		self.assertEqual(resp.status_code, 302)
+		m = Membro.objects.get(nu_eleitoral='UP00001')
+		self.assertRegex(m.file_eleitoral.name, r'^eleitoral/[0-9a-f]{64}\.pdf$')
+		self.assertTrue(open(m.file_eleitoral.path, 'rb').read().startswith(b'%PDF-'))
+
+	def rejected(self, upload):
+		resp = self.post_member(pdf=upload)
+		self.assertEqual(resp.status_code, 200)
+		self.assertFalse(Membro.objects.filter(nu_eleitoral='UP00001').exists())
+
+	def test_fake_pdf_is_rejected(self):
+		self.rejected(SimpleUploadedFile('a.pdf', b'bukan pdf sama sekali', content_type='application/pdf'))
+		self.rejected(SimpleUploadedFile('a.pdf', b'%PDF-1.4\nisi ngawur tanpa struktur', content_type='application/pdf'))
+		self.rejected(SimpleUploadedFile('a.pdf', img_bytes('PNG'), content_type='application/pdf'))
+		self.rejected(SimpleUploadedFile('a.pdf', pdf_bytes()[:-30], content_type='application/pdf'))  # terpotong
+
+	def test_pdf_with_javascript_is_rejected(self):
+		self.rejected(SimpleUploadedFile('a.pdf', pdf_bytes(js=True), content_type='application/pdf'))
+
+	def test_pdf_with_launch_or_embedded_file_is_rejected(self):
+		evil = pdf_bytes().replace(b'%%EOF', b'/Type /Action /S /Launch /F (cmd.exe)\n%%EOF')
+		self.rejected(SimpleUploadedFile('a.pdf', evil, content_type='application/pdf'))
+		evil2 = pdf_bytes().replace(b'%%EOF', b'/EmbeddedFile\n%%EOF')
+		self.rejected(SimpleUploadedFile('a.pdf', evil2, content_type='application/pdf'))
+
+	def test_structural_check_catches_javascript_even_if_raw_scan_is_bypassed(self):
+		from config.file_utils import validate_pdf_content
+		from django.core.exceptions import ValidationError
+		up = SimpleUploadedFile('a.pdf', pdf_bytes(js=True), content_type='application/pdf')
+		with mock.patch('config.file_utils.PDF_DANGEROUS') as fake:  # simulasi nama PDF yang disamarkan (#4A...)
+			fake.search.return_value = None
+			with self.assertRaises(ValidationError):
+				validate_pdf_content(up)
+
+	def test_clean_pdf_passes_validator(self):
+		from config.file_utils import validate_pdf_content
+		validate_pdf_content(SimpleUploadedFile('a.pdf', pdf_bytes(pages=2), content_type='application/pdf'))
+
+	def test_encrypted_pdf_is_rejected(self):
+		try:
+			data = pdf_bytes(encrypt=True)
+		except Exception:
+			self.skipTest('enkripsi PDF tidak tersedia')
+		self.rejected(SimpleUploadedFile('a.pdf', data, content_type='application/pdf'))
+
+	def test_too_many_pages_is_rejected(self):
+		self.rejected(SimpleUploadedFile('a.pdf', pdf_bytes(pages=21), content_type='application/pdf'))
+
+	def test_oversize_pdf_is_rejected(self):
+		self.rejected(SimpleUploadedFile('a.pdf', pdf_bytes() + b'\0' * (5 * 1024 * 1024 + 10), content_type='application/pdf'))
+
+	def test_image_as_eleitoral_is_rejected(self):
+		self.rejected(SimpleUploadedFile('a.pdf', img_bytes('JPEG'), content_type='application/pdf'))
+
+
+class PrivateFileServingTests(UploadBase):
+	def setUp(self):
+		self.post_member(image=self.jpg(), pdf=self.pdf())
+		self.m = Membro.objects.get(nu_eleitoral='UP00001')
+
+	def url(self, kind, m=None):
+		return reverse('membro-file', args=[(m or self.m).hashed, kind])
+
+	def test_files_live_outside_media_and_have_no_public_url(self):
+		self.assertTrue(self.m.image.path.startswith(PRIVATE_TMP))
+		self.assertFalse(self.m.image.path.startswith(str(settings.MEDIA_ROOT)))
+		with self.assertRaises(ValueError):
+			self.m.image.url
+		with self.assertRaises(ValueError):
+			self.m.file_eleitoral.url
+
+	def test_authorised_user_gets_photo_and_pdf_with_safe_headers(self):
+		self.login('presidente')
+		foto = self.client.get(self.url('foto'))
+		self.assertEqual((foto.status_code, foto['Content-Type']), (200, 'image/jpeg'))
+		self.assertEqual(foto['X-Content-Type-Options'], 'nosniff')
+		self.assertIn('no-store', foto['Cache-Control'])
+		self.assertTrue(b''.join(foto.streaming_content).startswith(b'\xff\xd8'))
+		pdf = self.client.get(self.url('eleitoral'))
+		self.assertEqual((pdf.status_code, pdf['Content-Type']), (200, 'application/pdf'))
+		self.assertNotIn(self.m.file_eleitoral.name.split('/')[-1], pdf['Content-Disposition'])
+		self.assertTrue(b''.join(pdf.streaming_content).startswith(b'%PDF-'))
+
+	def test_pdf_view_is_audited_in_historia(self):
+		self.login('presidente')
+		self.client.get(self.url('eleitoral'))
+		self.assertTrue(Historia.objects.filter(membro=self.m, aksaun='Hare Dokumentu', user=self.users['presidente']).exists())
+
+	def test_access_is_limited_by_scope_and_role(self):
+		self.login('sekrsukub')
+		self.assertEqual(self.client.get(self.url('eleitoral')).status_code, 404)
+		self.assertEqual(self.client.get(self.url('foto')).status_code, 404)
+		self.login('admin')
+		self.assertEqual(self.client.get(self.url('foto')).status_code, 403)
+		self.login('koordsuku')
+		self.assertEqual(self.client.get(self.url('foto')).status_code, 200)
+		self.client.logout()
+		resp = self.client.get(self.url('foto'))
+		self.assertEqual(resp.status_code, 302)
+		self.assertIn('/login/', resp['Location'])
+
+	def test_unknown_kind_and_missing_file_are_404(self):
+		self.login('presidente')
+		self.assertEqual(self.client.get(self.url('rahasia')).status_code, 404)
+		self.assertEqual(self.client.get('/membro/%s/file/..%%2F..%%2Fetc%%2Fpasswd/' % self.m.hashed).status_code, 404)
+		other = self.make('UP00099')
+		self.assertEqual(self.client.get(self.url('foto', other)).status_code, 404)
+
+	def test_detail_page_uses_protected_urls(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-detail', args=[self.m.hashed]))
+		self.assertContains(resp, self.url('foto'))
+		self.assertContains(resp, self.url('eleitoral'))
+		self.assertNotContains(resp, self.m.image.name)
+		self.assertNotContains(resp, '/media/')
+
+
+class ReplaceAndDeleteFilesTests(UploadBase):
+	def setUp(self):
+		self.post_member(image=self.jpg(), pdf=self.pdf())
+		self.m = Membro.objects.get(nu_eleitoral='UP00001')
+
+	def test_replacing_files_deletes_old_ones(self):
+		old_img, old_pdf = self.m.image.path, self.m.file_eleitoral.path
+		import os
+		self.login('sekrsuku')
+		data = self.form_data(nu='UP00001')
+		data.update({'image': self.jpg(color=(200, 0, 0)), 'file_eleitoral': self.pdf(pages=2)})
+		self.client.post(reverse('membro-update', args=[self.m.hashed]), data)
+		self.m.refresh_from_db()
+		self.assertNotEqual(self.m.image.path, old_img)
+		self.assertFalse(os.path.exists(old_img))
+		self.assertFalse(os.path.exists(old_pdf))
+		self.assertTrue(os.path.exists(self.m.image.path))
+		self.assertTrue(os.path.exists(self.m.file_eleitoral.path))
+
+	def test_edit_without_new_files_keeps_existing(self):
+		import os
+		img, pdf = self.m.image.name, self.m.file_eleitoral.name
+		self.login('sekrsuku')
+		self.client.post(reverse('membro-update', args=[self.m.hashed]), self.form_data(nu='UP00001', nome='Nama Baru'))
+		self.m.refresh_from_db()
+		self.assertEqual((self.m.nome, self.m.image.name, self.m.file_eleitoral.name), ('Nama Baru', img, pdf))
+		self.assertTrue(os.path.exists(self.m.image.path))
+
+	def test_rejected_replacement_keeps_old_files(self):
+		import os
+		self.login('sekrsuku')
+		data = self.form_data(nu='UP00001')
+		data['file_eleitoral'] = SimpleUploadedFile('x.pdf', b'palsu', content_type='application/pdf')
+		resp = self.client.post(reverse('membro-update', args=[self.m.hashed]), data)
+		self.assertEqual(resp.status_code, 200)
+		self.assertTrue(os.path.exists(self.m.file_eleitoral.path))
+
+	def test_deleting_member_removes_both_files(self):
+		import os
+		paths = [self.m.image.path, self.m.file_eleitoral.path]
+		self.login('presidente')
+		self.client.post(reverse('membro-del', args=[self.m.hashed]))
+		for p in paths:
+			self.assertFalse(os.path.exists(p))
+
+	def test_historia_records_file_change_without_leaking_full_name(self):
+		self.login('sekrsuku')
+		data = self.form_data(nu='UP00001')
+		data['file_eleitoral'] = self.pdf(pages=3)
+		self.client.post(reverse('membro-update', args=[self.m.hashed]), data)
+		h = Historia.objects.filter(membro=self.m, aksaun='Edita').first()
+		self.assertIn('Kartaun Eleitoral', h.detalhe)
+		self.assertNotRegex(h.detalhe, r'[0-9a-f]{64}')
