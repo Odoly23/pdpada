@@ -1,10 +1,24 @@
+import datetime
 from django.db.models import Q
 from membro.models import Membro, Historia, Alokasaun, POZISAUN_POR_NIVEL
 
 SNAPSHOT_FIELDS = ['nome', 'sex', 'place_of_birth', 'date_of_birth', 'marital', 'nu_eleitoral',
 	'telefone', 'image', 'file_eleitoral', 'village', 'aldeia', 'address', 'organizasaun', 'data_hakbit', 'status']
 
+AGE_BINS = [(0, 17, '< 18'), (18, 25, '18-25'), (26, 35, '26-35'), (36, 45, '36-45'),
+	(46, 55, '46-55'), (56, 65, '56-65'), (66, 200, '> 65')]
+AGE_RANGE = {label: (lo, hi) for lo, hi, label in AGE_BINS}
+
+
+def years_ago(today, n):
+	try:
+		return today.replace(year=today.year - n)
+	except ValueError:  # 29 Februari
+		return today.replace(year=today.year - n, day=28)
+
+
 FILTER_CHOICES = {
+	'marital': ['Solteiro/a', 'Casado/a', 'Divorciado/a', 'Viuvo/a'],
 	'aprovasaun': ['Pendente', 'Aprovadu', 'Rejeitadu'],
 	'status': ['Ativu', 'Inativu', 'Falesidu'],
 	'sex': ['Mane', 'Feto'],
@@ -48,6 +62,13 @@ def apply_filters(qs, params):
 				qs = qs.filter(organizasaun__isnull=True)
 			else:
 				qs = qs.filter(**{f'{key}_id': int(val)})
+	if params.get('marital') == 'laiha':
+		qs = qs.filter(Q(marital__isnull=True) | Q(marital=''))
+	umur = params.get('umur')
+	if umur in AGE_RANGE:
+		lo, hi = AGE_RANGE[umur]
+		today = datetime.date.today()
+		qs = qs.filter(date_of_birth__lte=years_ago(today, lo), date_of_birth__gt=years_ago(today, hi + 1))
 	hakbit = params.get('hakbit')
 	if hakbit and hakbit.isdigit():
 		qs = qs.filter(data_hakbit__year=int(hakbit))

@@ -383,16 +383,18 @@ class LayoutAndReportTests(BaseCase):
 	def test_menu_per_role(self):
 		self.assertEqual(self.menu('admin'), ['Varanda', 'Uzuáriu', 'Data Master', 'Historia'])
 		self.assertEqual(self.menu('presidente'),
-			['Varanda', 'Rekap', 'Grafik', 'Membru', 'Aprovasaun', 'Struktura', 'Historia'])
-		self.assertEqual(self.menu('sekrsuku'), ['Varanda', 'Rekap', 'Grafik', 'Membru', 'Aumenta', 'Struktura'])
-		self.assertEqual(self.menu('sekrorg'), ['Varanda', 'Rekap', 'Grafik', 'Membru', 'Aumenta', 'Struktura'])
-		self.assertEqual(self.menu('koordsuku'), ['Varanda', 'Rekap', 'Grafik', 'Membru', 'Struktura'])
+			['Varanda', 'Relatoriu', 'Membru', 'Aprovasaun', 'Struktura', 'Historia'])
+		self.assertEqual(self.menu('sekrsuku'), ['Varanda', 'Relatoriu', 'Membru', 'Aumenta', 'Struktura'])
+		self.assertEqual(self.menu('sekrorg'), ['Varanda', 'Relatoriu', 'Membru', 'Aumenta', 'Struktura'])
+		self.assertEqual(self.menu('koordsuku'), ['Varanda', 'Relatoriu', 'Membru', 'Struktura'])
 
 	def test_active_menu_item(self):
 		self.login('presidente')
 		resp = self.client.get(reverse('report-chart'))
 		active = [i['label'] for i in resp.context['nav_items'] if i['active']]
-		self.assertEqual(active, ['Grafik'])
+		self.assertEqual(active, ['Relatoriu'])
+		rel = [i for i in resp.context['nav_items'] if i['label'] == 'Relatoriu'][0]
+		self.assertEqual([(c['label'], c['active']) for c in rel['children']], [('Tabular', False), ('Grafiku', True)])
 
 	def test_navbar_has_sidebar_and_logout_form(self):
 		self.login('presidente')
@@ -604,14 +606,13 @@ class RekapButtonsTests(BaseCase):
 		resp = self.client.get(reverse('report-dash'))
 		self.assertContains(resp, 'Aumenta Membru')
 		self.assertContains(resp, 'Lista Jeral Membru')
-		self.assertContains(resp, 'Grafik Membru')
+		self.assertContains(resp, 'Grafiku')
 		self.assertNotContains(resp, 'href="/membro/aprovasaun/"')
-		self.assertContains(resp, 'chart_suku')
 		self.login('presidente')
 		resp = self.client.get(reverse('report-dash'))
 		self.assertContains(resp, 'Hein Aprovasaun (1)')
 		self.assertNotContains(resp, 'Aumenta Membru')
-		self.assertContains(resp, 'Membru Tinan Ativu 2026')
+		self.assertContains(resp, 'TINAN 2026')
 
 
 # ---------------------------------------------------------------- upload foto / PDF eleitoral
@@ -1004,7 +1005,7 @@ class VarandaTests(BaseCase):
 		self.assertNotContains(resp, 'Aumenta Membru')
 		self.assertContains(resp, 'Hein Aprovasaun (1)')
 		self.assertContains(resp, 'Lista Jeral Membru')
-		self.assertContains(resp, 'Rekap Membru')
+		self.assertContains(resp, 'Relatoriu Tabular')
 
 	def test_member_home_has_chart_and_local_highcharts(self):
 		resp = self.home('presidente')
@@ -1134,3 +1135,119 @@ class MetaTagTests(BaseCase):
 		resp = self.client.get(reverse('report-chart'))
 		for cid in ('chart_umur', 'chart_marital', 'chart_hakbit'):
 			self.assertContains(resp, f'id="{cid}"')
+
+
+class TabularTests(BaseCase):
+	def setUp(self):
+		d = datetime.date.today()
+		self.make('TB00001', self.va, self.a1, organizasaun=self.org, sex='Mane', marital='Casado/a',
+			date_of_birth=d.replace(year=d.year - 30), data_hakbit=datetime.date(2015, 1, 1), aprovasaun='Aprovadu')
+		self.make('TB00002', self.va, self.a2, sex='Feto', date_of_birth=d.replace(year=d.year - 22), status='Inativu')
+		self.make('TB00003', self.vb, self.b1, sex='Feto', marital='Viuvo/a', date_of_birth=d.replace(year=d.year - 70), data_hakbit=datetime.date(2015, 6, 1))
+
+	def page(self, user):
+		self.login(user)
+		resp = self.client.get(reverse('report-dash'))
+		self.assertEqual(resp.status_code, 200)
+		return resp
+
+	def table(self, resp, head):
+		return {r['name']: r for r in [t for t in resp.context['tables'] if t['head'] == head][0]['rows']}
+
+	def test_layout_follows_sample(self):
+		resp = self.page('presidente')
+		self.assertEqual([t['head'] for t in resp.context['tables']], ['Suku', 'Aldeia', 'Organizasaun', 'Tinan', 'Idade', 'Estado Civil'])
+		self.assertContains(resp, 'card-header bg-warning')
+		self.assertContains(resp, 'th-amber')
+		self.assertContains(resp, 'REKAPITULASAUN MEMBRU PD')
+		self.assertEqual(resp.context['tot']['total'], 3)
+		self.assertEqual((resp.context['tot']['ativu'], resp.context['tot']['inativu'], resp.context['tot']['falesidu']), (2, 1, 0))
+
+	def test_tables_values_and_links(self):
+		resp = self.page('presidente')
+		self.assertEqual((self.table(resp, 'Suku')['Suku A']['total'], self.table(resp, 'Suku')['Suku B']['total']), (2, 1))
+		self.assertEqual(self.table(resp, 'Suku')['Suku A']['url'], '/membro/?village=%d' % self.va.pk)
+		self.assertEqual(self.table(resp, 'Tinan')['2015']['total'], 2)
+		self.assertEqual(self.table(resp, 'Tinan')['2015']['url'], '/membro/?hakbit=2015')
+		self.assertEqual(self.table(resp, 'Organizasaun')['Laiha organizasaun']['url'], '/membro/?organizasaun=0')
+		self.assertEqual(self.table(resp, 'Estado Civil')['Laiha']['url'], '/membro/?marital=laiha')
+		self.assertEqual({k: v['total'] for k, v in self.table(resp, 'Idade').items()}, {'18-25': 1, '26-35': 1, '> 65': 1})
+
+	def test_suku_user_sees_only_own_data(self):
+		resp = self.page('koordsuku')
+		self.assertEqual(set(self.table(resp, 'Suku')), {'Suku A'})
+		self.assertEqual(set(self.table(resp, 'Aldeia')), {'A1', 'A2'})
+		self.assertEqual(resp.context['tot']['total'], 2)
+
+	def test_links_filter_the_member_list(self):
+		self.login('presidente')
+		get = lambda q: {m.nu_eleitoral for m in self.client.get(reverse('membro-list') + q).context['objects']}
+		self.assertEqual(get('?marital=laiha'), {'TB00002'})
+		self.assertEqual(get('?marital=Viuvo/a'), {'TB00003'})
+		self.assertEqual(get('?umur=18-25'), {'TB00002'})
+		self.assertEqual(get('?umur=26-35'), {'TB00001'})
+		self.assertEqual(get('?umur=%3E+65'), {'TB00003'})
+		self.assertEqual(get('?umur=bukan-bin'), {'TB00001', 'TB00002', 'TB00003'})
+		self.assertEqual(get('?hakbit=2015'), {'TB00001', 'TB00003'})
+
+	def test_age_filter_matches_age_api(self):
+		self.login('presidente')
+		api = self.client.get(reverse('api-age')).json()
+		for label, n in zip(api['label'], api['obj']):
+			listed = self.client.get(reverse('membro-list'), {'umur': label}).context['objects']
+			self.assertEqual(len(listed), n, label)
+
+	def test_admin_forbidden(self):
+		self.login('admin')
+		self.assertEqual(self.client.get(reverse('report-dash')).status_code, 403)
+
+
+class RelatoriuMenuTests(BaseCase):
+	def test_dropdown_in_navbar_and_sidebar(self):
+		self.login('presidente')
+		resp = self.client.get('/')
+		self.assertContains(resp, 'Relatoriu</a>')
+		self.assertContains(resp, 'href="/report/"><i class="fa fa-table"></i> Tabular')
+		self.assertContains(resp, 'href="/report/chart/"><i class="fa fa-bar-chart"></i> Grafiku')
+		self.assertContains(resp, '<li class="sb-sec">Relatoriu</li>')
+		self.assertNotContains(resp, '> Rekap<')
+
+	def test_chart_page_breadcrumb_points_to_tabular(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('report-chart'))
+		self.assertContains(resp, '>TABULAR</a>')
+		self.assertContains(resp, 'RELATORIU GRAFIKU')
+
+
+class MissingFilesTextTests(BaseCase):
+	def test_texts_when_no_files(self):
+		m = self.make('MF00001')
+		self.login('presidente')
+		detail = self.client.get(reverse('membro-detail', args=[m.hashed]))
+		self.assertContains(detail, 'Seidauk upload eleitoral')
+		self.assertContains(detail, 'Seidauk upload fotu')
+		self.assertNotContains(detail, 'Hare PDF')
+		lst = self.client.get(reverse('membro-list'))
+		self.assertContains(lst, 'ELEITORAL (PDF)')
+		self.assertContains(lst, 'Seidauk upload')
+
+
+class MissingFilesTextWithFilesTests(UploadBase):
+	def test_no_missing_text_when_files_exist(self):
+		self.post_member(nu='MF00002', image=self.jpg(), pdf=self.pdf())
+		m = Membro.objects.get(nu_eleitoral='MF00002')
+		self.login('presidente')
+		detail = self.client.get(reverse('membro-detail', args=[m.hashed]))
+		self.assertNotContains(detail, 'Seidauk upload')
+		self.assertContains(detail, 'Hare PDF')
+		self.assertNotContains(self.client.get(reverse('membro-list')), 'Seidauk upload')
+
+
+class UpdateScriptTests(BaseCase):
+	def test_update_script_runs_migrate(self):
+		import os
+		path = os.path.join(settings.BASE_DIR, 'update.sh')
+		self.assertTrue(os.access(path, os.X_OK))
+		content = open(path).read()
+		for step in ('git pull', 'pip install -r requirements.txt', 'migrate', 'collectstatic', 'set -euo pipefail'):
+			self.assertIn(step, content)

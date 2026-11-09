@@ -20,6 +20,8 @@ Untuk MySQL: `DB_ENGINE=mysql` + `DB_*` di `.env` dan `pip install mysqlclient`.
 
 > Jangan mengganti `DJANGO_SECRET_KEY` setelah ada data: kolom `hashed` (hashid di URL, HMAC-SHA256) dihitung dari kunci ini.
 
+Pembaruan di server: `bash update.sh` (git pull, pip, **migrate**, collectstatic, check), lalu Reload.
+
 Setelah login sebagai `admin`: isi **Data Master** (Suku dan Aldeia di Postu Dom Aleixo, nama lengkap Organizasaun), lalu buat **Uzuáriu** untuk tiap peran.
 
 Deploy ke PythonAnywhere: lihat [`docs/DEPLOY_PYTHONANYWHERE.md`](docs/DEPLOY_PYTHONANYWHERE.md). Data demo fiktif untuk presentasi: `python manage.py seed_demo --password '...'` (hapus dengan `--hapus`).
@@ -34,7 +36,7 @@ Deploy ke PythonAnywhere: lihat [`docs/DEPLOY_PYTHONANYWHERE.md`](docs/DEPLOY_PY
 | `users` | `UserScope` (wilayah user), kelola uzuáriu (Admin) |
 | `membro` | `Membro`, `Alokasaun` (posisi/kargu), `Historia` (log perubahan); views, forms, urls |
 | `notification` | notifikasi lonceng (API DRF `/api/notification/...`, polling 5 detik): approver = membru Pendente, sekjer = membru Rejeitadu |
-| `report` | rekap angka (`/report/`), grafik Highcharts (`/report/chart/`) + API (`/report/api/...`) |
+| `report` | relatoriu tabular (`/report/`) dan grafiku (`/report/chart/`), menu dropdown *Relatoriu*, grafik Highcharts (`/report/chart/`) + API (`/report/api/...`) |
 
 ## Tampilan
 

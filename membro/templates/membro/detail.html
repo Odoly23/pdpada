@@ -32,14 +32,14 @@
 					<tr>
 						<td width="25%">Naran</td><td>{{ obj.nome }}</td>
 						<td rowspan="12" align="right" style="text-align: center; vertical-align: middle;">
-						{% if obj.image %}<img class="foto-membro" src="{% url 'membro-file' hashid 'foto' %}" alt="{{ obj.nome }}">{% else %}<i class="fa fa-user-circle fa-5x text-muted"></i>{% endif %}
+						{% if obj.image %}<img class="foto-membro" src="{% url 'membro-file' hashid 'foto' %}" alt="{{ obj.nome }}">{% else %}<div class="text-muted"><i class="fa fa-user-circle fa-5x"></i><br><small>Seidauk upload fotu</small></div>{% endif %}
 						</td>
 					</tr>
 					<tr><td>Nu. Eleitoral</td><td>{{ obj.nu_eleitoral }}</td></tr>
 					<tr><td>Sexu</td><td>{{ obj.sex }}</td></tr>
 					<tr><td>Fatin/Data Moris</td><td>{{ obj.place_of_birth|default:"-" }} / {{ obj.date_of_birth|date:"d/m/Y" }} ({{ obj.age }} tinan)</td></tr>
 					<tr><td>Estado Civil</td><td>{{ obj.marital|default:"-" }}</td></tr>
-					<tr><td>Kartaun Eleitoral (PDF)</td><td>{% if obj.file_eleitoral %}<a href="{% url 'membro-file' hashid 'eleitoral' %}" target="_blank" rel="noopener"><i class="fa fa-file-pdf-o"></i> Hare PDF</a>{% else %}-{% endif %}</td></tr>
+					<tr><td>Kartaun Eleitoral (PDF)</td><td>{% if obj.file_eleitoral %}<a href="{% url 'membro-file' hashid 'eleitoral' %}" target="_blank" rel="noopener"><i class="fa fa-file-pdf-o"></i> Hare PDF</a>{% else %}<span class="text-muted">Seidauk upload eleitoral</span>{% endif %}</td></tr>
 					<tr><td>Nu. Telemovel</td><td>{{ obj.telefone|default:"-" }}</td></tr>
 					<tr><td>Suku / Aldeia</td><td>{{ obj.village }} / {{ obj.aldeia }}</td></tr>
 					<tr><td>Hela Fatin</td><td>{{ obj.address|default:"-" }}</td></tr>

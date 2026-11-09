@@ -340,3 +340,8 @@ td.th-aldeia-s { background-color: #eceffd; font-weight: 600; }
 /* baris TOTAL: angka di tengah, label di kiri */
 tr.th-base td { text-align: center; background-color: #cfd6f7; }
 tr.th-base td.text-left { text-align: left; }
+
+/* tabel rekap tabular (header kuning seperti contoh) */
+tr.th-amber th { background-color: rgb(255, 187, 0) !important; color: #000 !important; border-bottom: 1px solid #c99200; text-align: center; }
+.scroll-card { max-height: 420px; overflow-y: auto; }
+.card-header.bg-warning .btn-primary { background-color: var(--navy); border-color: var(--navy); color: #fff; }

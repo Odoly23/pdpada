@@ -31,8 +31,11 @@ def _menu(request, group):
 		items.append(_item(request, 'Historia', 'fa-history', 'historia-list'))
 		return items
 	if group in roles.VIEW_ROLES:
-		items.append(_item(request, 'Rekap', 'fa-table', 'report-dash'))
-		items.append(_item(request, 'Grafik', 'fa-bar-chart', 'report-chart'))
+		rel = {'label': 'Relatoriu', 'icon': 'fa-list', 'url': '#', 'active': False, 'children': [
+			_item(request, 'Tabular', 'fa-table', 'report-dash'),
+			_item(request, 'Grafiku', 'fa-bar-chart', 'report-chart')]}
+		rel['active'] = any(c['active'] for c in rel['children'])
+		items.append(rel)
 		items.append(_item(request, 'Membru', 'fa-list', 'membro-list', names=('membro-list', 'membro-detail', 'membro-update')))
 		if group in roles.INPUT_ROLES:
 			items.append(_item(request, 'Aumenta', 'fa-plus', 'membro-add'))

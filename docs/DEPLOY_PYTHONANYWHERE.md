@@ -102,23 +102,32 @@ application = get_wsgi_application()
 | Halaman tanpa gaya/ikon/grafik | jalankan `collectstatic`, cek pemetaan `/static/` |
 | Foto/PDF membru tidak muncul | file disajikan lewat halaman ber-login dari folder `private/`; cek folder itu ada dan dapat ditulis (`ls -la ~/pdpada/private`) |
 | `ModuleNotFoundError` | path virtualenv di tab Web salah |
+| `OperationalError: no such column ...` / `no such table ...` | **migrasi belum dijalankan** setelah `git pull`: `workon Env && python manage.py migrate`, lalu Reload (atau jalankan `bash update.sh`) |
 | `RuntimeError: DJANGO_SECRET_KEY wajib diisi` | `.env` belum terisi atau tidak di `/home/USERNAME/pdpada/.env` |
 
 Setiap mengubah kode atau `.env`: klik **Reload**.
 
 ## 7. Update versi baru
 
-Pembaruan terbaru menambah paket `pypdf` (pemeriksaan PDF) dan migrasi baru (hapus No. BI, tambah file eleitoral), jadi `pip install -r requirements.txt` dan `migrate` wajib dijalankan.
+Cara termudah (menjalankan semua langkah yang sering terlupa: kode, paket, **migrasi**, static, pengecekan):
+
+```bash
+cd ~/pdpada
+workon Env
+bash update.sh
+```
+
+lalu klik **Reload** di tab Web. Cara manual:
 
 ```bash
 cd ~/pdpada && git pull
-workon pdpada-venv
+workon Env
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py collectstatic --noinput
 ```
 
-lalu **Reload** di tab Web.
+> Setiap pembaruan bisa membawa migrasi baru. Jika `migrate` terlewat, halaman akan menampilkan `no such column`.
 
 ## Catatan akun gratis
 

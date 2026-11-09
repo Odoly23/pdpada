@@ -34,6 +34,8 @@
 								<th>ALDEIA</th>
 								<th>ORGANIZASAUN</th>
 								<th>STATUS</th>
+								<th>FOTU</th>
+								<th>ELEITORAL (PDF)</th>
 								<th>APROVASAUN</th>
 								<th class="no-export">#</th>
 							</tr>
@@ -50,6 +52,8 @@
 								<td data-title="Aldeia">{{ obj.aldeia }}</td>
 								<td data-title="Organizasaun">{{ obj.organizasaun|default_if_none:"-" }}</td>
 								<td data-title="Status">{{ obj.status }}</td>
+								<td data-title="Fotu">{% if obj.image %}<span class="text-success">Iha</span>{% else %}<span class="text-muted">Seidauk upload</span>{% endif %}</td>
+								<td data-title="Eleitoral (PDF)">{% if obj.file_eleitoral %}<span class="text-success">Iha</span>{% else %}<span class="text-muted">Seidauk upload</span>{% endif %}</td>
 								<td data-title="Aprovasaun"><span class="badge badge-{{ obj.aprovasaun|lower }}">{{ obj.aprovasaun }}</span></td>
 								<td><a class="btn btn-sm btn-primary" href="{% url 'membro-detail' obj.hashed %}" title="Detalha"><i class="fa fa-eye"></i></a></td>
 							</tr>

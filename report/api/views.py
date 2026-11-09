@@ -72,8 +72,7 @@ class APIHakbit(BaseAPI):
 		return Response({'label': [str(r[0]) for r in rows], 'obj': [r[1] for r in rows]})
 
 
-AGE_BINS = [(0, 17, '< 18'), (18, 25, '18-25'), (26, 35, '26-35'), (36, 45, '36-45'),
-	(46, 55, '46-55'), (56, 65, '56-65'), (66, 200, '> 65')]
+from membro.utils import AGE_BINS
 
 
 class APIAge(BaseAPI):
