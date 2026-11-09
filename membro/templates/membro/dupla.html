@@ -1,0 +1,64 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1">
+	<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+	<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
+</ol>
+<div class="row">
+	<div class="col-sm-12">
+		<div class="card shadow-lg pt-0 rounded">
+			<div class="card-header">{{ legend|upper }}</div>
+			<div class="card-body">
+				<p class="text-muted">Nu. Eleitoral dupla sistema bloka ona. Pájina ne'e hatudu membru ne'ebé <strong>naran no data moris hanesan</strong> ka <strong>Nu. Telemovel hanesan</strong>: bele ema ida deit ne'ebé registu dala rua (ezemplu: sala hakerek Nu. Eleitoral). Verifika no rejeita ka hamoos ida ne'ebé la loos.</p>
+
+				<h6 class="mt-3">Naran no data moris hanesan <span class="badge badge-secondary">{{ groups_nome|length }}</span></h6>
+				{% for grp in groups_nome %}
+				<div class="table-responsive mb-3">
+				<table class="table table-sm table-bordered">
+					<thead><tr class="th-amber"><th colspan="7">{{ grp.0.nome }} · {{ grp.0.date_of_birth|date:"d/m/Y" }} ({{ grp|length }} rejistu)</th></tr></thead>
+					<tbody>
+						{% for m in grp %}
+						<tr>
+							<td><a href="{% url 'membro-detail' m.hashed %}">{{ m.nu_eleitoral }}</a></td>
+							<td>{{ m.village }} / {{ m.aldeia }}</td>
+							<td>{{ m.organizasaun|default_if_none:"-" }}</td>
+							<td>{{ m.telefone|default:"-" }}</td>
+							<td>{{ m.status }}</td>
+							<td><span class="badge badge-{{ m.aprovasaun|lower }}">{{ m.aprovasaun }}</span></td>
+							<td class="text-muted">{{ m.datetime|date:"d/m/Y" }}</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+				</div>
+				{% empty %}
+				<div class="alert alert-success p-2">Laiha membru ho naran no data moris hanesan.</div>
+				{% endfor %}
+
+				<h6 class="mt-4">Nu. Telemovel hanesan <span class="badge badge-secondary">{{ groups_tel|length }}</span></h6>
+				{% for grp in groups_tel %}
+				<div class="table-responsive mb-3">
+				<table class="table table-sm table-bordered">
+					<thead><tr class="th-amber"><th colspan="6">{{ grp.0.telefone }} ({{ grp|length }} rejistu)</th></tr></thead>
+					<tbody>
+						{% for m in grp %}
+						<tr>
+							<td><a href="{% url 'membro-detail' m.hashed %}">{{ m.nome }}</a></td>
+							<td>{{ m.nu_eleitoral }}</td>
+							<td>{{ m.village }} / {{ m.aldeia }}</td>
+							<td>{{ m.status }}</td>
+							<td><span class="badge badge-{{ m.aprovasaun|lower }}">{{ m.aprovasaun }}</span></td>
+							<td class="text-muted">{{ m.date_of_birth|date:"d/m/Y" }}</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+				</div>
+				{% empty %}
+				<div class="alert alert-success p-2">Laiha Nu. Telemovel ne'ebé uza dala barak.</div>
+				{% endfor %}
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}

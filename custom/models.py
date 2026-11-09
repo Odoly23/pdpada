@@ -59,7 +59,7 @@ class Organizasaun(HashedModel):
 
 class Year(models.Model):
 	year = models.IntegerField(unique=True, verbose_name="Tinan")
-	is_active = models.BooleanField(default=False, verbose_name="Ativu")
+	is_active = models.BooleanField(default=False, db_index=True, verbose_name="Ativu")
 
 	class Meta:
 		ordering = ['-year']

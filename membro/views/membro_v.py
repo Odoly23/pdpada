@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.http import FileResponse, Http404
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
@@ -9,22 +10,19 @@ from config.user_utils import c_user_group, membro_scope
 from custom.models import Year, Village, Aldeia, Organizasaun
 from membro.forms import MembroForm
 from membro.models import Membro, Alokasaun
-from membro.utils import snapshot, diff_snapshot, log_historia, apply_filters
+from membro.utils import snapshot, diff_snapshot, log_historia, membro_listing, aprovasaun_filters
 
 
 @login_required
 @allowed_users(allowed_roles=roles.VIEW_ROLES)
 def MembroList(request):
 	group = c_user_group(request.user)
-	objects = membro_scope(request.user).select_related('village', 'aldeia', 'organizasaun')
-	ano = Year.objects.filter(is_active=True).first()
-	semua_ano = request.GET.get('ano') == 'hotu'
-	if ano and not semua_ano:
-		objects = objects.filter(year=ano)
-	objects = apply_filters(objects, request.GET)
+	objects, semua_ano = membro_listing(request.user, request.GET)
 	context = {
 		'group': group, 'objects': objects, 'semua_ano': semua_ano,
 		'can_add': group in roles.INPUT_ROLES, 'can_aprova': group in roles.APROVA_ROLES,
+		'can_export': group in roles.EXPORT_ROLES,
+		'filters': aprovasaun_filters(request.user, request.GET),
 		'title': 'Lista Membru', 'legend': 'Lista Membru'
 	}
 	return render(request, 'membro/list.html', context)
@@ -86,6 +84,7 @@ def MembroUpdate(request, hashid):
 	group = c_user_group(request.user)
 	obj = get_object_or_404(membro_scope(request.user), hashed=hashid)
 	old = snapshot(obj)
+	old_files = {'image': obj.image.name, 'file_eleitoral': obj.file_eleitoral.name}
 	if request.method == 'POST':
 		form = MembroForm(request.POST, request.FILES, instance=obj, user=request.user)
 		if form.is_valid():
@@ -100,6 +99,9 @@ def MembroUpdate(request, hashid):
 			instance.datetime = timezone.now()
 			instance.user = request.user
 			instance.save()
+			for name, old_name in old_files.items():  # file lama yang diganti dihapus dari penyimpanan
+				if old_name and old_name != getattr(instance, name).name:
+					Membro._meta.get_field(name).storage.delete(old_name)
 			log_historia(request.user, instance, 'Edita', diff_snapshot(old, snapshot(instance)) or 'Fotu troka')
 			messages.success(request, 'Data membru atualiza ona. Hein aprovasaun foun.')
 			return redirect('membro-detail', hashid)
@@ -122,6 +124,34 @@ def MembroDel(request, hashid):
 	log_historia(request.user, None, 'Hamoos', f'Data membru hamoos: {nome}', nome=nome)
 	if obj.image:
 		obj.image.delete(save=False)
+	if obj.file_eleitoral:
+		obj.file_eleitoral.delete(save=False)
 	obj.delete()
 	messages.warning(request, 'Hamoos ho Susesu!.')
 	return redirect('membro-list')
+
+
+@login_required
+@allowed_users(allowed_roles=roles.VIEW_ROLES)
+def MembroFile(request, hashid, kind):
+	"""Sajikan foto/PDF eleitoral dari penyimpanan privat, hanya untuk yang berhak melihat membru ini."""
+	obj = get_object_or_404(membro_scope(request.user), hashed=hashid)
+	if kind == 'foto':
+		fieldfile, ctype, name = obj.image, 'image/jpeg', 'foto.jpg'
+	elif kind == 'eleitoral':
+		fieldfile, ctype, name = obj.file_eleitoral, 'application/pdf', 'kartaun-eleitoral.pdf'
+	else:
+		raise Http404
+	if not fieldfile:
+		raise Http404
+	try:
+		handle = fieldfile.storage.open(fieldfile.name, 'rb')
+	except (FileNotFoundError, OSError):
+		raise Http404
+	if kind == 'eleitoral':
+		log_historia(request.user, obj, 'Hare Dokumentu', 'Kartaun Eleitoral (PDF)')
+	response = FileResponse(handle, content_type=ctype)
+	response['Content-Disposition'] = f'inline; filename="{name}"'
+	response['X-Content-Type-Options'] = 'nosniff'
+	response['Cache-Control'] = 'private, no-store'
+	return response

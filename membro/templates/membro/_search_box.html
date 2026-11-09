@@ -1,0 +1,10 @@
+{# Kotak pencarian + saran otomatis (search.js). Variabel: q (opsional), large (opsional) #}
+<form class="search-form position-relative" method="get" action="{% url 'membro-cari' %}" role="search">
+	<div class="input-group{% if large %} input-group-lg{% endif %}">
+		<div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-search"></i></span></div>
+		<input type="search" name="q" id="search-q" class="form-control" value="{{ q|default:'' }}" autocomplete="off" minlength="2" maxlength="80"
+			placeholder="Buka membru: naran, Nu. Eleitoral ka Nu. Telemovel…" aria-label="Pesquiza membru" data-url="{% url 'api-membro-cari' %}">
+		<div class="input-group-append"><button class="btn btn-primary" type="submit">Buka</button></div>
+	</div>
+	<div id="search-suggest" class="list-group search-suggest" role="listbox" style="display:none"></div>
+</form>

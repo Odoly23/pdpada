@@ -5,7 +5,7 @@ from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from config import roles
-from config.user_utils import c_user_group, membro_ativu
+from config.user_utils import c_user_group, membro_ativu, alokasaun_scope
 
 
 class IsViewRole(BasePermission):
@@ -72,8 +72,7 @@ class APIHakbit(BaseAPI):
 		return Response({'label': [str(r[0]) for r in rows], 'obj': [r[1] for r in rows]})
 
 
-AGE_BINS = [(0, 17, '< 18'), (18, 25, '18-25'), (26, 35, '26-35'), (36, 45, '36-45'),
-	(46, 55, '46-55'), (56, 65, '56-65'), (66, 200, '> 65')]
+from membro.utils import AGE_BINS
 
 
 class APIAge(BaseAPI):
@@ -87,3 +86,13 @@ class APIAge(BaseAPI):
 					counts[i] += 1
 					break
 		return Response({'label': [b[2] for b in AGE_BINS], 'obj': counts})
+
+
+class APIAlokasaun(BaseAPI):
+	"""Posisi aktif per nivel dan pozisaun (untuk grafik Struktura)."""
+	def get(self, request, format=None):
+		order = {'Postu': 0, 'Suku': 1, 'Aldeia': 2, 'Organizasaun': 3}
+		poz = {'Presidente': 0, 'Coordenador': 1, 'Sekretariu': 2}
+		rows = alokasaun_scope(request.user).filter(ativu='Sim').values_list('nivel', 'pozisaun').annotate(n=Count('id'))
+		rows = sorted(rows, key=lambda r: (order.get(r[0], 9), poz.get(r[1], 9)))
+		return Response({'label': [f'{r[0]} · {r[1]}' for r in rows], 'obj': [r[2] for r in rows]})

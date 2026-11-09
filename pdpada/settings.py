@@ -38,6 +38,7 @@ INSTALLED_APPS = [
 	'users.apps.UsersConfig',
 	'membro.apps.MembroConfig',
 	'report.apps.ReportConfig',
+	'notification.apps.NotificationConfig',
 ]
 
 MIDDLEWARE = [
@@ -80,6 +81,7 @@ if os.environ.get('DB_ENGINE', 'sqlite') == 'mysql':
 			'PASSWORD': os.environ.get('DB_PASSWORD', ''),
 			'HOST': os.environ.get('DB_HOST', 'localhost'),
 			'PORT': os.environ.get('DB_PORT', '3306'),
+			'CONN_MAX_AGE': 60,
 		}
 	}
 else:
@@ -108,6 +110,13 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
+# File sensitif (foto dan kartu eleitoral): di luar MEDIA_ROOT, tanpa URL publik.
+# Dilayani hanya lewat view ber-izin; ikut dicadangkan bersama database.
+PRIVATE_ROOT = os.environ.get('DJANGO_PRIVATE_ROOT') or os.path.join(BASE_DIR, 'private')
+
+# Batas ukuran upload (byte) yang disimpan di memori sebelum ke file sementara
+FILE_UPLOAD_MAX_MEMORY_SIZE = 2621440
+
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap4'
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
@@ -135,10 +144,40 @@ REST_FRAMEWORK = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Sesi: otomatis keluar setelah 12 jam
+SESSION_COOKIE_AGE = 60 * 60 * 12
+
 # Cookie dan header keamanan dasar
 SESSION_COOKIE_HTTPONLY = True
+SECURE_REFERRER_POLICY = 'same-origin'
+SECURE_CONTENT_TYPE_NOSNIFF = True
+# HSTS dimatikan secara bawaan; isi DJANGO_HSTS_SECONDS (mis. 31536000) setelah HTTPS stabil
+SECURE_HSTS_SECONDS = int(os.environ.get('DJANGO_HSTS_SECONDS', '0') or 0)
 CSRF_COOKIE_HTTPONLY = False
 X_FRAME_OPTIONS = 'DENY'
 if not DEBUG:
 	SESSION_COOKIE_SECURE = True
 	CSRF_COOKIE_SECURE = True
+
+
+# ---- Logging: konsol selalu; file berputar (5 MB x 5) saat produksi. Logger aplikasi: 'pdpada'.
+LOG_DIR = Path(os.environ.get('DJANGO_LOG_DIR') or BASE_DIR / 'logs')
+_log_handlers = {'console': {'class': 'logging.StreamHandler', 'formatter': 'simple'}}
+if not DEBUG:
+	try:
+		LOG_DIR.mkdir(parents=True, exist_ok=True)
+		_log_handlers['file'] = {
+			'class': 'logging.handlers.RotatingFileHandler', 'filename': str(LOG_DIR / 'app.log'),
+			'maxBytes': 5 * 1024 * 1024, 'backupCount': 5, 'encoding': 'utf-8', 'formatter': 'simple'}
+	except OSError:
+		pass  # folder log tidak bisa dibuat: cukup log ke konsol (error log server)
+LOGGING = {
+	'version': 1,
+	'disable_existing_loggers': False,
+	'formatters': {'simple': {'format': '%(asctime)s %(levelname)s %(name)s: %(message)s'}},
+	'handlers': _log_handlers,
+	'loggers': {
+		'django': {'handlers': list(_log_handlers), 'level': 'WARNING'},
+		'pdpada': {'handlers': list(_log_handlers), 'level': 'INFO', 'propagate': False},
+	},
+}

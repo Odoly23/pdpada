@@ -1,0 +1,44 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1">
+	<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+	<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
+</ol>
+<div class="row">
+	<div class="col-sm-12">
+		<div class="card shadow-lg pt-0 rounded">
+			<div class="card-header">{{ legend|upper }}</div>
+			<div class="card-body">
+				{% include 'membro/_search_box.html' with large=True %}
+				<p class="text-muted mt-2 mb-3"><small>Buka tuir naran (kata hotu), Nu. Eleitoral (komesa ho) ka Nu. Telemovel. Rezultadu limite ba ita nia wilayah.</small></p>
+				{% if too_short %}
+					<div class="alert alert-info p-2">Hakerek karakter {{ min_chars }} ka liu.</div>
+				{% elif q %}
+					<p><strong>{{ objects|length }}</strong> rezultadu ba "{{ q }}"{% if objects|length >= 50 %} (hatudu 50 uluk){% endif %}.</p>
+					<section id="no-more-tables">
+					<table class="table table-sm">
+						<thead><tr><th>Nu. Eleitoral</th><th>Naran</th><th>Sexu</th><th>Suku</th><th>Aldeia</th><th>Organizasaun</th><th>Status</th><th>Aprovasaun</th></tr></thead>
+						<tbody>
+							{% for obj in objects %}
+							<tr>
+								<td data-title="Nu. Eleitoral">{{ obj.nu_eleitoral }}</td>
+								<td data-title="Naran"><a href="{% url 'membro-detail' obj.hashed %}">{{ obj.nome }}</a></td>
+								<td data-title="Sexu">{{ obj.sex }}</td>
+								<td data-title="Suku">{{ obj.village }}</td>
+								<td data-title="Aldeia">{{ obj.aldeia }}</td>
+								<td data-title="Organizasaun">{{ obj.organizasaun|default_if_none:"-" }}</td>
+								<td data-title="Status">{{ obj.status }}</td>
+								<td data-title="Aprovasaun"><span class="badge badge-{{ obj.aprovasaun|lower }}">{{ obj.aprovasaun }}</span></td>
+							</tr>
+							{% empty %}
+							<tr><td colspan="8" class="text-muted">Laiha membru ne'ebé hetan.</td></tr>
+							{% endfor %}
+						</tbody>
+					</table>
+					</section>
+				{% endif %}
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}

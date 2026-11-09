@@ -1,6 +1,9 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.db.models import Count
+from django.urls import reverse
+from custom.models import Village, Aldeia, Organizasaun, Year
 from django.shortcuts import render, redirect, get_object_or_404
 from config import roles
 from config.decorators import allowed_users
@@ -70,3 +73,24 @@ def UserUpdate(request, pk):
 		'title': 'Edita Uzuáriu', 'legend': 'Edita Uzuáriu'
 	}
 	return render(request, 'users/form.html', context)
+
+
+@login_required
+@allowed_users(allowed_roles=[roles.ADMIN])
+def UserPainel(request):
+	"""Painel Admin: jumlah user aktif per peran dan ringkasan data master (tanpa data membru)."""
+	group = c_user_group(request.user)
+	by_role = {r['groups__name']: r['n'] for r in User.objects.filter(is_active=True).values('groups__name').annotate(n=Count('id'))}
+	context = {
+		'group': group, 'banner': ('ADMIN', 'SGDM-PDPADA'),
+		'users_by_role': [(label, by_role.get(key, 0)) for key, label in roles.ROLE_LABELS],
+		'users_total': sum(by_role.values()),
+		'master': [
+			('Suku', Village.objects.count(), reverse('master-list', args=['suku'])),
+			('Aldeia', Aldeia.objects.count(), reverse('master-list', args=['aldeia'])),
+			('Organizasaun', Organizasaun.objects.filter(is_active=True).count(), reverse('master-list', args=['organizasaun'])),
+			('Tinan', Year.objects.count(), reverse('master-list', args=['ano'])),
+		],
+		'title': 'Painel Admin', 'legend': 'Painel Admin'
+	}
+	return render(request, 'users/painel.html', context)

@@ -4,7 +4,8 @@ from config.utils import hash_id
 
 class HashedModel(models.Model):
 	"""Model dasar dengan kolom hashed (HMAC-SHA256) yang terisi otomatis setelah id ada."""
-	hashed = models.CharField(max_length=64, null=True, blank=True, editable=False)
+	# hashed dipakai untuk mencari data di setiap URL (get_object_or_404(hashed=...)): unik dan terindeks
+	hashed = models.CharField(max_length=64, null=True, blank=True, editable=False, unique=True)
 
 	class Meta:
 		abstract = True

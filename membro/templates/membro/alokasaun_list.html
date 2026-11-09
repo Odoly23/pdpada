@@ -2,6 +2,7 @@
 {% block content %}
 <ol class="breadcrumb mb-2 mt-1">
 	<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+	<li class="breadcrumb-item"><a href="{% url 'alokasaun-dash' %}">STRUKTURA PD</a></li>
 	<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
 </ol>
 <div class="row">
@@ -10,6 +11,8 @@
 			<div class="card-header">{{ legend|upper }}</div>
 			<div class="card-body">
 				{% if can_aloka %}<a class="btn btn-sm btn-primary mb-2" href="{% url 'alokasaun-add' %}">Aloka Pozisaun <i class="fa fa-plus"></i></a>{% endif %}
+				<a class="btn btn-sm btn-secondary mb-2" href="{% url 'alokasaun-dash' %}">Dashboard Struktura <i class="fa fa-sitemap"></i></a>
+				{% if request.GET.urlencode %}<a class="btn btn-sm btn-outline-primary mb-2" href="{% url 'alokasaun-list' %}">Hotu <i class="fa fa-times"></i></a>{% endif %}
 				<section id="no-more-tables">
 					<table class="table table-sm" id="example" width="100%" cellspacing="0">
 						<thead>

@@ -50,7 +50,7 @@ python manage.py collectstatic --noinput
 python manage.py seed_demo --password 'PasswordDemoYangKuat2026!'
 ```
 
-Membuat 3 suku, 9 aldeia, 60 membru fiktif, dan user `demo_presidente`, `demo_koordpostu`, `demo_sekrpostu`, `demo_koordsuku`, `demo_sekrsuku`, `demo_sekraldeia`, `demo_koordorg` (semua memakai password di atas). Hapus semuanya sebelum dipakai sungguhan:
+Membuat 3 suku, 9 aldeia, 60 membru fiktif, dan 8 user: `demo_presidente`, `demo_koordpostu`, `demo_sekrpostu`, `demo_koordsuku`, `demo_sekrsuku`, `demo_sekraldeia`, `demo_koordorg`, `demo_sekrorg` (semua memakai password di atas). Hapus semuanya sebelum dipakai sungguhan:
 
 ```bash
 python manage.py seed_demo --hapus
@@ -82,7 +82,7 @@ application = get_wsgi_application()
 | URL | Directory |
 |---|---|
 | `/static/` | `/home/USERNAME/pdpada/staticfiles` |
-| `/media/` | `/home/USERNAME/pdpada/media` |
+| `/media/` | `/home/USERNAME/pdpada/media` (opsional; foto dan PDF eleitoral kini ada di folder privat `private/`, jangan dipetakan) |
 
 6. Aktifkan **Force HTTPS**.
 7. Klik **Reload**, lalu buka `https://USERNAME.pythonanywhere.com`.
@@ -100,25 +100,49 @@ application = get_wsgi_application()
 | `DisallowedHost` / Bad Request (400) | `DJANGO_ALLOWED_HOSTS` salah di `.env` |
 | `CSRF verification failed` (403) saat login | isi `DJANGO_CSRF_TRUSTED_ORIGINS=https://USERNAME.pythonanywhere.com` |
 | Halaman tanpa gaya/ikon/grafik | jalankan `collectstatic`, cek pemetaan `/static/` |
-| Foto membru tidak muncul | cek pemetaan `/media/` |
+| Foto/PDF membru tidak muncul | file disajikan lewat halaman ber-login dari folder `private/`; cek folder itu ada dan dapat ditulis (`ls -la ~/pdpada/private`) |
 | `ModuleNotFoundError` | path virtualenv di tab Web salah |
+| `OperationalError: no such column ...` / `no such table ...` | **migrasi belum dijalankan** setelah `git pull`: `workon Env && python manage.py migrate`, lalu Reload (atau jalankan `bash update.sh`) |
+| `Not possible to fast-forward, aborting` saat `bash update.sh` | riwayat git server berbeda dari GitHub (biasanya karena `git pull` biasa membuat commit gabungan lokal). Jalankan `bash update.sh --reset` (menyamakan dengan GitHub; `.env`, database, `private/` dan `backups/` tidak tersentuh) |
 | `RuntimeError: DJANGO_SECRET_KEY wajib diisi` | `.env` belum terisi atau tidak di `/home/USERNAME/pdpada/.env` |
 
 Setiap mengubah kode atau `.env`: klik **Reload**.
 
 ## 7. Update versi baru
 
+Cara termudah (menjalankan semua langkah yang sering terlupa: kode, paket, **migrasi**, static, pengecekan):
+
+```bash
+cd ~/pdpada
+workon Env
+bash update.sh
+```
+
+lalu klik **Reload** di tab Web. Cara manual:
+
 ```bash
 cd ~/pdpada && git pull
-workon pdpada-venv
+workon Env
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py collectstatic --noinput
 ```
 
-lalu **Reload** di tab Web.
+> Jangan memakai `git pull` biasa di server; gunakan `bash update.sh`. Server tidak boleh punya commit atau perubahan sendiri.
+
+> Setiap pembaruan bisa membawa migrasi baru. Jika `migrate` terlewat, halaman akan menampilkan `no such column`.
+
+## 8. Cadangan harian dan pemantauan
+
+Tab **Tasks** → *Create a scheduled task* (harian), perintah:
+
+```
+cd /home/USERNAME/pdpada && /home/USERNAME/.virtualenvs/Env/bin/python manage.py backup_data
+```
+
+Hasilnya `~/pdpada/backups/pdpada-*.zip` (14 terakhir; berisi database + foto + PDF eleitoral). Unduh salinan ke tempat lain secara berkala. Pemantauan: `https://USERNAME.pythonanywhere.com/healthz/` harus menjawab `{"status":"ok"}`. Panduan lengkap: `docs/MAINTENANCE.md`.
 
 ## Catatan akun gratis
 
 - Web app harus diperpanjang dengan tombol **Run until...** di tab Web (jadwal sekitar tiap 3 bulan).
-- Cadangan data: unduh `~/pdpada/db.sqlite3` dan folder `~/pdpada/media/` lewat tab **Files**.
+- Cadangan data: unduh `~/pdpada/db.sqlite3` dan folder `~/pdpada/private/` (foto dan kartu eleitoral) lewat tab **Files**.

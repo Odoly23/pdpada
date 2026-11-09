@@ -1,11 +1,14 @@
 import datetime
 from django import forms
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import UploadedFile
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Row, Column, HTML
 from django.urls import reverse
 from custom.models import Village, Aldeia, Organizasaun
 from config import roles
+from config.file_utils import sanitize_image, validate_image_content
+from config.upload_utils import validate_image_size
 from config.user_utils import c_user_group, c_user_scope
 from membro.models import Membro, Alokasaun, POZISAUN_POR_NIVEL
 
@@ -31,8 +34,8 @@ class MembroForm(forms.ModelForm):
 
 	class Meta:
 		model = Membro
-		fields = ['nome', 'sex', 'place_of_birth', 'date_of_birth', 'marital', 'nu_eleitoral', 'nu_bi',
-			'telefone', 'image', 'village', 'aldeia', 'address', 'organizasaun', 'data_hakbit', 'status']
+		fields = ['nome', 'sex', 'place_of_birth', 'date_of_birth', 'marital', 'nu_eleitoral',
+			'telefone', 'image', 'file_eleitoral', 'village', 'aldeia', 'address', 'organizasaun', 'data_hakbit', 'status']
 
 	def __init__(self, *args, user=None, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -40,6 +43,15 @@ class MembroForm(forms.ModelForm):
 		scope = c_user_scope(user) if user else None
 		self.fields['organizasaun'].queryset = Organizasaun.objects.filter(is_active=True)
 		self.fields['organizasaun'].empty_label = '--- Laiha ---'
+		# upload: FileInput biasa (tanpa tautan/URL publik); isi file diperiksa di server
+		self.fields['image'].widget = forms.FileInput(attrs={'accept': 'image/jpeg,image/png'})
+		self.fields['file_eleitoral'].widget = forms.FileInput(attrs={'accept': 'application/pdf'})
+		self.fields['image'].error_messages['invalid_image'] = "Fotu la válidu: ficheiru ne'e la'ós imajen JPEG ka PNG ne'ebé loos."
+		self.fields['image'].error_messages['invalid'] = "Fotu la válidu."
+		has_img = bool(self.instance.pk and self.instance.image)
+		has_pdf = bool(self.instance.pk and self.instance.file_eleitoral)
+		self.fields['image'].help_text = 'JPEG/PNG, maksimu 2 MB.' + (' Fotu iha ona; upload foun atu troka.' if has_img else '')
+		self.fields['file_eleitoral'].help_text = 'PDF deit, maksimu 5 MB.' + (' PDF iha ona; upload foun atu troka.' if has_pdf else '')
 		self.fields['village'].queryset = Village.objects.all()
 		self.fields['aldeia'].queryset = Aldeia.objects.select_related('village')
 		if group == roles.SEKR_SUKU and scope and scope.village_id:
@@ -47,6 +59,15 @@ class MembroForm(forms.ModelForm):
 			self.fields['aldeia'].queryset = Aldeia.objects.filter(village_id=scope.village_id)
 			self.fields['village'].initial = scope.village_id
 			self.fields['village'].disabled = True
+		elif group == roles.SEKR_ORG and scope and scope.organizasaun_id:
+			# anggota organisasi bisa berasal dari suku/aldeia mana pun di Postu; organisasi terkunci
+			self.fields['organizasaun'].queryset = Organizasaun.objects.filter(pk=scope.organizasaun_id)
+			self.fields['organizasaun'].empty_label = None
+			self.fields['organizasaun'].initial = scope.organizasaun_id
+			self.fields['organizasaun'].disabled = True
+			village_id = self.data.get('village') if self.is_bound else (self.instance.village_id if self.instance.pk else None)
+			valid = str(village_id).isdigit() if village_id else False
+			self.fields['aldeia'].queryset = Aldeia.objects.filter(village_id=village_id) if valid else Aldeia.objects.none()
 		elif group == roles.SEKR_ALDEIA and scope and scope.aldeia_id:
 			self.fields['village'].queryset = Village.objects.filter(pk=scope.aldeia.village_id)
 			self.fields['aldeia'].queryset = Aldeia.objects.filter(pk=scope.aldeia_id)
@@ -57,6 +78,7 @@ class MembroForm(forms.ModelForm):
 		self.helper = FormHelper()
 		self.helper.form_method = 'post'
 		self.helper.form_id = 'membroForm'
+		self.helper.attrs = {'data-aldeias-url': reverse('ajax_load_aldeias')}  # dropdown Suku -> Aldeia
 		self.helper.layout = Layout(
 			Row(
 				Column('nome', css_class='form-group col-md-6 mb-0'),
@@ -71,9 +93,9 @@ class MembroForm(forms.ModelForm):
 				css_class='form-row'
 			),
 			Row(
-				Column('nu_bi', css_class='form-group col-md-4 mb-0'),
 				Column('telefone', css_class='form-group col-md-4 mb-0'),
 				Column('image', css_class='form-group col-md-4 mb-0'),
+				Column('file_eleitoral', css_class='form-group col-md-4 mb-0'),
 				css_class='form-row'
 			),
 			Row(
@@ -91,6 +113,16 @@ class MembroForm(forms.ModelForm):
 			HTML(BTN_CANCEL),
 			HTML(BTN_SAVE)
 		)
+
+	def clean_image(self):
+		f = self.cleaned_data.get('image')
+		if f and isinstance(f, UploadedFile):
+			# periksa file ASLI dulu (ukuran, format JPEG/PNG, jumlah piksel); validator model baru
+			# berjalan setelah foto dibersihkan sehingga tidak cukup
+			validate_image_size(f)
+			validate_image_content(f)
+			return sanitize_image(f)  # dekode + encode ulang: buang EXIF dan data tambahan
+		return f
 
 	def clean_nome(self):
 		return ' '.join(self.cleaned_data['nome'].split())
