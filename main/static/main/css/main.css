@@ -345,3 +345,10 @@ tr.th-base td.text-left { text-align: left; }
 tr.th-amber th { background-color: rgb(255, 187, 0) !important; color: #000 !important; border-bottom: 1px solid #c99200; text-align: center; }
 .scroll-card { max-height: 420px; overflow-y: auto; }
 .card-header.bg-warning .btn-primary { background-color: var(--navy); border-color: var(--navy); color: #fff; }
+
+/* bendera partai selalu utuh (tidak dipotong): tinggi mengikuti lebar */
+.brand img.brand-flag { height: 34px; width: auto; object-fit: contain; border: 1px solid rgba(255,255,255,.75); border-radius: 3px; background: #fff; }
+.login-page { min-height: 55vh; }
+.login-flag { display: block; width: 100%; max-width: 560px; height: auto; margin: 0 auto; object-fit: contain;
+	border: 1px solid #dfe2f2; border-radius: 6px; box-shadow: 0 6px 22px rgba(11,30,138,.25); }
+.login-motto { color: var(--navy); font-style: italic; letter-spacing: .08em; }

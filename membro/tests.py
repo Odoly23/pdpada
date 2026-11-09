@@ -1114,7 +1114,7 @@ class MetaTagTests(BaseCase):
 		resp = self.client.get(reverse('login'))
 		for needle in ('<meta charset="utf-8">', 'name="viewport"', 'name="description"', 'name="keywords"', 'name="author"',
 				'name="robots" content="noindex, nofollow', 'name="theme-color" content="#0b1e8a"', 'property="og:title"',
-				'property="og:description"', 'property="og:image" content="http://testserver/static/main/images/logo_pd.png"',
+				'property="og:description"', 'property="og:image" content="http://testserver/static/main/images/bandeira_pd.png"',
 				'name="twitter:card"', 'rel="apple-touch-icon"', 'rel="icon"', 'name="referrer" content="same-origin"'):
 			self.assertContains(resp, needle)
 
@@ -1251,3 +1251,54 @@ class UpdateScriptTests(BaseCase):
 		content = open(path).read()
 		for step in ('git pull', 'pip install -r requirements.txt', 'migrate', 'collectstatic', 'set -euo pipefail'):
 			self.assertIn(step, content)
+
+
+class LoginPageTests(BaseCase):
+	def test_login_layout_follows_sample(self):
+		resp = self.client.get(reverse('login'))
+		self.assertEqual(resp.status_code, 200)
+		for needle in ('SISTEMA JESTAUN DADUS MEMBRU', 'PARTIDO DEMOCRATICO', 'SGDM-PDPADA', 'class="card border-primary shadow-lg"',
+				'card-header bg-primary text-white', 'LOGIN', 'Log In', 'name="username"', 'name="password"', 'csrfmiddlewaretoken'):
+			self.assertContains(resp, needle)
+
+	def test_login_shows_full_flag_not_cropped_logo(self):
+		resp = self.client.get(reverse('login'))
+		self.assertContains(resp, 'class="login-flag" src="/static/main/images/bandeira_pd.png"')
+		self.assertContains(resp, 'width="592" height="337"')
+		self.assertNotContains(resp, 'logo_pd')
+
+	def test_flag_file_is_complete_and_not_cropped(self):
+		import os
+		base = os.path.join(settings.BASE_DIR, 'main/static/main/images')
+		with Image.open(os.path.join(base, 'bandeira_pd.png')) as flag:
+			self.assertEqual(flag.size, (592, 337))  # ukuran bendera asli utuh
+		self.assertFalse(os.path.exists(os.path.join(base, 'logo_pd.png')))  # potongan emblem tidak dipakai lagi
+
+	def test_icons_keep_the_whole_flag_with_padding(self):
+		import os
+		base = os.path.join(settings.BASE_DIR, 'main/static/main/images')
+		with Image.open(os.path.join(base, 'favicon.png')) as fav:
+			self.assertEqual(fav.size, (64, 64))
+			rgba = fav.convert('RGBA')
+			self.assertEqual(rgba.getpixel((0, 0))[3], 0)        # sudut atas transparan (padding)
+			self.assertGreater(rgba.getpixel((0, 32))[3], 200)   # tepi kiri bendera terisi penuh: tidak terpotong
+			self.assertGreater(rgba.getpixel((63, 32))[3], 200)  # tepi kanan bendera terisi penuh
+		with Image.open(os.path.join(base, 'apple-touch-icon.png')) as apple:
+			self.assertEqual(apple.size, (180, 180))
+
+	def test_navbar_uses_full_flag(self):
+		self.login('presidente')
+		resp = self.client.get('/')
+		self.assertContains(resp, 'class="brand-flag" src="/static/main/images/bandeira_pd.png"')
+		self.assertNotContains(resp, 'logo_pd')
+		self.assertContains(resp, 'apple-touch-icon.png')
+
+	def test_login_error_message_and_authentication(self):
+		bad = self.client.post(reverse('login'), {'username': 'presidente', 'password': 'salah'})
+		self.assertContains(bad, 'Username ka password la loos.')
+		ok = self.client.post(reverse('login'), {'username': 'presidente', 'password': 'Teste-12345!'})
+		self.assertRedirects(ok, '/', fetch_redirect_response=False)
+
+	def test_logged_in_user_is_redirected_from_login(self):
+		self.login('presidente')
+		self.assertEqual(self.client.get(reverse('login')).status_code, 302)

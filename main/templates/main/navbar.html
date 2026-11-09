@@ -16,7 +16,7 @@
 <nav class="main-navbar">
 	<div class="container">
 		<a class="brand" href="{% if user.is_authenticated %}{% url 'home' %}{% else %}{% url 'login' %}{% endif %}">
-			<img src="{% static 'main/images/logo_pd.png' %}" alt="PD"><span>SGDM-PDPADA</span>
+			<img class="brand-flag" src="{% static 'main/images/bandeira_pd.png' %}" alt="Bendera Partido Democratico"><span>SGDM-PDPADA</span>
 		</a>
 		{% if user.is_authenticated %}
 		<ul class="nav-links">
