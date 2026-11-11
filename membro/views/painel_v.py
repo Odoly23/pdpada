@@ -6,11 +6,12 @@ from django.urls import reverse
 from config import roles
 from config.decorators import allowed_users
 from config.user_utils import c_user_group, c_user_scope, membro_ativu
+from membro.views.rekap_v import PainelPostu
 from report.utils import matrix_rows
 
 ROLE_NAME = dict(roles.ROLE_LABELS)
 
-# Tabel dan grafik Painel mengikuti wilayah peran: (judul, parameter filter, field id, field nama)
+# Tabel dan grafik Painel mengikuti suku peran: (judul, parameter filter, field id, field nama)
 TABLES = {
 	'postu': [('Suku', 'village', 'village_id', 'village__name'), ('Organizasaun', 'organizasaun', 'organizasaun_id', 'organizasaun__code')],
 	'suku': [('Aldeia', 'aldeia', 'aldeia_id', 'aldeia__name')],
@@ -54,7 +55,7 @@ def _cells(row, key=None):
 
 
 def _banner(group, scope):
-	"""Dua baris judul banner: peran dan wilayahnya."""
+	"""Dua baris judul banner: peran dan sukunya."""
 	name = ROLE_NAME.get(group, '').upper()
 	if group in roles.POSTU_ROLES:
 		return name, 'POSTU DOM ALEIXO'
@@ -70,9 +71,11 @@ def _banner(group, scope):
 @login_required
 @allowed_users(allowed_roles=roles.VIEW_ROLES)
 def PainelMembru(request):
-	"""Painel membru: banner peran, tombol aksi, tabel matriks bertaut, dan grafik, sesuai wilayah peran."""
+	"""Painel membru: banner peran, tombol aksi, tabel matriks bertaut, dan grafik, sesuai suku peran."""
 	user = request.user
 	group = c_user_group(user)
+	if group in roles.POSTU_ROLES:  # peran Postu: Painel tinan | suku | grafik (rekapitulasi saja)
+		return PainelPostu(request)
 	qs = membro_ativu(user)
 	level = _level(group)
 	tot = qs.aggregate(
@@ -92,6 +95,6 @@ def PainelMembru(request):
 		'can_add': group in roles.INPUT_ROLES, 'can_aprova': group in roles.APROVA_ROLES,
 		'chart_url': reverse(chart_name), 'chart_title': chart_title,
 		'title': 'Painel Membru', 'legend': 'Painel Membru',
-		'meta_description': 'Painel membru Partido Democratico, Postu Dom Aleixo: total, sexu, aprovasaun por wilayah.',
+		'meta_description': 'Painel membru Partido Democratico, Postu Dom Aleixo: total, sexu, aprovasaun por suku.',
 	}
 	return render(request, 'membro/painel.html', context)

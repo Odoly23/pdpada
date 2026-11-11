@@ -78,8 +78,16 @@ class ScopeTests(BaseCase):
 		return {o.nu_eleitoral for o in resp.context['objects']}
 
 	def test_postu_roles_see_all(self):
-		for u in ('presidente', 'koordpostu', 'sekrpostu'):
+		for u in ('presidente', 'koordpostu'):
 			self.assertEqual(self.names(u), {'SCOPE01', 'SCOPE02', 'SCOPE03'})
+
+	def test_sekretariu_postu_only_sees_recap_not_member_data(self):
+		self.login('sekrpostu')
+		for name, args in [('membro-list', ()), ('membro-cari', ()), ('alokasaun-dash', ()), ('historia-list', ()),
+				('membro-detail', (self.ma1.hashed,)), ('membro-file', (self.ma1.hashed, 'foto')), ('api-membro-cari', ())]:
+			self.assertEqual(self.client.get(reverse(name, args=args)).status_code, 403, name)
+		for name in ('home', 'membro-painel', 'report-dash', 'report-chart'):
+			self.assertEqual(self.client.get(reverse(name)).status_code, 200, name)
 
 	def test_suku_sees_only_own_suku(self):
 		self.assertEqual(self.names('koordsuku'), {'SCOPE01', 'SCOPE02'})
@@ -950,27 +958,36 @@ class PainelTests(BaseCase):
 	def table(self, resp, title):
 		return [t for t in resp.context['tables'] if t['title'] == title][0]
 
-	def test_postu_roles_see_suku_and_organizasaun_tables(self):
+	def test_postu_roles_see_year_suku_chart_panel(self):
 		for u in ('presidente', 'koordpostu', 'sekrpostu'):
 			resp = self.home(u)
-			self.assertEqual([t['title'] for t in resp.context['tables']], ['Suku', 'Organizasaun'], u)
-			self.assertEqual(resp.context['banner'][1], 'POSTU DOM ALEIXO')
-		suku = {r['name']: r for r in self.table(resp, 'Suku')['rows']}
-		self.assertEqual((suku['Suku A']['total'], suku['Suku A']['mane'], suku['Suku A']['feto'], suku['Suku B']['rejeitadu']), (2, 1, 1, 1))
-		org = {r['name']: r for r in self.table(resp, 'Organizasaun')['rows']}
-		self.assertEqual((org['OJD']['total'], org['Laiha organizasaun']['total']), (2, 1))
+			self.assertTemplateUsed(resp, 'membro/painel_postu.html')
+			self.assertContains(resp, 'id="chart_painel"')
+			self.assertContains(resp, 'js_custom/highcharts.js')
+			self.assertNotContains(resp, 'https://')
+			suku = {r['obj'].name: r for r in resp.context['objects2']}
+			self.assertEqual((suku['Suku A']['n'], suku['Suku A']['mane'], suku['Suku A']['feto'], suku['Suku B']['n']), (2, 1, 1, 1), u)
+			self.assertEqual(resp.context['chart'], {'label': ['Suku A', 'Suku B'], 'obj': [2, 1], 'selected': -1}, u)
+			self.assertEqual([(y.year, n, a) for y, n, a in resp.context['objects1']], [(2026, 3, True)], u)
 
-	def test_cells_link_to_filtered_list(self):
-		resp = self.home('presidente')
-		row = [r for r in self.table(resp, 'Suku')['rows'] if r['name'] == 'Suku A'][0]
-		urls = [u for _, u in row['cells']]
-		self.assertEqual(urls[0], '/membro/?village=%d' % self.va.pk)
-		self.assertIn('sex=Mane', urls[1])
-		self.assertIn('aprovasaun=Pendente', urls[4])
-		none_org = [r for r in self.table(resp, 'Organizasaun')['rows'] if r['name'] == 'Laiha organizasaun'][0]
-		self.assertEqual(none_org['cells'][0][1], '/membro/?organizasaun=0')
-		total = self.table(resp, 'Suku')['total_cells']
-		self.assertEqual([v for v, _ in total], [3, 2, 1, 1, 1, 1])
+	def test_postu_painel_selects_suku_and_links_only_for_list_roles(self):
+		url = reverse('membro-painel') + '?ano=%d&suku=%d' % (self.year.pk, self.va.pk)
+		self.login('presidente')
+		resp = self.client.get(url)
+		self.assertEqual(resp.context['chart']['selected'], 0)
+		self.assertEqual([(a.name, n) for a, n, _ in resp.context['aldeias']], [('A1', 1), ('A2', 1)])
+		self.assertEqual(resp.context['aldeias'][0][2], '/membro/?aldeia=%d' % self.a1.pk)
+		self.login('sekrpostu')
+		resp = self.client.get(url)
+		self.assertEqual({u for _, _, u in resp.context['aldeias']}, {''})
+		self.assertNotContains(resp, '/membro/?')
+
+	def test_postu_painel_ignores_invalid_parameters(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-painel') + '?ano=abc&suku=zzz')
+		self.assertEqual(resp.status_code, 200)
+		self.assertEqual(resp.context['ano'], self.year)
+		self.assertIsNone(resp.context['selected'])
 
 	def test_organizasaun_zero_filter_lists_members_without_org(self):
 		self.login('presidente')
@@ -1002,17 +1019,16 @@ class PainelTests(BaseCase):
 		self.assertContains(self.home('sekrsuku'), 'Aumenta Membru')
 		self.assertContains(self.home('sekrorg'), 'Aumenta Membru')
 		self.assertNotContains(self.home('koordsuku'), 'Aumenta Membru')
-		resp = self.home('presidente')
-		self.assertNotContains(resp, 'Aumenta Membru')
-		self.assertContains(resp, 'Hein Aprovasaun (1)')
+		resp = self.home('sekraldeia')
 		self.assertContains(resp, 'Lista Jeral Membru')
 		self.assertContains(resp, 'Relatoriu Tabular')
+		self.assertNotContains(resp, reverse('aprovasaun-list'))
 
 	def test_member_home_has_chart_and_local_highcharts(self):
-		resp = self.home('presidente')
+		resp = self.home('sekraldeia')
 		self.assertContains(resp, 'id="chart_home"')
 		self.assertContains(resp, 'js_custom/highcharts.js')
-		self.assertContains(resp, '/report/api/suku/')
+		self.assertContains(resp, '/report/api/organizasaun/')
 		self.assertNotContains(resp, 'Chart.min.js')
 		self.assertNotContains(resp, 'https://')
 
@@ -1106,7 +1122,7 @@ class MetaTagTests(BaseCase):
 			self.assertContains(resp, needle)
 
 	def test_page_specific_title_and_description(self):
-		self.login('presidente')
+		self.login('sekrsuku')
 		resp = self.client.get('/')
 		self.assertContains(resp, '<title>SGDM-PDPADA - Varanda</title>')
 		self.assertContains(resp, 'content="SGDM-PDPADA: Sistema Jestaun Dadus Membru Partido Democratico')
@@ -1404,19 +1420,55 @@ class LandingTests(BaseCase):
 		return resp, {t['title']: t for t in resp.context['tiles']}
 
 	def test_hero_has_title_full_flag_and_welcome(self):
-		resp, _ = self.tiles('presidente')
-		for needle in ('SISTEMA JESTAUN', 'SGDM-PDPADA', "Hanoin &middot; Hari'i &middot; Hametin", 'Bainhira,', 'Presidente Postu',
+		resp, _ = self.tiles('sekrsuku')
+		for needle in ('SISTEMA JESTAUN', 'SGDM-PDPADA', "Hanoin &middot; Hari'i &middot; Hametin", 'Utiliza husi', 'Sekjer Suku',
 				'width="592" height="337"', 'bandeira_pd.png', 'Tinan 2026'):
 			self.assertContains(resp, needle)
 		self.assertNotContains(resp, 'logo_pd')
 
-	def test_tiles_for_approver(self):
-		self.make('LD00001'); self.make('LD00002')
-		_, tiles = self.tiles('presidente')
-		self.assertEqual(tiles['Hein Aprovasaun']['badge'], 2)
-		for t in ('Painel Membru', 'Lista Membru', 'Pesquiza', 'Dupla Potensial', 'Relatoriu Tabular', 'Relatoriu Grafiku', 'Struktura PD', 'Historia'):
-			self.assertIn(t, tiles)
-		self.assertNotIn('Aumenta Membru', tiles)
+	def varanda(self, user):
+		self.login(user)
+		resp = self.client.get('/')
+		self.assertEqual(resp.status_code, 200)
+		self.assertTemplateUsed(resp, 'home/varanda_postu.html')
+		return resp
+
+	def test_postu_varanda_has_total_suku_line_aldeia_cards_and_chart(self):
+		self.make('LD00001'); self.make('LD00002', self.vb, self.b1)
+		for u in ('presidente', 'koordpostu', 'sekrpostu'):
+			resp = self.varanda(u)
+			self.assertEqual(resp.context['total'], 2, u)
+			self.assertEqual([(v.name, n) for v, n in resp.context['objects1']], [('Suku A', 1), ('Suku B', 1)], u)
+			self.assertEqual([(a['obj'].name, a['n']) for a in resp.context['objects2']], [('A1', 1), ('A2', 0), ('B1', 1)], u)
+			self.assertEqual(resp.context['chart'], {'label': ['A1', 'A2', 'B1'], 'obj': [1, 0, 1]}, u)
+			for needle in ('Utiliza husi', 'Total Membru', 'MEMBRU TUIR ALDEIA', 'id="chart_aldeia_postu"', 'js_custom/highcharts.js', 'width="296"'):
+				self.assertContains(resp, needle)
+			self.assertNotContains(resp, 'https://')
+
+	def test_postu_varanda_links_and_search_follow_role(self):
+		self.make('LD00001')
+		resp = self.varanda('presidente')
+		self.assertContains(resp, 'id="search-q"')
+		self.assertContains(resp, '/membro/?aldeia=%d' % self.a1.pk)
+		self.assertContains(resp, 'Hein Aprovasaun')
+		resp = self.varanda('sekrpostu')  # Sekretariu Postu: rekapitulasi saja
+		self.assertNotContains(resp, 'id="search-q"')
+		self.assertNotContains(resp, '/membro/?')
+		self.assertNotContains(resp, 'Lista Membru')
+		self.assertNotContains(resp, 'Hein Aprovasaun')
+		self.assertNotContains(resp, 'Struktura')
+
+	def test_postu_varanda_query_count_is_constant(self):
+		self.login('presidente')
+
+		def count():
+			with CaptureQueriesContext(connection) as ctx:
+				self.client.get('/')
+			return len(ctx)
+		before = count()
+		for i in range(10):
+			self.make(f'LQ{i:04d}', aldeia=self.a2)
+		self.assertEqual(count(), before)
 
 	def test_tiles_for_secretaries_and_viewers(self):
 		self.make('LD00003', aprovasaun='Rejeitadu')
@@ -1438,7 +1490,7 @@ class LandingTests(BaseCase):
 		self.assertNotContains(resp, 'id="search-q"')
 
 	def test_search_box_only_for_member_roles(self):
-		resp, _ = self.tiles('presidente')
+		resp, _ = self.tiles('sekrsuku')
 		self.assertContains(resp, 'id="search-q"')
 		self.assertContains(resp, 'data-url="/membro/api/cari/"')
 
@@ -1448,10 +1500,10 @@ class LandingTests(BaseCase):
 		self.assertContains(self.client.get('/'), 'seidauk iha peran')
 
 	def test_landing_is_lightweight(self):
-		self.login('presidente')
+		self.login('sekrsuku')
 		with CaptureQueriesContext(connection) as ctx:
 			self.client.get('/')
-		self.assertLessEqual(len(ctx), 12)
+		self.assertLessEqual(len(ctx), 14)
 		self.assertFalse(any('GROUP BY' in q['sql'] for q in ctx.captured_queries))
 
 	def test_requires_login(self):
@@ -1556,9 +1608,9 @@ class ExportTests(BaseCase):
 		return resp, list(csv.reader(io.StringIO(body.lstrip('﻿'))))
 
 	def test_roles(self):
-		for u in ('presidente', 'koordpostu', 'sekrpostu'):
+		for u in ('presidente', 'koordpostu'):
 			self.assertEqual(self.rows(u)[0].status_code, 200, u)
-		for u in ('sekrsuku', 'koordsuku', 'sekraldeia', 'koordorg', 'sekrorg', 'admin'):
+		for u in ('sekrpostu', 'sekrsuku', 'koordsuku', 'sekraldeia', 'koordorg', 'sekrorg', 'admin'):
 			self.login(u)
 			self.assertEqual(self.client.get(reverse('membro-export')).status_code, 403, u)
 		self.client.logout()

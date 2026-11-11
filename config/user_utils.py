@@ -9,8 +9,8 @@ def c_user_group(user):
 
 
 def c_user_scope(user):
-	from users.models import UserScope
-	return UserScope.objects.filter(user=user).select_related('village', 'aldeia', 'organizasaun').first()
+	from users.utils import c_user_scope as helper
+	return helper(user)
 
 
 def membro_scope(user, qs=None):

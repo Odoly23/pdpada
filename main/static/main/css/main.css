@@ -424,3 +424,29 @@ div.dataTables_wrapper div.dataTables_length label { font-weight: 400; color: #6
 
 /* layar lebar (laptop/monitor): area konten lebih lebar agar tabel data muat tanpa scroll */
 @media (min-width: 1300px) { .page-wrapper .container { max-width: 1260px; } }
+
+/* Varanda dan Painel peran Postu (rekapitulasi dan grafik) */
+.rekap-hero { border: 0; border-top: 4px solid #ffbb00; }
+.rekap-title { font-size: 1.6rem; font-weight: 800; color: var(--navy); letter-spacing: .5px; margin: .25rem 0 .5rem; }
+.rekap-flag { max-width: 100%; height: auto; width: 220px; margin: .25rem auto .75rem; display: block; }
+.rekap-search { max-width: 640px; margin: .75rem auto; }
+.rekap-total { margin: .5rem 0; }
+.rekap-number { font-size: 3rem; font-weight: 800; line-height: 1.1; color: var(--navy); }
+.rekap-number a { color: inherit; }
+.rekap-line { margin: .25rem 0 .75rem; color: #495057; }
+.rekap-suku { display: inline-block; margin: 0 .35rem; }
+.rekap-suku strong { color: var(--navy); }
+.rekap-sep { color: #adb5bd; margin: 0 .25rem; }
+.rekap-actions .btn { margin: .15rem; border-radius: 999px; font-weight: 600; }
+.rekap-head { font-weight: 700; color: var(--navy); margin: 1.25rem 0 .75rem; letter-spacing: .5px; }
+.aldeia-card { border: 0; border-top: 3px solid #ffbb00; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+.aldeia-name { font-weight: 700; color: var(--navy); }
+.aldeia-name a { color: inherit; }
+.aldeia-suku { font-size: .8rem; color: #6c757d; }
+.aldeia-n { font-size: 1.9rem; font-weight: 800; color: #212529; line-height: 1.2; }
+.aldeia-sex { font-size: .85rem; color: #495057; }
+.pick-list { max-height: 420px; overflow-y: auto; }
+.pick-list .list-group-item.active { background: var(--navy); border-color: var(--navy); color: #fff; }
+.pick-list .list-group-item.active .badge { background: #ffbb00; color: #000; }
+.highcharts-column-series .pick-on, .highcharts-column-series .pick-hover { fill: var(--highcharts-color-0); stroke: var(--highcharts-color-0); }
+@media (max-width: 576px) { .rekap-title { font-size: 1.25rem; } .rekap-number { font-size: 2.4rem; } }

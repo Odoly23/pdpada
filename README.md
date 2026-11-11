@@ -49,7 +49,7 @@ Deploy ke PythonAnywhere: lihat [`docs/DEPLOY_PYTHONANYWHERE.md`](docs/DEPLOY_PY
 
 ## Tampilan
 
-`main/static/main/css/main.css` memuat variabel warna (`--navy`, `--navy-dk`) di bagian atas. Menu navbar desktop dan sidebar mobile berasal dari satu definisi per peran di `config/context_processors.py`. Varanda (home) menampilkan banner peran, bar tombol, tabel matriks bertaut (Suku/Aldeia/Organizasaun sesuai peran) dan grafik. Semua grafik memakai Highcharts `styledMode` (halaman Grafik berisi 9 grafik); warna di `main/static/main/js_custom/chart.css` (`--highcharts-color-N`). Ekspor grafik berjalan offline (tanpa server Highcharts).
+`main/static/main/css/main.css` memuat variabel warna (`--navy`, `--navy-dk`) di bagian atas. Menu navbar desktop dan sidebar mobile berasal dari satu definisi per peran di `config/context_processors.py`. Varanda peran Postu menampilkan total, total per suku, kartu per aldeia dan grafik; Painel peran Postu berbentuk daftar Tinan | Suku | grafik (suku terpilih menyala). Peran lain tetap memakai Painel matriks bertaut sesuai wilayahnya. Semua grafik memakai Highcharts `styledMode` (halaman Grafik berisi 9 grafik); warna di `main/static/main/js_custom/chart.css` (`--highcharts-color-N`). Ekspor grafik berjalan offline (tanpa server Highcharts).
 
 ## Peran dan hak akses
 
@@ -57,7 +57,7 @@ Deploy ke PythonAnywhere: lihat [`docs/DEPLOY_PYTHONANYWHERE.md`](docs/DEPLOY_PY
 |---|---|---|---|---|
 | `presidente` | semua | – | ya | aloka pozisaun, hamoos membru, lihat historia |
 | `koord_postu` | semua | – | ya | hamoos membru, lihat historia |
-| `sekr_postu` | semua | – | – | – |
+| `sekr_postu` | hanya rekapitulasi dan grafik (Varanda, Painel, Relatoriu); tanpa lista/detalhe/pesquiza/struktura/historia/ekspor | – | – | – |
 | `koord_suku` / `sekr_suku` | sukunya | sekr_suku | – | – |
 | `koord_aldeia` / `sekr_aldeia` | aldeianya | sekr_aldeia | – | – |
 | `koord_org` | anggota organisasinya | – | – | – |

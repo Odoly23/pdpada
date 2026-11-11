@@ -22,7 +22,7 @@
 								<td data-title="Username">{{ row.obj.username }}</td>
 								<td data-title="Naran">{{ row.obj.first_name }}</td>
 								<td data-title="Peran">{{ row.role }}</td>
-								<td data-title="Wilayah">{{ row.wilayah }}</td>
+								<td data-title="Suku/Aldeia/Organizasaun">{{ row.wilayah }}</td>
 								<td data-title="Ativu">{% if row.obj.is_active %}Sim{% else %}Lae{% endif %}</td>
 								<td><a class="btn btn-sm btn-success" href="{% url 'user-update' row.obj.pk %}" title="Edita"><i class="fa fa-edit"></i></a></td>
 							</tr>

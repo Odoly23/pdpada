@@ -32,6 +32,9 @@ INPUT_ROLES = [SEKR_SUKU, SEKR_ALDEIA, SEKR_ORG]  # input dan edit data membru
 APROVA_ROLES = [PRESIDENTE, KOORD_POSTU]          # aprova atau rejeita
 ALOKA_ROLES = [PRESIDENTE]                        # aloka pozisaun (coordenador, dll)
 HISTORIA_ROLES = [ADMIN, PRESIDENTE, KOORD_POSTU]  # lee historia mudansa data
-EXPORT_ROLES = POSTU_ROLES                        # ekspor CSV seluruh data membru
+EXPORT_ROLES = [PRESIDENTE, KOORD_POSTU]          # ekspor CSV seluruh data membru
 DUPLIKAT_ROLES = APROVA_ROLES                     # tinjau membru dobel potensial
-VIEW_ROLES = POSTU_ROLES + SUKU_ROLES + ALDEIA_ROLES + ORG_ROLES
+VIEW_ROLES = POSTU_ROLES + SUKU_ROLES + ALDEIA_ROLES + ORG_ROLES  # lihat rekapitulasi dan grafik (Varanda, Painel, Relatoriu)
+# Sekretariu Postu hanya melihat rekapitulasi dan grafik; data per orang (lista, detalhe, pesquiza, struktura) tidak dibuka.
+LISTA_ROLES = [r for r in VIEW_ROLES if r != SEKR_POSTU]
+STRUKTURA_ROLES = LISTA_ROLES

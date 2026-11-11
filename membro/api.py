@@ -12,7 +12,7 @@ SUGGEST_LIMIT = 8
 
 class IsViewRole(BasePermission):
 	def has_permission(self, request, view):
-		return c_user_group(request.user) in roles.VIEW_ROLES
+		return c_user_group(request.user) in roles.LISTA_ROLES
 
 
 class APIMembroCari(APIView):

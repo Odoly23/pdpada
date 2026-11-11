@@ -14,7 +14,7 @@ from membro.utils import snapshot, diff_snapshot, log_historia, membro_listing, 
 
 
 @login_required
-@allowed_users(allowed_roles=roles.VIEW_ROLES)
+@allowed_users(allowed_roles=roles.LISTA_ROLES)
 def MembroList(request):
 	group = c_user_group(request.user)
 	objects, semua_ano = membro_listing(request.user, request.GET)
@@ -29,7 +29,7 @@ def MembroList(request):
 
 
 @login_required
-@allowed_users(allowed_roles=roles.VIEW_ROLES)
+@allowed_users(allowed_roles=roles.LISTA_ROLES)
 def MembroDetail(request, hashid):
 	group = c_user_group(request.user)
 	obj = get_object_or_404(membro_scope(request.user), hashed=hashid)
@@ -132,7 +132,7 @@ def MembroDel(request, hashid):
 
 
 @login_required
-@allowed_users(allowed_roles=roles.VIEW_ROLES)
+@allowed_users(allowed_roles=roles.LISTA_ROLES)
 def MembroFile(request, hashid, kind):
 	"""Sajikan foto/PDF eleitoral dari penyimpanan privat, hanya untuk yang berhak melihat membru ini."""
 	obj = get_object_or_404(membro_scope(request.user), hashed=hashid)

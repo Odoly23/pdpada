@@ -1,0 +1,76 @@
+{% extends "main/layout.html" %}
+{% load static %}
+{% block content %}
+	<div class="card rekap-hero shadow-sm rounded text-center">
+		<div class="card-body">
+			<p class="hero-eyebrow mb-1">PARTIDO DEMOCRATICO &middot; POSTU ADMINISTRATIVU DOM ALEIXO</p>
+			<h1 class="rekap-title">SISTEMA JESTAUN DADUS MEMBRU</h1>
+			<img class="rekap-flag" src="{% static 'main/images/bandeira_pd.png' %}" width="296" height="169" alt="Bendera Partido Democratico">
+			<p class="mb-2">
+				<span class="welcome-hi">Utiliza husi, <strong>{{ user.first_name|default:user.username }}</strong></span>
+				<span class="chip">{{ role_label }}</span>
+				{% if ano_ativu %}<span class="chip chip-soft"><i class="fa fa-calendar"></i> Tinan {{ ano_ativu }}</span>{% endif %}
+			</p>
+			{% if group != 'sekr_postu' %}
+			<div class="hero-search rekap-search">{% include 'membro/_search_box.html' with large=True %}</div>
+			{% endif %}
+			<div class="rekap-total">
+				<span class="stat-label">Total Membru</span>
+				<div class="rekap-number">{% if total_url %}<a href="{{ total_url }}">{{ total }}</a>{% else %}{{ total }}{% endif %}</div>
+			</div>
+			<p class="rekap-line">
+				{% for v, n in objects1 %}<span class="rekap-suku"><strong>{{ v.name }}</strong> {{ n }}</span>{% if not forloop.last %}<span class="rekap-sep">&middot;</span>{% endif %}{% endfor %}
+			</p>
+			<div class="rekap-actions">
+				<a class="btn btn-sm btn-primary" href="{% url 'membro-painel' %}"><i class="fa fa-tachometer"></i> Painel</a>
+				<a class="btn btn-sm btn-outline-primary" href="{% url 'report-dash' %}"><i class="fa fa-table"></i> Relatoriu Tabular</a>
+				<a class="btn btn-sm btn-outline-primary" href="{% url 'report-chart' %}"><i class="fa fa-bar-chart"></i> Grafiku</a>
+				{% if group != 'sekr_postu' %}
+				<a class="btn btn-sm btn-outline-primary" href="{% url 'membro-list' %}"><i class="fa fa-list"></i> Lista Membru</a>
+				{% endif %}
+				{% if notif_items and notif_total %}<a class="btn btn-sm btn-warning" href="{{ notif_items.0.url }}"><i class="fa fa-bell"></i> {{ notif_total }} Hein Aprovasaun</a>{% endif %}
+			</div>
+		</div>
+	</div>
+
+	<h6 class="rekap-head">MEMBRU TUIR ALDEIA</h6>
+	<div class="row">
+		{% for a in objects2 %}
+		<div class="col-6 col-md-4 col-lg-3 mb-3">
+			<div class="card aldeia-card h-100">
+				<div class="card-body text-center">
+					<div class="aldeia-name">{% if a.url %}<a href="{{ a.url }}">{{ a.obj.name }}</a>{% else %}{{ a.obj.name }}{% endif %}</div>
+					<div class="aldeia-suku">Suku {{ a.obj.village.name }}</div>
+					<div class="aldeia-n">{{ a.n }}</div>
+					<div class="aldeia-sex"><i class="fa fa-male"></i> {{ a.mane }} <span class="rekap-sep">&middot;</span> <i class="fa fa-female"></i> {{ a.feto }}</div>
+				</div>
+			</div>
+		</div>
+		{% empty %}
+		<div class="col-12"><div class="alert alert-light text-center">Seidauk iha aldeia. Kontaktu Admin.</div></div>
+		{% endfor %}
+	</div>
+
+	<div class="card mt-2 mb-3">
+		<div class="card-header text-center">Grafiku Membru Tuir Aldeia</div>
+		<div class="card-body"><figure class="highcharts-figure"><div id="chart_aldeia_postu"></div></figure></div>
+	</div>
+	{{ chart|json_script:"chart-data" }}
+{% endblock %}
+{% block scripts %}
+	{% include 'main/highcharts_scripts.html' %}
+	<script>
+	(function () {
+		var d = JSON.parse(document.getElementById('chart-data').textContent);
+		Highcharts.setOptions({ lang: { noData: 'Laiha data' }, credits: { enabled: false }, exporting: { enabled: false } });
+		Highcharts.chart('chart_aldeia_postu', {
+			chart: { type: 'column', styledMode: true },
+			title: { text: '' }, legend: { enabled: false },
+			xAxis: { categories: d.label },
+			yAxis: { title: { text: 'Total Membru' }, allowDecimals: false },
+			plotOptions: { column: { borderRadius: 4, colorIndex: 1 } },
+			series: [{ name: 'Membru', data: d.obj, tooltip: { valueSuffix: ' Membru' } }]
+		});
+	})();
+	</script>
+{% endblock %}

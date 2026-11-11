@@ -18,28 +18,28 @@
 				<div class="card">
 					<div class="card-header bg-warning">
 						{% if can_add %}<a class="btn btn-sm btn-primary" href="{% url 'membro-add' %}">Aumenta Membru <i class="fa fa-plus"></i></a>{% endif %}
-						<a class="btn btn-sm btn-secondary" href="{% url 'membro-list' %}">Lista Jeral Membru <i class="fa fa-list"></i></a>
+						{% if can_link %}<a class="btn btn-sm btn-secondary" href="{% url 'membro-list' %}">Lista Jeral Membru <i class="fa fa-list"></i></a>{% endif %}
 						{% if can_aprova %}<a class="btn btn-sm btn-danger" href="{% url 'aprovasaun-list' %}">Hein Aprovasaun{% if tot.pendente %} ({{ tot.pendente }}){% endif %} <i class="fa fa-check-square-o"></i></a>{% endif %}
 						<a class="btn btn-sm btn-outline-dark" href="{% url 'report-chart' %}">Grafiku <i class="fa fa-bar-chart"></i></a>
-						<a class="btn btn-sm btn-outline-dark" href="{% url 'alokasaun-dash' %}">Struktura PD <i class="fa fa-sitemap"></i></a>
+						{% if can_link %}<a class="btn btn-sm btn-outline-dark" href="{% url 'alokasaun-dash' %}">Struktura PD <i class="fa fa-sitemap"></i></a>{% endif %}
 					</div>
 					<div class="card-body">
 						<div class="row">
-							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Total Membru</span><h4 class="stat-number"><a href="{% url 'membro-list' %}">{{ tot.total }}</a></h4></div></div>
-							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Total Mane</span><h4 class="stat-number"><a href="{% url 'membro-list' %}?sex=Mane">{{ tot.mane }}</a></h4></div></div>
-							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Total Feto</span><h4 class="stat-number"><a href="{% url 'membro-list' %}?sex=Feto">{{ tot.feto }}</a></h4></div></div>
+							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Total Membru</span><h4 class="stat-number">{% if can_link %}<a href="{% url 'membro-list' %}">{{ tot.total }}</a>{% else %}{{ tot.total }}{% endif %}</h4></div></div>
+							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Total Mane</span><h4 class="stat-number">{% if can_link %}<a href="{% url 'membro-list' %}?sex=Mane">{{ tot.mane }}</a>{% else %}{{ tot.mane }}{% endif %}</h4></div></div>
+							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Total Feto</span><h4 class="stat-number">{% if can_link %}<a href="{% url 'membro-list' %}?sex=Feto">{{ tot.feto }}</a>{% else %}{{ tot.feto }}{% endif %}</h4></div></div>
 						</div>
 						<hr>
 						<div class="row">
-							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Hein Aprovasaun</span><h4 class="stat-number"><a href="{% url 'membro-list' %}?aprovasaun=Pendente">{{ tot.pendente }}</a></h4></div></div>
-							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Aprovadu</span><h4 class="stat-number"><a href="{% url 'membro-list' %}?aprovasaun=Aprovadu">{{ tot.aprovadu }}</a></h4></div></div>
-							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Rejeitadu</span><h4 class="stat-number"><a href="{% url 'membro-list' %}?aprovasaun=Rejeitadu">{{ tot.rejeitadu }}</a></h4></div></div>
+							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Hein Aprovasaun</span><h4 class="stat-number">{% if can_link %}<a href="{% url 'membro-list' %}?aprovasaun=Pendente">{{ tot.pendente }}</a>{% else %}{{ tot.pendente }}{% endif %}</h4></div></div>
+							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Aprovadu</span><h4 class="stat-number">{% if can_link %}<a href="{% url 'membro-list' %}?aprovasaun=Aprovadu">{{ tot.aprovadu }}</a>{% else %}{{ tot.aprovadu }}{% endif %}</h4></div></div>
+							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Rejeitadu</span><h4 class="stat-number">{% if can_link %}<a href="{% url 'membro-list' %}?aprovasaun=Rejeitadu">{{ tot.rejeitadu }}</a>{% else %}{{ tot.rejeitadu }}{% endif %}</h4></div></div>
 						</div>
 						<hr>
 						<div class="row">
-							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Status Ativu</span><h4 class="stat-number"><a href="{% url 'membro-list' %}?status=Ativu">{{ tot.ativu }}</a></h4></div></div>
-							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Status Inativu</span><h4 class="stat-number"><a href="{% url 'membro-list' %}?status=Inativu">{{ tot.inativu }}</a></h4></div></div>
-							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Status Falesidu</span><h4 class="stat-number"><a href="{% url 'membro-list' %}?status=Falesidu">{{ tot.falesidu }}</a></h4></div></div>
+							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Status Ativu</span><h4 class="stat-number">{% if can_link %}<a href="{% url 'membro-list' %}?status=Ativu">{{ tot.ativu }}</a>{% else %}{{ tot.ativu }}{% endif %}</h4></div></div>
+							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Status Inativu</span><h4 class="stat-number">{% if can_link %}<a href="{% url 'membro-list' %}?status=Inativu">{{ tot.inativu }}</a>{% else %}{{ tot.inativu }}{% endif %}</h4></div></div>
+							<div class="col-md-4"><div class="text-center mb-2 mt-1"><span class="text-muted">Status Falesidu</span><h4 class="stat-number">{% if can_link %}<a href="{% url 'membro-list' %}?status=Falesidu">{{ tot.falesidu }}</a>{% else %}{{ tot.falesidu }}{% endif %}</h4></div></div>
 						</div>
 					</div>
 				</div>
@@ -60,7 +60,7 @@
 							{% for r in t.rows %}
 							<tr>
 								<td style="text-align:center;">{{ r.name }}</td>
-								<td style="text-align:center;"><a href="{{ r.url }}">{{ r.total }}</a></td>
+								<td style="text-align:center;">{% if can_link %}<a href="{{ r.url }}">{{ r.total }}</a>{% else %}{{ r.total }}{% endif %}</td>
 							</tr>
 							{% empty %}
 							<tr><td colspan="2" class="text-muted">Laiha data.</td></tr>
