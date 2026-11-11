@@ -8,6 +8,8 @@ from config import roles
 from config.decorators import allowed_users
 from config.user_utils import c_user_group, membro_ativu
 from membro.utils import AGE_BINS
+from membro.views.rekap_v import _banner
+from users.utils import c_user_emp
 
 
 def _url(**params):
@@ -29,8 +31,11 @@ def _count_rows(qs, field, key, label=None, none_label='Laiha', none_value=None,
 
 
 def _named_rows(qs, id_field, name_field, key, none_label='Laiha organizasaun'):
-	rows = qs.values(id_field, name_field).annotate(total=Count('id')).order_by(name_field)
-	return [{'name': r[name_field] or none_label, 'total': r['total'], 'url': _url(**{key: r[id_field] or 0})} for r in rows]
+	"""Baris {name, total, mane, feto, url} per suku/aldeia/organizasaun (satu query)."""
+	rows = qs.order_by().values(id_field, name_field).annotate(
+		total=Count('id'), mane=Count('id', filter=Q(sex='Mane')), feto=Count('id', filter=Q(sex='Feto'))).order_by(name_field)
+	return [{'name': r[name_field] or none_label, 'total': r['total'], 'mane': r['mane'], 'feto': r['feto'],
+		'url': _url(**{key: r[id_field] or 0})} for r in rows]
 
 
 def _age_rows(qs):
@@ -49,6 +54,7 @@ def _age_rows(qs):
 @allowed_users(allowed_roles=roles.VIEW_ROLES)
 def Dash(request):
 	group = c_user_group(request.user)
+	e = c_user_emp(request.user)
 	qs = membro_ativu(request.user)
 	tot = qs.aggregate(
 		total=Count('id'), mane=Count('id', filter=Q(sex='Mane')), feto=Count('id', filter=Q(sex='Feto')),
@@ -59,15 +65,15 @@ def Dash(request):
 		sem_org=Count('id', filter=Q(organizasaun__isnull=True)))
 	age = _age_rows(qs)
 	tables = [
-		{'title': 'Membru Tuir Suku', 'head': 'Suku', 'rows': _named_rows(qs, 'village_id', 'village__name', 'village')},
-		{'title': 'Membru Tuir Aldeia', 'head': 'Aldeia', 'rows': _named_rows(qs, 'aldeia_id', 'aldeia__name', 'aldeia')},
-		{'title': 'Membru Tuir Organizasaun', 'head': 'Organizasaun', 'rows': _named_rows(qs, 'organizasaun_id', 'organizasaun__code', 'organizasaun')},
+		{'title': 'Membru Tuir Suku', 'head': 'Suku', 'sexu': True, 'rows': _named_rows(qs, 'village_id', 'village__name', 'village')},
+		{'title': 'Membru Tuir Aldeia', 'head': 'Aldeia', 'sexu': True, 'rows': _named_rows(qs, 'aldeia_id', 'aldeia__name', 'aldeia')},
+		{'title': 'Membru Tuir Organizasaun', 'head': 'Organizasaun', 'sexu': True, 'rows': _named_rows(qs, 'organizasaun_id', 'organizasaun__code', 'organizasaun')},
 		{'title': 'Membru Tuir Tinan Tama', 'head': 'Tinan', 'rows': _count_rows(qs, 'data_hakbit__year', 'hakbit', skip_none=True)},
 		{'title': 'Membru Tuir Idade', 'head': 'Idade', 'rows': age},
 		{'title': 'Membru Tuir Estado Civil', 'head': 'Estado Civil', 'rows': _count_rows(qs, 'marital', 'marital', none_label='Laiha', none_value='laiha')},
 	]
 	context = {
-		'group': group, 'tot': tot, 'tables': tables, 'can_link': group in roles.LISTA_ROLES,
+		'group': group, 'banner': _banner(group, e), 'tot': tot, 'tables': tables, 'can_link': group in roles.LISTA_ROLES,
 		'can_add': group in roles.INPUT_ROLES, 'can_aprova': group in roles.APROVA_ROLES,
 		'title': 'Relatoriu Tabular', 'legend': 'Relatoriu Tabular',
 		'meta_description': 'Relatoriu tabular membru Partido Democratico, Postu Dom Aleixo.',

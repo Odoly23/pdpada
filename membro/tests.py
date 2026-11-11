@@ -1286,7 +1286,7 @@ class TabularTests(BaseCase):
 		self.assertEqual([t['head'] for t in resp.context['tables']], ['Suku', 'Aldeia', 'Organizasaun', 'Tinan', 'Idade', 'Estado Civil'])
 		self.assertContains(resp, 'card-header bg-warning')
 		self.assertContains(resp, 'th-amber')
-		self.assertContains(resp, 'REKAPITULASAUN MEMBRU PD')
+		self.assertContains(resp, 'PRESIDENTE POSTU')
 		self.assertEqual(resp.context['tot']['total'], 3)
 		self.assertEqual((resp.context['tot']['ativu'], resp.context['tot']['inativu'], resp.context['tot']['falesidu']), (2, 1, 0))
 
@@ -2142,3 +2142,35 @@ class FilterButtonsAndTablesTests(BaseCase):
 		self.login('presidente')
 		html = self.client.get('/').content.decode()
 		self.assertLess(html.index('jquery.dataTables.min.js'), html.index('datatable_defaults.js'))
+
+
+class TabularPatternTests(BaseCase):
+	def setUp(self):
+		self.make('TP00001', self.va, self.a1, sex='Mane')
+		self.make('TP00002', self.va, self.a1, sex='Feto')
+		self.make('TP00003', self.vb, self.b1, sex='Feto')
+
+	def page(self, user):
+		self.login(user)
+		resp = self.client.get(reverse('report-dash'))
+		self.assertEqual(resp.status_code, 200)
+		return resp
+
+	def test_banner_follows_role_scope(self):
+		self.assertEqual(self.page('presidente').context['banner'], ('PRESIDENTE POSTU', 'POSTU DOM ALEIXO'))
+		self.assertEqual(self.page('koordsuku').context['banner'][1], 'SUKU SUKU A')
+		self.assertEqual(self.page('sekrorg').context['banner'][1], 'ORGANIZASAUN OJD')
+
+	def test_area_tables_have_mane_and_feto_columns(self):
+		resp = self.page('presidente')
+		suku = [t for t in resp.context['tables'] if t['head'] == 'Suku'][0]
+		self.assertTrue(suku['sexu'])
+		self.assertEqual([(r['name'], r['total'], r['mane'], r['feto']) for r in suku['rows']], [('Suku A', 2, 1, 1), ('Suku B', 1, 0, 1)])
+		self.assertContains(resp, '<th>Mane</th><th>Feto</th>', html=False)
+		age = [t for t in resp.context['tables'] if t['head'] == 'Idade'][0]
+		self.assertFalse(age.get('sexu'))
+
+	def test_suku_role_only_sees_own_rows(self):
+		suku = [t for t in self.page('koordsuku').context['tables'] if t['head'] == 'Suku'][0]
+		self.assertEqual([r['name'] for r in suku['rows']], ['Suku A'])
+
