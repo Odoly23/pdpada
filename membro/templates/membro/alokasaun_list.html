@@ -12,7 +12,7 @@
 			<div class="card-body">
 				{% if can_aloka %}<a class="btn btn-sm btn-primary mb-2" href="{% url 'alokasaun-add' %}">Aloka Pozisaun <i class="fa fa-plus"></i></a>{% endif %}
 				<a class="btn btn-sm btn-secondary mb-2" href="{% url 'alokasaun-dash' %}">Dashboard Struktura <i class="fa fa-sitemap"></i></a>
-				{% if request.GET.urlencode %}<a class="btn btn-sm btn-outline-primary mb-2" href="{% url 'alokasaun-list' %}">Hotu <i class="fa fa-times"></i></a>{% endif %}
+				{% if request.GET.urlencode %}<a class="btn btn-sm btn-secondary mb-2" href="{% url 'alokasaun-list' %}">Hotu <i class="fa fa-times"></i></a>{% endif %}
 				<section id="no-more-tables">
 					<table class="table table-sm" id="example" width="100%" cellspacing="0">
 						<thead>

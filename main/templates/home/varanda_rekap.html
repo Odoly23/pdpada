@@ -23,13 +23,13 @@
 				{% for v, n in objects1 %}<span class="rekap-suku"><strong>{{ v.name }}</strong> {{ n }}</span>{% if not forloop.last %}<span class="rekap-sep">&middot;</span>{% endif %}{% endfor %}
 			</p>{% endif %}
 			<div class="rekap-actions">
-				<a class="btn btn-sm btn-primary" href="{% url 'membro-painel' %}"><i class="fa fa-tachometer"></i> Painel</a>
-				<a class="btn btn-sm btn-outline-primary" href="{% url 'report-dash' %}"><i class="fa fa-table"></i> Relatoriu Tabular</a>
-				<a class="btn btn-sm btn-outline-primary" href="{% url 'report-chart' %}"><i class="fa fa-bar-chart"></i> Grafiku</a>
-				{% if can_add %}<a class="btn btn-sm btn-success" href="{% url 'membro-add' %}"><i class="fa fa-user-plus"></i> Aumenta Membru</a>{% endif %}
-				{% if can_list %}<a class="btn btn-sm btn-outline-primary" href="{% url 'membro-list' %}"><i class="fa fa-list"></i> Lista Membru</a>{% endif %}
-				{% if can_struktura %}<a class="btn btn-sm btn-outline-primary" href="{% url 'alokasaun-dash' %}"><i class="fa fa-sitemap"></i> Struktura</a>{% endif %}
-				{% if notif_items and notif_total %}<a class="btn btn-sm btn-warning" href="{{ notif_items.0.url }}"><i class="fa fa-bell"></i> {{ notif_total }} notifikasaun</a>{% endif %}
+				<a class="btn btn-sm btn-primary" href="{% url 'membro-painel' %}">Painel <i class="fa fa-tachometer"></i></a>
+				<a class="btn btn-sm btn-danger" href="{% url 'report-dash' %}">Relatoriu Tabular <i class="fa fa-table"></i></a>
+				<a class="btn btn-sm btn-secondary" href="{% url 'report-chart' %}">Grafiku <i class="fa fa-bar-chart"></i></a>
+				{% if can_add %}<a class="btn btn-sm btn-primary" href="{% url 'membro-add' %}">Aumenta Membru <i class="fa fa-user-plus"></i></a>{% endif %}
+				{% if can_list %}<a class="btn btn-sm btn-secondary" href="{% url 'membro-list' %}">Lista Membru <i class="fa fa-list"></i></a>{% endif %}
+				{% if can_struktura %}<a class="btn btn-sm btn-secondary" href="{% url 'alokasaun-dash' %}">Struktura <i class="fa fa-sitemap"></i></a>{% endif %}
+				{% if notif_items and notif_total %}<a class="btn btn-sm btn-warning" href="{{ notif_items.0.url }}">{{ notif_total }} notifikasaun <i class="fa fa-bell"></i></a>{% endif %}
 			</div>
 		</div>
 	</div>

@@ -389,14 +389,14 @@ tr.th-amber th { background-color: rgb(255, 187, 0) !important; color: #000 !imp
 /* ---- Tombol filter (pil berwarna, ikon, hitungan, status aktif): mudah dipahami pengguna awam ---- */
 .filter-bar { display: flex; flex-wrap: wrap; gap: .6rem; margin: .25rem 0 1.1rem; }
 .btn-filter { --fc: var(--navy); --fc-soft: #eef1ff;
-	display: inline-flex; align-items: center; gap: .45rem; min-height: 42px; padding: .4rem 1rem; border-radius: 999px;
-	border: 2px solid var(--fc); background: #fff; color: var(--fc); font-weight: 600; font-size: .95rem; line-height: 1.2;
+	display: inline-flex; align-items: center; gap: .45rem; min-height: 42px; padding: .4rem 1rem; border-radius: .25rem;
+	border: 2px solid var(--fc); background: var(--fc); color: #fff; font-weight: 600; font-size: .95rem; line-height: 1.2;
 	text-decoration: none; cursor: pointer; transition: background .15s, color .15s, box-shadow .15s, transform .1s; }
-.btn-filter:hover { background: var(--fc-soft); color: var(--fc); text-decoration: none; transform: translateY(-1px); }
-.btn-filter .count { min-width: 1.6rem; padding: .05rem .5rem; border-radius: 999px; background: var(--fc); color: #fff; font-size: .8rem; text-align: center; }
-.btn-filter.active { background: var(--fc); color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.2); }
-.btn-filter.active:hover { background: var(--fc); color: #fff; }
-.btn-filter.active .count { background: #fff; color: var(--fc); }
+.btn-filter:hover { background: var(--fc); color: #fff; text-decoration: none; filter: brightness(1.12); }
+.btn-filter .count { min-width: 1.6rem; padding: .05rem .5rem; border-radius: .2rem; background: #fff; color: var(--fc); font-size: .8rem; text-align: center; }
+.btn-filter { opacity: .72; }
+.btn-filter:hover, .btn-filter.active { opacity: 1; }
+.btn-filter.active { box-shadow: 0 0 0 3px rgba(0,0,0,.25); }
 .btn-filter-all  { --fc: var(--navy);  --fc-soft: #eef1ff; }
 .btn-filter-ok   { --fc: #1a8a3c; --fc-soft: #e7f6ec; }
 .btn-filter-warn { --fc: #a87600; --fc-soft: #fff6dc; }
@@ -410,11 +410,11 @@ div.dataTables_wrapper div.dataTables_filter label { font-weight: 600; color: va
 div.dataTables_wrapper div.dataTables_filter input { border: 2px solid #c9cff0; border-radius: 999px; padding: .35rem 1rem; margin-left: .5rem; min-width: 220px; }
 div.dataTables_wrapper div.dataTables_filter input:focus { border-color: var(--navy); outline: 0; box-shadow: 0 0 0 .2rem rgba(11,30,138,.15); }
 div.dt-buttons { margin-bottom: .5rem; }
-div.dt-buttons .btn { margin-right: .4rem; border-radius: 999px; padding: .4rem 1rem; font-weight: 600; }
+div.dt-buttons .btn { margin-right: .4rem; }
 div.dataTables_wrapper div.dataTables_length label { font-weight: 400; color: #6c757d; }
 
 /* tombol aksi di bilah atas halaman: bulat, lebih besar, mudah ditekan (juga di HP) */
-.main-content .no-print .btn-sm, .main-content .card-header .btn-sm { border-radius: 999px; padding: .4rem 1rem; font-size: .9rem; font-weight: 600; margin: 0 .25rem .35rem 0; }
+.main-content .no-print .btn-sm, .main-content .card-header .btn-sm { margin: 0 .25rem .5rem 0; }
 .main-content .no-print .btn-link.btn-sm { font-weight: 400; }
 
 /* indikator dokumen (foto, PDF eleitoral) di daftar membru */
@@ -437,7 +437,7 @@ div.dataTables_wrapper div.dataTables_length label { font-weight: 400; color: #6
 .rekap-suku { display: inline-block; margin: 0 .35rem; }
 .rekap-suku strong { color: var(--navy); }
 .rekap-sep { color: #adb5bd; margin: 0 .25rem; }
-.rekap-actions .btn { margin: .15rem; border-radius: 999px; font-weight: 600; }
+.rekap-actions .btn { margin: 0 .15rem .5rem; }
 .rekap-head { font-weight: 700; color: var(--navy); margin: 1.25rem 0 .75rem; letter-spacing: .5px; }
 .aldeia-card { border: 0; border-top: 3px solid #ffbb00; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
 .aldeia-name { font-weight: 700; color: var(--navy); }

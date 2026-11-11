@@ -6,7 +6,7 @@
 		<li class="breadcrumb-item active" aria-current="page">PAINEL</li>
 	</ol>
 	<div class="card mb-2"><div class="card-header bg-primary text-white text-center">{{ banner.0 }} <br/> {{ banner.1 }}</div></div>
-	{% if can_add %}<p><a class="btn btn-sm btn-success" href="{% url 'membro-add' %}"><i class="fa fa-user-plus"></i> Aumenta Membru</a></p>{% endif %}
+	{% if can_add %}<p><a class="btn btn-sm btn-primary" href="{% url 'membro-add' %}">Aumenta Membru <i class="fa fa-user-plus"></i></a></p>{% endif %}
 	<div class="row">
 		<div class="col-md-3 mb-3">
 			<div class="card h-100">
