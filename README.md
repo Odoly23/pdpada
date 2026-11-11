@@ -49,7 +49,7 @@ Deploy ke PythonAnywhere: lihat [`docs/DEPLOY_PYTHONANYWHERE.md`](docs/DEPLOY_PY
 
 ## Tampilan
 
-`main/static/main/css/main.css` memuat variabel warna (`--navy`, `--navy-dk`) di bagian atas. Menu navbar desktop dan sidebar mobile berasal dari satu definisi per peran di `config/context_processors.py`. Varanda peran Postu menampilkan total, total per suku, kartu per aldeia dan grafik; Painel peran Postu berbentuk daftar Tinan | Suku | grafik (suku terpilih menyala). Peran lain tetap memakai Painel matriks bertaut sesuai wilayahnya. Semua grafik memakai Highcharts `styledMode` (halaman Grafik berisi 9 grafik); warna di `main/static/main/js_custom/chart.css` (`--highcharts-color-N`). Ekspor grafik berjalan offline (tanpa server Highcharts).
+`main/static/main/css/main.css` memuat variabel warna (`--navy`, `--navy-dk`) di bagian atas. Menu navbar desktop dan sidebar mobile berasal dari satu definisi per peran di `config/context_processors.py`. Varanda semua peran menampilkan total, total per suku, kartu per aldeia dan grafik, hanya untuk wilayah peran: Postu melihat semua suku dan aldeia (kartu dikelompokkan per suku, grafik mendatar jika banyak), suku hanya sukunya, aldeia hanya aldeianya, organisasi (OJD/OPD/MPD) hanya suku dan aldeia tempat anggotanya. Painel berbentuk daftar Tinan | unit | grafik (unit terpilih menyala); unit = suku (Postu/organisasi), aldeia (suku) atau organizasaun (aldeia). Semua grafik memakai Highcharts `styledMode` (halaman Grafik berisi 9 grafik); warna di `main/static/main/js_custom/chart.css` (`--highcharts-color-N`). Ekspor grafik berjalan offline (tanpa server Highcharts).
 
 ## Peran dan hak akses
 

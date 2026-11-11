@@ -450,3 +450,6 @@ div.dataTables_wrapper div.dataTables_length label { font-weight: 400; color: #6
 .pick-list .list-group-item.active .badge { background: #ffbb00; color: #000; }
 .highcharts-column-series .pick-on, .highcharts-column-series .pick-hover { fill: var(--highcharts-color-0); stroke: var(--highcharts-color-0); }
 @media (max-width: 576px) { .rekap-title { font-size: 1.25rem; } .rekap-number { font-size: 2.4rem; } }
+.rekap-scope { font-weight: 700; letter-spacing: .5px; color: #6c757d; margin: 0 0 .25rem; }
+.rekap-suku-head { font-weight: 700; color: var(--navy); margin: .5rem 0 .5rem; padding-bottom: .25rem; border-bottom: 2px solid #ffbb00; }
+.highcharts-bar-series .pick-on, .highcharts-bar-series .pick-hover { fill: var(--highcharts-color-0); stroke: var(--highcharts-color-0); }

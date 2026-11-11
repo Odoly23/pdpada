@@ -6,12 +6,13 @@
 			<p class="hero-eyebrow mb-1">PARTIDO DEMOCRATICO &middot; POSTU ADMINISTRATIVU DOM ALEIXO</p>
 			<h1 class="rekap-title">SISTEMA JESTAUN DADUS MEMBRU</h1>
 			<img class="rekap-flag" src="{% static 'main/images/bandeira_pd.png' %}" width="296" height="169" alt="Bendera Partido Democratico">
+			<p class="rekap-scope">{{ banner.1 }}</p>
 			<p class="mb-2">
 				<span class="welcome-hi">Utiliza husi, <strong>{{ user.first_name|default:user.username }}</strong></span>
 				<span class="chip">{{ role_label }}</span>
 				{% if ano_ativu %}<span class="chip chip-soft"><i class="fa fa-calendar"></i> Tinan {{ ano_ativu }}</span>{% endif %}
 			</p>
-			{% if group != 'sekr_postu' %}
+			{% if can_list %}
 			<div class="hero-search rekap-search">{% include 'membro/_search_box.html' with large=True %}</div>
 			{% endif %}
 			<div class="rekap-total">
@@ -25,35 +26,39 @@
 				<a class="btn btn-sm btn-primary" href="{% url 'membro-painel' %}"><i class="fa fa-tachometer"></i> Painel</a>
 				<a class="btn btn-sm btn-outline-primary" href="{% url 'report-dash' %}"><i class="fa fa-table"></i> Relatoriu Tabular</a>
 				<a class="btn btn-sm btn-outline-primary" href="{% url 'report-chart' %}"><i class="fa fa-bar-chart"></i> Grafiku</a>
-				{% if group != 'sekr_postu' %}
-				<a class="btn btn-sm btn-outline-primary" href="{% url 'membro-list' %}"><i class="fa fa-list"></i> Lista Membru</a>
-				{% endif %}
-				{% if notif_items and notif_total %}<a class="btn btn-sm btn-warning" href="{{ notif_items.0.url }}"><i class="fa fa-bell"></i> {{ notif_total }} Hein Aprovasaun</a>{% endif %}
+				{% if can_add %}<a class="btn btn-sm btn-success" href="{% url 'membro-add' %}"><i class="fa fa-user-plus"></i> Aumenta Membru</a>{% endif %}
+				{% if can_list %}<a class="btn btn-sm btn-outline-primary" href="{% url 'membro-list' %}"><i class="fa fa-list"></i> Lista Membru</a>{% endif %}
+				{% if can_struktura %}<a class="btn btn-sm btn-outline-primary" href="{% url 'alokasaun-dash' %}"><i class="fa fa-sitemap"></i> Struktura</a>{% endif %}
+				{% if notif_items and notif_total %}<a class="btn btn-sm btn-warning" href="{{ notif_items.0.url }}"><i class="fa fa-bell"></i> {{ notif_total }} notifikasaun</a>{% endif %}
 			</div>
 		</div>
 	</div>
 
 	<h6 class="rekap-head">MEMBRU TUIR ALDEIA</h6>
+	{% regroup objects2 by obj.village as by_suku %}
+	{% for g in by_suku %}
+	{% if group_cards %}<div class="rekap-suku-head">Suku {{ g.grouper.name }} <span class="badge badge-pill badge-warning">{{ g.list|length }} aldeia</span></div>{% endif %}
 	<div class="row">
-		{% for a in objects2 %}
-		<div class="col-6 col-md-4 col-lg-3 mb-3">
+		{% for a in g.list %}
+		<div class="col-6 col-md-4 {% if group_cards %}col-lg-2{% else %}col-lg-3{% endif %} mb-3">
 			<div class="card aldeia-card h-100">
 				<div class="card-body text-center">
 					<div class="aldeia-name">{% if a.url %}<a href="{{ a.url }}">{{ a.obj.name }}</a>{% else %}{{ a.obj.name }}{% endif %}</div>
-					<div class="aldeia-suku">Suku {{ a.obj.village.name }}</div>
+					{% if not group_cards %}<div class="aldeia-suku">Suku {{ a.obj.village.name }}</div>{% endif %}
 					<div class="aldeia-n">{{ a.n }}</div>
 					<div class="aldeia-sex"><i class="fa fa-male"></i> {{ a.mane }} <span class="rekap-sep">&middot;</span> <i class="fa fa-female"></i> {{ a.feto }}</div>
 				</div>
 			</div>
 		</div>
-		{% empty %}
-		<div class="col-12"><div class="alert alert-light text-center">Seidauk iha aldeia. Kontaktu Admin.</div></div>
 		{% endfor %}
 	</div>
+	{% empty %}
+	<div class="alert alert-light text-center">Seidauk iha membru iha ita nia suku/aldeia/organizasaun.</div>
+	{% endfor %}
 
 	<div class="card mt-2 mb-3">
-		<div class="card-header text-center">Grafiku Membru Tuir Aldeia</div>
-		<div class="card-body"><figure class="highcharts-figure"><div id="chart_aldeia_postu"></div></figure></div>
+		<div class="card-header text-center">{{ chart.title }}</div>
+		<div class="card-body"><figure class="highcharts-figure"><div id="chart_aldeia_postu" style="height: {{ chart.height }}px"></div></figure></div>
 	</div>
 	{{ chart|json_script:"chart-data" }}
 {% endblock %}
@@ -64,11 +69,11 @@
 		var d = JSON.parse(document.getElementById('chart-data').textContent);
 		Highcharts.setOptions({ lang: { noData: 'Laiha data' }, credits: { enabled: false }, exporting: { enabled: false } });
 		Highcharts.chart('chart_aldeia_postu', {
-			chart: { type: 'column', styledMode: true },
+			chart: { type: d.horizontal ? 'bar' : 'column', styledMode: true },
 			title: { text: '' }, legend: { enabled: false },
 			xAxis: { categories: d.label },
 			yAxis: { title: { text: 'Total Membru' }, allowDecimals: false },
-			plotOptions: { column: { borderRadius: 4, colorIndex: 1 } },
+			plotOptions: { column: { borderRadius: 4, colorIndex: 1 }, bar: { borderRadius: 4, colorIndex: 1 } },
 			series: [{ name: 'Membru', data: d.obj, tooltip: { valueSuffix: ' Membru' } }]
 		});
 	})();

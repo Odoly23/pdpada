@@ -90,9 +90,9 @@ def _tiles(group, counts):
 def home(request):
 	"""Beranda ringan: sambutan, pencarian, dan pintasan sesuai peran (tanpa query berat)."""
 	group = c_user_group(request.user)
-	if group in roles.POSTU_ROLES:  # peran Postu: Varanda rekapitulasi (total, suku, aldeia, grafik)
-		from membro.views.rekap_v import VarandaPostu
-		return VarandaPostu(request)
+	if group in roles.VIEW_ROLES:  # semua peran data: Varanda rekapitulasi sesuai wilayah peran
+		from membro.views.rekap_v import VarandaRekap
+		return VarandaRekap(request)
 	_, counts = notif_counts(request.user)
 	context = {
 		'group': group, 'role_label': ROLE_NAME.get(group, ''),
