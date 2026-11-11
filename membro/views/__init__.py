@@ -5,4 +5,4 @@ from .historia_v import *
 from .cari_v import *
 from .export_v import *
 from .dupla_v import *
-from .painel_v import *
+from .rekap_v import *

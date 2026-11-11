@@ -7,7 +7,7 @@ from membro.utils import search_membro, SEARCH_MIN
 
 
 @login_required
-@allowed_users(allowed_roles=roles.VIEW_ROLES)
+@allowed_users(allowed_roles=roles.LISTA_ROLES)
 def MembroCari(request):
 	"""Pencarian cepat membru (naran, Nu. Eleitoral, Nu. Telemovel) dalam wilayah user."""
 	group = c_user_group(request.user)

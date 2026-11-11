@@ -67,7 +67,7 @@ def Dash(request):
 		{'title': 'Membru Tuir Estado Civil', 'head': 'Estado Civil', 'rows': _count_rows(qs, 'marital', 'marital', none_label='Laiha', none_value='laiha')},
 	]
 	context = {
-		'group': group, 'tot': tot, 'tables': tables,
+		'group': group, 'tot': tot, 'tables': tables, 'can_link': group in roles.LISTA_ROLES,
 		'can_add': group in roles.INPUT_ROLES, 'can_aprova': group in roles.APROVA_ROLES,
 		'title': 'Relatoriu Tabular', 'legend': 'Relatoriu Tabular',
 		'meta_description': 'Relatoriu tabular membru Partido Democratico, Postu Dom Aleixo.',

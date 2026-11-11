@@ -1,0 +1,94 @@
+{% extends "main/layout.html" %}
+{% load static %}
+{% block content %}
+	<ol class="breadcrumb mb-2 mt-1">
+		<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+		<li class="breadcrumb-item active" aria-current="page">PAINEL</li>
+	</ol>
+	<div class="card mb-2"><div class="card-header bg-primary text-white text-center">{{ banner.0 }} <br/> {{ banner.1 }}</div></div>
+	{% if can_add %}<p><a class="btn btn-sm btn-primary" href="{% url 'membro-add' %}">Aumenta Membru <i class="fa fa-user-plus"></i></a></p>{% endif %}
+	<div class="row">
+		<div class="col-md-3 mb-3">
+			<div class="card h-100">
+				<div class="card-header th-amber text-center">TINAN</div>
+				<div class="list-group list-group-flush pick-list">
+					{% for y, n, active in objects1 %}
+					<a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center{% if active %} active{% endif %}" href="?ano={{ y.pk }}">{{ y.year }}<span class="badge badge-pill badge-light">{{ n }}</span></a>
+					{% empty %}<div class="list-group-item text-muted">Laiha tinan.</div>{% endfor %}
+				</div>
+			</div>
+		</div>
+		<div class="col-md-4 mb-3">
+			<div class="card h-100">
+				<div class="card-header th-amber text-center">{{ unit_title }}</div>
+				<div class="list-group list-group-flush pick-list">
+					{% for s in objects2 %}
+					<a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center{% if s.active %} active{% endif %}" data-idx="{{ forloop.counter0 }}"
+						href="?{% if ano %}ano={{ ano.pk }}&amp;{% endif %}u={{ s.id }}">{{ s.name }}<span class="badge badge-pill badge-light">{{ s.n }}</span></a>
+					{% empty %}<div class="list-group-item text-muted">Laiha data.</div>{% endfor %}
+				</div>
+			</div>
+		</div>
+		<div class="col-md-5 mb-3">
+			<div class="card h-100">
+				<div class="card-header text-center">Membru Tinan {% if ano %}{{ ano.year }}{% endif %}{% if selected %} &middot; {{ selected.name }}{% endif %}</div>
+				<div class="card-body">
+					<p class="text-center mb-2"><span class="stat-label">{% if selected %}Total {{ selected.name }}{% else %}Total Membru{% endif %}</span>
+						<span class="stat-number d-block">{% if selected %}{% if selected_url %}<a href="{{ selected_url }}">{{ selected.n }}</a>{% else %}{{ selected.n }}{% endif %}{% else %}{{ total }}{% endif %}</span></p>
+					{% if selected %}<p class="text-center text-muted"><i class="fa fa-male"></i> Mane {{ selected.mane }} &middot; <i class="fa fa-female"></i> Feto {{ selected.feto }}</p>{% endif %}
+					<figure class="highcharts-figure"><div id="chart_painel" style="height: {{ chart.height }}px"></div></figure>
+				</div>
+			</div>
+		</div>
+	</div>
+	{% if selected and aldeias %}
+	<div class="card mb-3">
+		<div class="card-header">Aldeia iha Suku {{ selected.name }}</div>
+		<div class="card-body">
+			<table class="table table-sm table-bordered text-center mb-0">
+				<thead><tr class="th-amber"><th>Aldeia</th><th>Total</th></tr></thead>
+				<tbody>
+					{% for a, n, url in aldeias %}<tr><td>{{ a.name }}</td><td>{% if url and n %}<a href="{{ url }}">{{ n }}</a>{% else %}{{ n }}{% endif %}</td></tr>
+					{% empty %}<tr><td colspan="2" class="text-muted">Laiha aldeia.</td></tr>{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+	{% endif %}
+	{{ chart|json_script:"chart-data" }}
+{% endblock %}
+{% block scripts %}
+	{% include 'main/highcharts_scripts.html' %}
+	<script>
+	(function () {
+		var d = JSON.parse(document.getElementById('chart-data').textContent);
+		Highcharts.setOptions({ lang: { noData: 'Laiha data' }, credits: { enabled: false }, exporting: { enabled: false } });
+		function seriesOf(d, sel) {
+			if (!d.mane) { return [{ name: 'Membru', data: d.obj, tooltip: { valueSuffix: ' Membru' } }]; }
+			function pts(arr) { return arr.map(function (y, i) { return { y: y, className: i === sel ? 'pick-on' : '' }; }); }
+			return [{ name: 'Mane', colorIndex: 0, data: pts(d.mane), tooltip: { valueSuffix: ' Mane' } },
+				{ name: 'Feto', colorIndex: 1, data: pts(d.feto), tooltip: { valueSuffix: ' Feto' } }];
+		}
+		var chart = Highcharts.chart('chart_painel', {
+			chart: { type: d.horizontal ? 'bar' : 'column', styledMode: true },
+			title: { text: '' }, legend: { enabled: true },
+			xAxis: { categories: d.label },
+			yAxis: { title: { text: 'Total Membru' }, allowDecimals: false },
+			plotOptions: { column: { borderRadius: 4 }, bar: { borderRadius: 4 } },
+			series: seriesOf(d, d.selected)
+		});
+		// pilih/arahkan kursor pada daftar suku -> batang suku itu menyala di grafik
+		function mark(i, on) {
+			chart.series.forEach(function (sr) {
+				var p = sr.points[i];
+				if (p && p.graphic) { p.graphic[on ? 'addClass' : 'removeClass']('pick-hover'); }
+			});
+		}
+		document.querySelectorAll('.pick-list [data-idx]').forEach(function (el) {
+			var i = parseInt(el.getAttribute('data-idx'), 10);
+			el.addEventListener('mouseenter', function () { mark(i, true); });
+			el.addEventListener('mouseleave', function () { mark(i, false); });
+		});
+	})();
+	</script>
+{% endblock %}

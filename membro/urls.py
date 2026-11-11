@@ -5,7 +5,8 @@ from .api import APIMembroCari
 urlpatterns = [
 	path('', views.MembroList, name='membro-list'),
 	path('add/', views.MembroAdd, name='membro-add'),
-	path('painel/', views.PainelMembru, name='membro-painel'),
+	path('painel/', views.PainelRekap, name='membro-painel'),
+	path('suku/<int:pk>/', views.SukuRekap, name='membro-suku'),
 	path('cari/', views.MembroCari, name='membro-cari'),
 	path('dupla/', views.MembroDupla, name='membro-dupla'),
 	path('export.csv', views.MembroExport, name='membro-export'),

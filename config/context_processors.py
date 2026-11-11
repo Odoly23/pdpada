@@ -36,6 +36,11 @@ def _menu(request, group):
 		return items
 	if group in roles.VIEW_ROLES:
 		items.append(_item(request, 'Painel', 'fa-tachometer', 'membro-painel'))
+		if group not in roles.LISTA_ROLES:  # Sekretariu Postu: rekapitulasi dan grafik saja
+			items.append(_dropdown('Relatoriu', 'fa-list', [
+				_item(request, 'Tabular', 'fa-table', 'report-dash'),
+				_item(request, 'Grafiku', 'fa-bar-chart', 'report-chart')]))
+			return items
 		membru = [
 			_item(request, 'Lista Membru', 'fa-list', 'membro-list', names=('membro-list', 'membro-detail', 'membro-update')),
 			_item(request, 'Pesquiza', 'fa-search', 'membro-cari'),

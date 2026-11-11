@@ -49,7 +49,7 @@ Deploy ke PythonAnywhere: lihat [`docs/DEPLOY_PYTHONANYWHERE.md`](docs/DEPLOY_PY
 
 ## Tampilan
 
-`main/static/main/css/main.css` memuat variabel warna (`--navy`, `--navy-dk`) di bagian atas. Menu navbar desktop dan sidebar mobile berasal dari satu definisi per peran di `config/context_processors.py`. Varanda (home) menampilkan banner peran, bar tombol, tabel matriks bertaut (Suku/Aldeia/Organizasaun sesuai peran) dan grafik. Semua grafik memakai Highcharts `styledMode` (halaman Grafik berisi 9 grafik); warna di `main/static/main/js_custom/chart.css` (`--highcharts-color-N`). Ekspor grafik berjalan offline (tanpa server Highcharts).
+`main/static/main/css/main.css` memuat variabel warna (`--navy`, `--navy-dk`) di bagian atas. Menu navbar desktop dan sidebar mobile berasal dari satu definisi per peran di `config/context_processors.py`. Varanda semua peran menampilkan total, total per suku, kartu per aldeia dan grafik, hanya untuk wilayah peran: Postu melihat kartu per suku saja; klik suku membuka halaman detail suku (pemimpin suku, total, ativu/la ativu/mate, dan tabel Suku | Aldeia | Naran | Posisaun, tanpa Nu. Eleitoral), suku hanya sukunya, aldeia hanya aldeianya, organisasi (OJD/OPD/MPD) hanya suku dan aldeia tempat anggotanya. Painel berbentuk daftar Tinan | unit | grafik (unit terpilih menyala); unit = suku (Postu/organisasi), aldeia (suku) atau organizasaun (aldeia). Semua grafik memakai Highcharts `styledMode` (halaman Grafik berisi 9 grafik); warna di `main/static/main/js_custom/chart.css` (`--highcharts-color-N`). Ekspor grafik berjalan offline (tanpa server Highcharts).
 
 ## Peran dan hak akses
 
@@ -57,7 +57,7 @@ Deploy ke PythonAnywhere: lihat [`docs/DEPLOY_PYTHONANYWHERE.md`](docs/DEPLOY_PY
 |---|---|---|---|---|
 | `presidente` | semua | – | ya | aloka pozisaun, hamoos membru, lihat historia |
 | `koord_postu` | semua | – | ya | hamoos membru, lihat historia |
-| `sekr_postu` | semua | – | – | – |
+| `sekr_postu` | hanya rekapitulasi dan grafik (Varanda, Painel, Relatoriu); tanpa lista/detalhe/pesquiza/struktura/historia/ekspor | – | – | – |
 | `koord_suku` / `sekr_suku` | sukunya | sekr_suku | – | – |
 | `koord_aldeia` / `sekr_aldeia` | aldeianya | sekr_aldeia | – | – |
 | `koord_org` | anggota organisasinya | – | – | – |

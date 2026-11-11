@@ -13,7 +13,7 @@
 					{% if can_add %}<a class="btn btn-sm btn-primary" href="{% url 'membro-add' %}">Aumenta <i class="fa fa-plus"></i></a>{% endif %}
 					{% if can_aprova %}<a class="btn btn-sm btn-warning" href="{% url 'aprovasaun-list' %}">Hein Aprovasaun <i class="fa fa-check-square-o"></i></a>{% endif %}
 					{% if can_export %}<a class="btn btn-sm btn-success" href="{% url 'membro-export' %}?{{ request.GET.urlencode }}" title="Ekspor CSV kompletu tuir filtru">Ekspor CSV <i class="fa fa-download"></i></a>{% endif %}
-					<a class="btn btn-sm btn-outline-primary" href="{% url 'membro-cari' %}">Pesquiza <i class="fa fa-search"></i></a>
+					<a class="btn btn-sm btn-secondary" href="{% url 'membro-cari' %}">Pesquiza <i class="fa fa-search"></i></a>
 					{% if ano_ativu %}
 						{% if semua_ano %}<a class="btn btn-sm btn-link" href="{% url 'membro-list' %}">Tinan ativu deit</a>
 						{% else %}<a class="btn btn-sm btn-link" href="?ano=hotu">Tinan hotu</a>{% endif %}

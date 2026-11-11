@@ -13,7 +13,7 @@ from membro.utils import log_historia, apply_alokasaun_filters
 
 
 @login_required
-@allowed_users(allowed_roles=roles.VIEW_ROLES)
+@allowed_users(allowed_roles=roles.STRUKTURA_ROLES)
 def AlokasaunList(request):
 	group = c_user_group(request.user)
 	objects = alokasaun_scope(request.user).select_related('membro', 'village', 'aldeia', 'organizasaun')
@@ -103,7 +103,7 @@ def _unit_scope(user):
 
 
 @login_required
-@allowed_users(allowed_roles=roles.VIEW_ROLES)
+@allowed_users(allowed_roles=roles.STRUKTURA_ROLES)
 def AlokasaunDash(request):
 	"""Dashboard Struktura PD: siapa memegang posisi apa, dan kelengkapannya per suku/aldeia/organisasi."""
 	group = c_user_group(request.user)

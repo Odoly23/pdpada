@@ -1,0 +1,41 @@
+{% extends "main/layout.html" %}
+{% block content %}
+	<ol class="breadcrumb mb-2 mt-1">
+		<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+		<li class="breadcrumb-item active" aria-current="page">SUKU {{ village.name|upper }}</li>
+	</ol>
+	<div class="card suku-sheet">
+		<div class="card-body">
+			<p class="suku-lead">Lista kompañeiru husi suku <strong>{{ village.name }}</strong> ho total membru : <strong>[{{ tot.total }}]</strong></p>
+			{% for p in pemimpin %}
+			<p class="suku-lead mb-1">{{ forloop.counter }}. {{ p.label }} :
+				{% if p.nome %}<strong>{{ p.nome }}</strong> idade : [{{ p.idade|default:"-" }}]{% else %}<span class="text-muted">seidauk iha</span>{% endif %}</p>
+			{% endfor %}
+			<hr>
+			<div class="row text-center suku-stats">
+				<div class="col-4 col-md-2"><span class="stat-label">Total Membru</span><span class="stat-number d-block">{{ tot.total }}</span></div>
+				<div class="col-4 col-md-2"><span class="stat-label">Total Mane</span><span class="stat-number d-block">{{ tot.mane }}</span></div>
+				<div class="col-4 col-md-2"><span class="stat-label">Total Feto</span><span class="stat-number d-block">{{ tot.feto }}</span></div>
+				<div class="col-4 col-md-2"><span class="stat-label">Total Ativu</span><span class="stat-number d-block">{{ tot.ativu }}</span></div>
+				<div class="col-4 col-md-2"><span class="stat-label">Total La Ativu</span><span class="stat-number d-block">{{ tot.inativu }}</span></div>
+				<div class="col-4 col-md-2"><span class="stat-label">Total Mate</span><span class="stat-number d-block">{{ tot.falesidu }}</span></div>
+			</div>
+			<div class="table-responsive mt-3">
+				<table class="table table-bordered text-center suku-table">
+					<thead><tr class="th-amber"><th>SUKU</th><th>Aldeia</th><th>Naran Membru</th><th>Posisaun</th></tr></thead>
+					<tbody>
+						{% for r in rows %}
+						<tr>
+							{% if forloop.first %}<td rowspan="{{ rows|length }}" class="align-middle suku-name">{{ village.name }}</td>{% endif %}
+							<td>{{ r.aldeia }}</td><td>{{ r.nome }}</td><td class="text-left">{{ r.pozisaun }}</td>
+						</tr>
+						{% empty %}
+						<tr><td>{{ village.name }}</td><td colspan="3" class="text-muted">Seidauk iha membru iha suku ida ne'e.</td></tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+			<a class="btn btn-sm btn-secondary" href="{% url 'home' %}">Fila ba Varanda <i class="fa fa-arrow-left"></i></a>
+		</div>
+	</div>
+{% endblock %}

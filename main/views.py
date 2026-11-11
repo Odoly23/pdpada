@@ -56,28 +56,31 @@ def _tiles(group, counts):
 
 	if group == roles.ADMIN:
 		add('Painel Admin', 'Sumariu uzuáriu no data master', 'fa-tachometer', reverse('user-painel'))
-		add('Uzuáriu', 'Kria no jere konta ho peran no wilayah', 'fa-users', reverse('user-list'))
-		add('Suku no Aldeia', 'Rejistu wilayah Postu Dom Aleixo', 'fa-map-marker', reverse('master-list', args=['suku']))
+		add('Uzuáriu', 'Kria no jere konta ho peran no suku', 'fa-users', reverse('user-list'))
+		add('Suku no Aldeia', 'Rejistu suku Postu Dom Aleixo', 'fa-map-marker', reverse('master-list', args=['suku']))
 		add('Organizasaun', 'OJD, OPD, MPD no seluk', 'fa-flag', reverse('master-list', args=['organizasaun']))
 		add('Tinan Ativu', 'Troka tinan ne\'ebé uza ba relatoriu', 'fa-calendar', reverse('master-list', args=['ano']))
 		add('Historia', 'Rekorda mudansa dadus tomak', 'fa-history', reverse('historia-list'))
 		return tiles
 	if group not in roles.VIEW_ROLES:
 		return tiles
-	add('Painel Membru', 'Total, sexu no aprovasaun tuir wilayah', 'fa-tachometer', reverse('membro-painel'))
-	add('Lista Membru', 'Hare, filtra no hili dadus membru', 'fa-list', reverse('membro-list'))
+	add('Painel Membru', 'Total, sexu no aprovasaun tuir suku', 'fa-tachometer', reverse('membro-painel'))
+	if group in roles.LISTA_ROLES:
+		add('Lista Membru', 'Hare, filtra no hili dadus membru', 'fa-list', reverse('membro-list'))
 	if group in roles.INPUT_ROLES:
 		add('Aumenta Membru', 'Rejistu membru foun', 'fa-user-plus', reverse('membro-add'))
 		add('Membru Rejeitadu', 'Koriji dadus ne\'ebé rejeitadu', 'fa-exclamation-triangle',
 			reverse('membro-list') + '?aprovasaun=Rejeitadu&ano=hotu', counts['rejeitadu'])
 	if group in roles.APROVA_ROLES:
 		add('Hein Aprovasaun', 'Aprova ka rejeita membru foun', 'fa-check-square-o', reverse('aprovasaun-list'), counts['pendente'])
-	add('Pesquiza', 'Buka membru ho lalais', 'fa-search', reverse('membro-cari'))
+	if group in roles.LISTA_ROLES:
+		add('Pesquiza', 'Buka membru ho lalais', 'fa-search', reverse('membro-cari'))
 	if group in roles.DUPLIKAT_ROLES:
 		add('Dupla Potensial', 'Verifika membru ne\'ebé bele dupla', 'fa-clone', reverse('membro-dupla'))
 	add('Relatoriu Tabular', 'Tabela rekapitulasaun ho tautan', 'fa-table', reverse('report-dash'))
 	add('Relatoriu Grafiku', 'Grafiku membru tuir kategoria', 'fa-bar-chart', reverse('report-chart'))
-	add('Struktura PD', 'Coordenador no Sekretariu tuir nivel', 'fa-sitemap', reverse('alokasaun-dash'))
+	if group in roles.STRUKTURA_ROLES:
+		add('Struktura PD', 'Coordenador no Sekretariu tuir nivel', 'fa-sitemap', reverse('alokasaun-dash'))
 	if group in roles.HISTORIA_ROLES:
 		add('Historia', 'Rekorda mudansa dadus', 'fa-history', reverse('historia-list'))
 	return tiles
@@ -87,10 +90,13 @@ def _tiles(group, counts):
 def home(request):
 	"""Beranda ringan: sambutan, pencarian, dan pintasan sesuai peran (tanpa query berat)."""
 	group = c_user_group(request.user)
+	if group in roles.VIEW_ROLES:  # semua peran data: Varanda rekapitulasi sesuai wilayah peran
+		from membro.views.rekap_v import VarandaRekap
+		return VarandaRekap(request)
 	_, counts = notif_counts(request.user)
 	context = {
 		'group': group, 'role_label': ROLE_NAME.get(group, ''),
-		'tiles': _tiles(group, counts), 'can_search': group in roles.VIEW_ROLES, 'notif_counts': counts,
+		'tiles': _tiles(group, counts), 'can_search': group in roles.LISTA_ROLES, 'notif_counts': counts,
 		'title': 'Varanda', 'legend': 'Varanda',
 		'meta_description': 'SGDM-PDPADA: Sistema Jestaun Dadus Membru Partido Democratico, Postu Administrativu Dom Aleixo, Dili.',
 	}
