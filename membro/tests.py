@@ -1027,6 +1027,37 @@ class PainelTests(BaseCase):
 		self.assertNotContains(self.home('presidente'), 'Aumenta Membru')
 
 
+class SukuSexuChartTests(BaseCase):
+	def setUp(self):
+		self.make('SX00001', self.va, self.a1, sex='Mane')
+		self.make('SX00002', self.va, self.a1, sex='Feto')
+		self.make('SX00003', self.va, self.a2, sex='Feto')
+		self.make('SX00004', self.vb, self.b1, sex='Mane')
+
+	def get(self, user):
+		self.login(user)
+		return self.client.get(reverse('api-suku-sexu'))
+
+	def test_postu_compares_mane_and_feto_per_suku(self):
+		for u in ('presidente', 'sekrpostu'):
+			self.assertEqual(self.get(u).json(), {'label': ['Suku A', 'Suku B'], 'mane': [1, 1], 'feto': [2, 0]}, u)
+
+	def test_other_roles_only_get_their_own_scope(self):
+		self.assertEqual(self.get('koordsuku').json(), {'label': ['Suku A'], 'mane': [1], 'feto': [2]})
+		self.assertEqual(self.get('sekraldeia').json(), {'label': ['Suku A'], 'mane': [1], 'feto': [1]})
+
+	def test_admin_and_anonymous_refused(self):
+		self.assertEqual(self.get('admin').status_code, 403)
+		self.client.logout()
+		self.assertIn(self.client.get(reverse('api-suku-sexu')).status_code, (401, 403))
+
+	def test_chart_page_has_the_card_and_page_has_no_external_assets(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('report-chart'))
+		self.assertContains(resp, 'id="chart_suku_sexu"')
+		self.assertContains(resp, reverse('api-suku-sexu'))
+
+
 class SukuRekapTests(BaseCase):
 	def setUp(self):
 		self.m1 = self.make('SK00001', self.va, self.a1, nome='Joao Koord', sex='Mane', date_of_birth=datetime.date(1980, 1, 1))
@@ -1533,6 +1564,8 @@ class LandingTests(BaseCase):
 			self.assertEqual([(c['obj'].name, c['n']) for c in resp.context['suku_cards']], [('Suku A', 1), ('Suku B', 1)], u)
 			self.assertEqual(resp.context['objects2'], [], u)  # aldeia baru muncul setelah suku diklik
 			self.assertEqual((resp.context['chart']['label'], resp.context['chart']['obj']), (['Suku A', 'Suku B'], [1, 1]), u)
+			self.assertEqual((resp.context['chart']['mane'], resp.context['chart']['feto']), ([1, 1], [0, 0]), u)  # grafik Mane vs Feto
+			self.assertContains(resp, 'Grafiku Mane no Feto Tuir Suku')
 			for needle in ('Utiliza husi', 'Total Membru', 'MEMBRU TUIR SUKU', 'id="chart_aldeia_postu"', 'js_custom/highcharts.js', 'width="296"'):
 				self.assertContains(resp, needle)
 			self.assertNotContains(resp, 'https://')

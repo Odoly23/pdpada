@@ -87,13 +87,19 @@
 	(function () {
 		var d = JSON.parse(document.getElementById('chart-data').textContent);
 		Highcharts.setOptions({ lang: { noData: 'Laiha data' }, credits: { enabled: false }, exporting: { enabled: false } });
+		function seriesOf(d, sel) {
+			if (!d.mane) { return [{ name: 'Membru', data: d.obj, tooltip: { valueSuffix: ' Membru' } }]; }
+			function pts(arr) { return arr.map(function (y, i) { return { y: y, className: i === sel ? 'pick-on' : '' }; }); }
+			return [{ name: 'Mane', colorIndex: 0, data: pts(d.mane), tooltip: { valueSuffix: ' Mane' } },
+				{ name: 'Feto', colorIndex: 1, data: pts(d.feto), tooltip: { valueSuffix: ' Feto' } }];
+		}
 		Highcharts.chart('chart_aldeia_postu', {
 			chart: { type: d.horizontal ? 'bar' : 'column', styledMode: true },
-			title: { text: '' }, legend: { enabled: false },
+			title: { text: '' }, legend: { enabled: !!d.mane },
 			xAxis: { categories: d.label },
 			yAxis: { title: { text: 'Total Membru' }, allowDecimals: false },
-			plotOptions: { column: { borderRadius: 4, colorIndex: 1 }, bar: { borderRadius: 4, colorIndex: 1 } },
-			series: [{ name: 'Membru', data: d.obj, tooltip: { valueSuffix: ' Membru' } }]
+			plotOptions: { column: { borderRadius: 4 }, bar: { borderRadius: 4 } },
+			series: seriesOf(d)
 		});
 	})();
 	</script>

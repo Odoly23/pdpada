@@ -96,3 +96,12 @@ class APIAlokasaun(BaseAPI):
 		rows = alokasaun_scope(request.user).filter(ativu='Sim').values_list('nivel', 'pozisaun').annotate(n=Count('id'))
 		rows = sorted(rows, key=lambda r: (order.get(r[0], 9), poz.get(r[1], 9)))
 		return Response({'label': [f'{r[0]} · {r[1]}' for r in rows], 'obj': [r[2] for r in rows]})
+
+
+class APISukuSexu(BaseAPI):
+	"""Perbandingan Mane dan Feto per suku (grafik berkelompok)."""
+	def get(self, request, format=None):
+		from django.db.models import Q
+		rows = membro_ativu(request.user).order_by().values('village__name').annotate(
+			mane=Count('id', filter=Q(sex='Mane')), feto=Count('id', filter=Q(sex='Feto'))).order_by('village__name')
+		return Response({'label': [r['village__name'] for r in rows], 'mane': [r['mane'] for r in rows], 'feto': [r['feto'] for r in rows]})

@@ -66,9 +66,12 @@ def _units(level, e, aldeia_rows, suku_rows):
 	return villages, aldeias
 
 
-def _chart(labels, values, title, horizontal=None):
+def _chart(labels, values, title, mane=None, feto=None, horizontal=None):
+	"""Data grafik; `mane`/`feto` (jika ada) membuat grafik berkelompok perbandingan Mane dan Feto per label."""
 	horizontal = len(labels) > BAR_ROWS if horizontal is None else horizontal
-	return {'label': labels, 'obj': values, 'title': title, 'horizontal': horizontal, 'height': 90 + 26 * len(labels) if horizontal else 360}
+	per = 2 if mane is not None else 1  # grafik mendatar dengan dua batang per label perlu ruang lebih
+	return {'label': labels, 'obj': values, 'mane': mane, 'feto': feto, 'title': title, 'horizontal': horizontal,
+		'height': 90 + 26 * per * len(labels) if horizontal else 360}
 
 
 @login_required
@@ -101,14 +104,17 @@ def VarandaRekap(request):
 		objects2 = []
 
 	if level == 'postu':
-		chart = _chart([x.name for x, _ in objects1], [n for _, n in objects1], 'Grafiku Membru Tuir Suku')
+		chart = _chart([c['obj'].name for c in suku_cards], [c['n'] for c in suku_cards], 'Grafiku Mane no Feto Tuir Suku',
+			[c['mane'] for c in suku_cards], [c['feto'] for c in suku_cards])
 	elif level == 'aldeia':  # satu aldeia saja: grafik per organizasaun
 		org = _counts(qs, 'organizasaun_id')
 		names = {o.pk: o.code for o in Organizasaun.objects.filter(pk__in=[k for k in org if k])}
 		keys = sorted(org, key=lambda k: names.get(k, 'zzz'))
-		chart = _chart([names.get(k, 'Laiha organizasaun') for k in keys], [org[k]['n'] for k in keys], 'Grafiku Membru Tuir Organizasaun')
+		chart = _chart([names.get(k, 'Laiha organizasaun') for k in keys], [org[k]['n'] for k in keys], 'Grafiku Mane no Feto Tuir Organizasaun',
+			[org[k]['mane'] for k in keys], [org[k]['feto'] for k in keys])
 	else:
-		chart = _chart([r['obj'].name for r in objects2], [r['n'] for r in objects2], 'Grafiku Membru Tuir Aldeia')
+		chart = _chart([r['obj'].name for r in objects2], [r['n'] for r in objects2], 'Grafiku Mane no Feto Tuir Aldeia',
+			[r['mane'] for r in objects2], [r['feto'] for r in objects2])
 
 	context = {
 		'group': group, 'role_label': ROLE_NAME.get(group, ''), 'e': e, 'level': level, 'banner': _banner(group, e),
@@ -175,7 +181,7 @@ def PainelRekap(request):
 			aldeias_detail.append([x, counts.get(x.pk, {}).get('n', 0), _list_url(group, aldeia=x.pk) if linkable else ''])
 
 	labels = [r['name'] for r in objects2]
-	chart = _chart(labels, [r['n'] for r in objects2], '')
+	chart = _chart(labels, [r['n'] for r in objects2], '', [r['mane'] for r in objects2], [r['feto'] for r in objects2])
 	chart['selected'] = next((i for i, r in enumerate(objects2) if r['active']), -1)
 	context = {
 		'group': group, 'level': level, 'banner': _banner(group, e), 'ano': ano, 'unit_title': unit_title,
