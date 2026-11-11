@@ -1027,6 +1027,57 @@ class PainelTests(BaseCase):
 		self.assertNotContains(self.home('presidente'), 'Aumenta Membru')
 
 
+class SukuRekapTests(BaseCase):
+	def setUp(self):
+		self.m1 = self.make('SK00001', self.va, self.a1, nome='Joao Koord', sex='Mane', date_of_birth=datetime.date(1980, 1, 1))
+		self.m2 = self.make('SK00002', self.va, self.a1, nome='Aaa Sekr', sex='Mane', status='Inativu')
+		self.m3 = self.make('SK00003', self.va, self.a1, nome='Abel Aldeia', sex='Feto', status='Falesidu')
+		self.m4 = self.make('SK00004', self.va, self.a2, nome='Mario Biasa', sex='Mane')
+		self.m5 = self.make('SK00005', self.vb, self.b1, nome='Orang Suku B')
+		d = datetime.date(2020, 1, 1)
+		Alokasaun.objects.create(membro=self.m1, nivel='Suku', pozisaun='Coordenador', village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.m2, nivel='Suku', pozisaun='Sekretariu', village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.m3, nivel='Aldeia', pozisaun='Sekretariu', aldeia=self.a1, data_hahu=d)
+
+	def page(self, user, pk=None):
+		self.login(user)
+		resp = self.client.get(reverse('membro-suku', args=[pk or self.va.pk]))
+		self.assertEqual(resp.status_code, 200)
+		return resp
+
+	def test_postu_roles_see_summary_leaders_and_table(self):
+		for u in ('presidente', 'koordpostu', 'sekrpostu'):
+			resp = self.page(u)
+			self.assertTemplateUsed(resp, 'membro/suku_rekap.html')
+			t = resp.context['tot']
+			self.assertEqual((t['total'], t['mane'], t['feto'], t['ativu'], t['inativu'], t['falesidu']), (4, 3, 1, 2, 1, 1), u)
+			self.assertEqual([(p['label'], p['nome']) for p in resp.context['pemimpin']],
+				[('Cordenador Suku', 'Joao Koord'), ('Sekjer Suku', 'Aaa Sekr')], u)
+			self.assertEqual(resp.context['pemimpin'][0]['idade'], self.m1.age())
+			self.assertEqual([(r['nome'], r['pozisaun']) for r in resp.context['rows']], [
+				('Joao Koord', 'Cordenador Suku'), ('Aaa Sekr', 'Sekjer Suku'), ('Abel Aldeia', 'Sekjer Aldeia A1'), ('Mario Biasa', 'Membru')], u)
+			self.assertContains(resp, 'Lista kompañeiru husi suku')
+			self.assertNotContains(resp, 'Orang Suku B')
+
+	def test_sekretariu_postu_does_not_get_sensitive_fields_or_links(self):
+		resp = self.page('sekrpostu')
+		self.assertNotContains(resp, 'SK0000')  # Nu. Eleitoral
+		self.assertNotContains(resp, '/membro/?')
+		self.assertNotContains(resp, self.m1.hashed)
+
+	def test_vacant_leaders_are_shown_as_not_yet(self):
+		resp = self.page('presidente', self.vb.pk)
+		self.assertEqual([p['nome'] for p in resp.context['pemimpin']], [None, None])
+		self.assertContains(resp, 'seidauk iha')
+
+	def test_other_roles_and_unknown_suku_are_refused(self):
+		for u in ('koordsuku', 'sekrsuku', 'sekraldeia', 'koordorg', 'admin'):
+			self.login(u)
+			self.assertEqual(self.client.get(reverse('membro-suku', args=[self.va.pk])).status_code, 403, u)
+		self.login('presidente')
+		self.assertEqual(self.client.get(reverse('membro-suku', args=[99999])).status_code, 404)
+
+
 class VarandaScopeTests(BaseCase):
 	"""Varanda tiap peran hanya memuat suku/aldeia dalam wilayahnya; Postu melihat semuanya."""
 	def setUp(self):
@@ -1047,9 +1098,8 @@ class VarandaScopeTests(BaseCase):
 
 	def test_postu_sees_everything_grouped_by_suku(self):
 		resp = self.page('presidente')
-		self.assertEqual(self.names(resp), (['Suku A', 'Suku B'], ['A1', 'A2', 'B1']))
-		self.assertTrue(resp.context['group_cards'])
-		self.assertContains(resp, 'Suku B <span class="badge')
+		self.assertEqual(self.names(resp), (['Suku A', 'Suku B'], []))
+		self.assertEqual([c['n'] for c in resp.context['suku_cards']], [2, 1])
 
 	def test_suku_sees_only_own_suku_and_aldeia(self):
 		for u in ('koordsuku', 'sekrsuku'):
@@ -1071,7 +1121,7 @@ class VarandaScopeTests(BaseCase):
 	def test_many_aldeia_use_horizontal_chart(self):
 		for i in range(15):
 			Aldeia.objects.create(village=self.va, name=f'Extra {i}')
-		resp = self.page('presidente')
+		resp = self.page('koordsuku')
 		self.assertTrue(resp.context['chart']['horizontal'])
 		self.assertGreater(resp.context['chart']['height'], 360)
 		self.assertFalse(self.page('sekraldeia').context['chart']['horizontal'])
@@ -1480,10 +1530,10 @@ class LandingTests(BaseCase):
 		for u in ('presidente', 'koordpostu', 'sekrpostu'):
 			resp = self.varanda(u)
 			self.assertEqual(resp.context['total'], 2, u)
-			self.assertEqual([(v.name, n) for v, n in resp.context['objects1']], [('Suku A', 1), ('Suku B', 1)], u)
-			self.assertEqual([(a['obj'].name, a['n']) for a in resp.context['objects2']], [('A1', 1), ('A2', 0), ('B1', 1)], u)
-			self.assertEqual((resp.context['chart']['label'], resp.context['chart']['obj']), (['A1', 'A2', 'B1'], [1, 0, 1]), u)
-			for needle in ('Utiliza husi', 'Total Membru', 'MEMBRU TUIR ALDEIA', 'id="chart_aldeia_postu"', 'js_custom/highcharts.js', 'width="296"'):
+			self.assertEqual([(c['obj'].name, c['n']) for c in resp.context['suku_cards']], [('Suku A', 1), ('Suku B', 1)], u)
+			self.assertEqual(resp.context['objects2'], [], u)  # aldeia baru muncul setelah suku diklik
+			self.assertEqual((resp.context['chart']['label'], resp.context['chart']['obj']), (['Suku A', 'Suku B'], [1, 1]), u)
+			for needle in ('Utiliza husi', 'Total Membru', 'MEMBRU TUIR SUKU', 'id="chart_aldeia_postu"', 'js_custom/highcharts.js', 'width="296"'):
 				self.assertContains(resp, needle)
 			self.assertNotContains(resp, 'https://')
 
@@ -1491,8 +1541,8 @@ class LandingTests(BaseCase):
 		self.make('LD00001')
 		resp = self.varanda('presidente')
 		self.assertContains(resp, 'id="search-q"')
-		self.assertContains(resp, '/membro/?aldeia=%d' % self.a1.pk)
-		self.assertContains(resp, 'Hein Aprovasaun')
+		self.assertContains(resp, reverse('membro-suku', args=[self.va.pk]))
+		self.assertNotContains(resp, 'Aldeia A1')
 		resp = self.varanda('sekrpostu')  # Sekretariu Postu: rekapitulasi saja
 		self.assertNotContains(resp, 'id="search-q"')
 		self.assertNotContains(resp, '/membro/?')

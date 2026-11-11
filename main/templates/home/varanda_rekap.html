@@ -19,9 +19,9 @@
 				<span class="stat-label">Total Membru</span>
 				<div class="rekap-number">{% if total_url %}<a href="{{ total_url }}">{{ total }}</a>{% else %}{{ total }}{% endif %}</div>
 			</div>
-			<p class="rekap-line">
+			{% if level != 'postu' %}<p class="rekap-line">
 				{% for v, n in objects1 %}<span class="rekap-suku"><strong>{{ v.name }}</strong> {{ n }}</span>{% if not forloop.last %}<span class="rekap-sep">&middot;</span>{% endif %}{% endfor %}
-			</p>
+			</p>{% endif %}
 			<div class="rekap-actions">
 				<a class="btn btn-sm btn-primary" href="{% url 'membro-painel' %}"><i class="fa fa-tachometer"></i> Painel</a>
 				<a class="btn btn-sm btn-outline-primary" href="{% url 'report-dash' %}"><i class="fa fa-table"></i> Relatoriu Tabular</a>
@@ -34,6 +34,24 @@
 		</div>
 	</div>
 
+	{% if level == 'postu' %}
+	<h6 class="rekap-head">MEMBRU TUIR SUKU <small class="text-muted">&middot; klik suku atu hare aldeia</small></h6>
+	<div class="row">
+		{% for c in suku_cards %}
+		<div class="col-6 col-md-4 col-lg-3 mb-3">
+			<a class="card aldeia-card h-100 suku-card" href="{{ c.url }}">
+				<div class="card-body text-center">
+					<div class="aldeia-name">Suku {{ c.obj.name }}</div>
+					<div class="aldeia-n">{{ c.n }}</div>
+					<div class="aldeia-sex"><i class="fa fa-male"></i> {{ c.mane }} <span class="rekap-sep">&middot;</span> <i class="fa fa-female"></i> {{ c.feto }}</div>
+				</div>
+			</a>
+		</div>
+		{% empty %}
+		<div class="col-12"><div class="alert alert-light text-center">Seidauk iha suku. Kontaktu Admin.</div></div>
+		{% endfor %}
+	</div>
+	{% else %}
 	<h6 class="rekap-head">MEMBRU TUIR ALDEIA</h6>
 	{% regroup objects2 by obj.village as by_suku %}
 	{% for g in by_suku %}
@@ -56,6 +74,7 @@
 	<div class="alert alert-light text-center">Seidauk iha membru iha ita nia suku/aldeia/organizasaun.</div>
 	{% endfor %}
 
+	{% endif %}
 	<div class="card mt-2 mb-3">
 		<div class="card-header text-center">{{ chart.title }}</div>
 		<div class="card-body"><figure class="highcharts-figure"><div id="chart_aldeia_postu" style="height: {{ chart.height }}px"></div></figure></div>
