@@ -458,3 +458,7 @@ div.dataTables_wrapper div.dataTables_length label { font-weight: 400; color: #6
 .suku-stats .stat-number { font-size: 1.6rem; }
 .suku-name { font-weight: 700; color: var(--navy); }
 .suku-table td { vertical-align: middle; }
+
+/* semua tombol persegi (tanpa radius): btn, btn-sm, btn-info, tombol filter, grup tombol */
+.btn, .btn-sm, .btn-lg, .btn-filter, .btn-filter .count, .btn-group > .btn, .btn-group-sm > .btn, .input-group > .btn,
+.input-group-append .btn, .input-group-prepend .btn, div.dt-buttons .btn, .badge-pill.count { border-radius: 0 !important; }
