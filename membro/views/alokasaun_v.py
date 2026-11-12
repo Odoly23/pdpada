@@ -135,9 +135,9 @@ def AlokasaunDash(request):
 	villages, aldeias, orgs = _unit_scope(request.user)
 	aktivu = list(Alokasaun.objects.filter(ativu='Sim').select_related('membro'))
 	postu = {a.pozisaun: a for a in aktivu if a.nivel == 'Postu'}
-	suku = {(a.village_id, a.pozisaun): a for a in aktivu if a.nivel == 'Suku'}
+	suku = {(a.village_id, a.pozisaun): a for a in aktivu if a.nivel == 'Suku' and not a.organizasaun_id}
 	org = {(a.organizasaun_id, a.pozisaun): a for a in aktivu if a.nivel == 'Organizasaun'}
-	aldeia_hold = {(a.aldeia_id, a.pozisaun): a for a in aktivu if a.nivel == 'Aldeia'}
+	aldeia_hold = {(a.aldeia_id, a.pozisaun): a for a in aktivu if a.nivel == 'Aldeia' and not a.organizasaun_id}
 	aldeias = list(aldeias)
 	rows_suku = []
 	for v in villages:

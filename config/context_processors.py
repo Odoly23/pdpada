@@ -46,6 +46,9 @@ def _menu(request, group):
 			_item(request, 'Lista Membru', 'fa-list', 'membro-list', names=('membro-list', 'membro-detail', 'membro-update')),
 			_item(request, 'Pesquiza', 'fa-search', 'membro-cari'),
 		]
+		if group in roles.DELEGADU_ROLES:
+			membru.append(_item(request, 'Lista Delegadu', 'fa-address-book', 'membro-delegadu-index',
+				names=('membro-delegadu-index', 'membro-delegadu')))
 		if group in roles.INPUT_ROLES:
 			membru.append(_item(request, 'Aumenta Membru', 'fa-user-plus', 'membro-add'))
 		if group in roles.APROVA_ROLES:

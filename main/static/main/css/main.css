@@ -492,3 +492,19 @@ div.dataTables_wrapper div.dataTables_length label { font-weight: 400; color: #6
 .text-warning { color: var(--red) !important; }
 .alert-warning { background-color: #eef1ff; border-color: #c9cff0; color: var(--navy); }
 .table-warning, .table-warning > td, .table-warning > th { background-color: #eef1ff; }
+
+/* Lista Delegadu: tampilan seperti dokumen resmi */
+.doc-letterhead { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+.doc-letterhead img { max-width: 100%; height: auto; }
+.doc-letterhead .lh-name { font-family: 'Times New Roman', Times, serif; font-weight: 700; font-size: 1.3rem; }
+.doc-letterhead div { font-family: 'Times New Roman', Times, serif; font-weight: 600; }
+.doc-rule { border-top: 2px solid #212529; margin: .5rem 0 .75rem; }
+.doc-title { text-align: center; font-family: 'Courier New', monospace; font-weight: 700; line-height: 1.5; }
+.doc-table { font-family: 'Times New Roman', Times, serif; }
+.doc-table td, .doc-table th { border-color: #212529 !important; }
+.doc-table tr.doc-gap td { padding: 0; height: 8px; background: #f8f9fa; }
+@media print {
+	.doc-table tr.doc-gap td { background: #fff; }
+	.doc-letterhead img { width: 110px; height: auto; }
+	.doc-table { font-size: 10pt; }
+}

@@ -119,7 +119,7 @@ class Alokasaun(models.Model):
 		return result
 
 	def unit(self):
-		return self.village or self.aldeia or self.organizasaun
+		return self.aldeia or self.village or self.organizasaun
 
 	def __str__(self):
 		template = '{0.membro} - {0.pozisaun} {0.nivel}'

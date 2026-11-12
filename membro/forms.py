@@ -229,17 +229,20 @@ class AlokasaunForm(forms.ModelForm):
 		if nivel == 'Postu':
 			village = aldeia = org = None
 		elif nivel == 'Suku':
-			aldeia = org = None
+			aldeia = None  # organizasaun opsional = sayap (Koord OJD Suku, dst.)
 			if not village:
 				self.add_error('village', 'Suku tenke hili.')
 			elif membro.village_id != village.pk:
 				self.add_error('membro', 'Membru ne\'e la hela iha suku ne\'e.')
-		elif nivel == 'Aldeia':
-			org = None
+			elif org and membro.organizasaun_id != org.pk:
+				self.add_error('membro', 'Membru ne\'e la tama organizasaun ne\'e.')
+		elif nivel == 'Aldeia':  # organizasaun opsional = sayap (Koord OJD Aldeia, dst.)
 			if not aldeia:
 				self.add_error('aldeia', 'Aldeia tenke hili.')
 			elif membro.aldeia_id != aldeia.pk:
 				self.add_error('membro', 'Membru ne\'e la hela iha aldeia ne\'e.')
+			elif org and membro.organizasaun_id != org.pk:
+				self.add_error('membro', 'Membru ne\'e la tama organizasaun ne\'e.')
 			else:
 				village = aldeia.village
 		elif nivel == 'Organizasaun':
@@ -257,9 +260,9 @@ class AlokasaunForm(forms.ModelForm):
 				raise ValidationError(f'{membro.nome} iha ona pozisaun ativu: {lain.pozisaun} {lain.nivel}. Termina uluk pozisaun ne\'e.')
 			qs = Alokasaun.objects.filter(nivel=nivel, pozisaun=pozisaun, ativu='Sim')
 			if nivel == 'Suku':
-				qs = qs.filter(village=village)
+				qs = qs.filter(village=village, organizasaun=org)  # org kosong = pemimpin utama suku
 			elif nivel == 'Aldeia':
-				qs = qs.filter(aldeia=aldeia)
+				qs = qs.filter(aldeia=aldeia, organizasaun=org)
 			elif nivel == 'Organizasaun':
 				qs = qs.filter(organizasaun=org)
 			if self.instance.pk:

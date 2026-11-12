@@ -2437,3 +2437,117 @@ class AlokasaunColocadoTests(BaseCase):
 		sync_colocado(self.m2.pk)
 		self.assertTrue(Membro.objects.get(pk=self.m2.pk).is_colocado)
 
+
+class DelegaduTests(BaseCase):
+	def setUp(self):
+		self.opd = Organizasaun.objects.create(code='OPD', name='OPD')
+		d = datetime.date(2026, 1, 1)
+		def person(nu, nome, aldeia, org=None, tel=None, village=None):
+			return self.make(nu, village or self.va, aldeia, nome=nome, aprovasaun='Aprovadu', organizasaun=org, telefone=tel)
+		self.k = person('DG0001', 'Yakobus Koord', self.a1, tel='77279439')
+		self.s = person('DG0002', 'Rosalino Sekr', self.a1, tel='77332283')
+		self.kw = person('DG0003', 'Anacleto Sayap', self.a2, org=self.org, tel='73573571')
+		self.ka = person('DG0004', 'Francisco Aldeia', self.a1, tel='77594908')
+		self.kj = person('DG0005', 'Nelson Sayap Aldeia', self.a1, org=self.org)
+		self.kb = person('DG0006', 'Orang Suku B', self.b1, village=self.vb)
+		Alokasaun.objects.create(membro=self.k, nivel='Suku', pozisaun='Coordenador', village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.s, nivel='Suku', pozisaun='Sekretariu', village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.kw, nivel='Suku', pozisaun='Coordenador', village=self.va, organizasaun=self.org, data_hahu=d)
+		Alokasaun.objects.create(membro=self.ka, nivel='Aldeia', pozisaun='Coordenador', aldeia=self.a1, village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.kj, nivel='Aldeia', pozisaun='Coordenador', aldeia=self.a1, village=self.va, organizasaun=self.org, data_hahu=d)
+		Alokasaun.objects.create(membro=self.kb, nivel='Suku', pozisaun='Coordenador', village=self.vb, data_hahu=d)
+
+	def page(self, user, pk=None):
+		self.login(user)
+		resp = self.client.get(reverse('membro-delegadu', args=[pk or self.va.pk]))
+		self.assertEqual(resp.status_code, 200)
+		return resp
+
+	def test_data_has_suku_leaders_wings_and_aldeia_blocks(self):
+		data = self.page('presidente').context['data']
+		self.assertEqual([(r['pozisaun'], r['nome']) for r in data['suku_rows']], [
+			('Koord Suku', 'Yakobus Koord'), ('Sekretario Suku', 'Rosalino Sekr'), ('Koord OJD Suku', 'Anacleto Sayap')])
+		self.assertEqual(data['suku_rows'][2]['aldeia'], 'A2')  # aldeia anggota
+		self.assertEqual(data['n_aldeia'], 2)
+		a1 = [b for b in data['blocks'] if b['aldeia'] == 'A1'][0]
+		self.assertEqual([(r['pozisaun'], r['nome']) for r in a1['rows']], [('Koord Aldeia', 'Francisco Aldeia'), ('Koord OJD', 'Nelson Sayap Aldeia')])
+		self.assertEqual(a1['hp'], '77594908')  # HP koordinator aldeia
+		a2 = [b for b in data['blocks'] if b['aldeia'] == 'A2'][0]
+		self.assertEqual(a2['rows'], [])
+		self.assertNotIn('Orang Suku B', str(data))
+
+	def test_page_looks_like_the_document(self):
+		resp = self.page('presidente')
+		for needle in ('LISTA DELEGADO/A ALDEIA 2 IHA SUKU SUKU A, TUIR KONFERÉNSIA', 'NÚ. KARTAUN ELEITORAL', 'NÚ HP WA', 'SEKRETARIADO PARTIDO DEMOCRÁTICO',
+				'DG0001', '77279439', 'Seidauk iha delegadu', 'Download PDF', 'Imprime', 'window.print()', 'rowspan="2"'):
+			self.assertContains(resp, needle)
+		self.assertNotContains(resp, 'https://')
+
+	def test_pdf_is_real_pdf_with_letterhead_and_is_audited(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-delegadu-pdf', args=[self.va.pk]))
+		self.assertEqual((resp.status_code, resp['Content-Type']), (200, 'application/pdf'))
+		self.assertTrue(resp.content.startswith(b'%PDF'))
+		self.assertEqual(resp['Cache-Control'], 'private, no-store')
+		from pypdf import PdfReader
+		text = ''.join(p.extract_text() for p in PdfReader(io.BytesIO(resp.content)).pages)
+		for needle in ('SEKRETARIADO PARTIDO DEMOCR', 'LISTA DELEGADO/A ALDEIA 2', 'Yakobus Koord', 'Koord OJD Suku', 'DG0001', 'Seidauk iha delegadu'):
+			self.assertIn(needle, text)
+		self.assertTrue(Historia.objects.filter(aksaun='Ekspor', detalhe__contains='Lista Delegadu PDF').exists())
+
+	def test_long_suku_splits_over_pages(self):
+		for i in range(30):
+			a = Aldeia.objects.create(village=self.va, name=f'Aldeia Extra {i}')
+			for j, p in enumerate(('Coordenador', 'Sekretariu')):
+				m = self.make(f'LG{i:03d}{j}', self.va, a, nome=f'Delegadu {i}-{j}', aprovasaun='Aprovadu')
+				Alokasaun.objects.create(membro=m, nivel='Aldeia', pozisaun=p, aldeia=a, village=self.va, data_hahu=datetime.date(2026, 1, 1))
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-delegadu-pdf', args=[self.va.pk]))
+		from pypdf import PdfReader
+		self.assertGreaterEqual(len(PdfReader(io.BytesIO(resp.content)).pages), 2)
+
+	def test_access_by_role(self):
+		for u, code in [('presidente', 200), ('koordpostu', 200), ('koordsuku', 200), ('sekrsuku', 200),
+				('sekrpostu', 403), ('sekraldeia', 403), ('koordorg', 403), ('sekrorg', 403), ('admin', 403)]:
+			self.login(u)
+			self.assertEqual(self.client.get(reverse('membro-delegadu', args=[self.va.pk])).status_code, code, u)
+			self.assertEqual(self.client.get(reverse('membro-delegadu-pdf', args=[self.va.pk])).status_code, code, u)
+
+	def test_suku_role_only_own_suku_and_index_redirects(self):
+		self.login('koordsuku')
+		self.assertEqual(self.client.get(reverse('membro-delegadu', args=[self.vb.pk])).status_code, 404)
+		self.assertEqual(self.client.get(reverse('membro-delegadu-pdf', args=[self.vb.pk])).status_code, 404)
+		self.assertRedirects(self.client.get(reverse('membro-delegadu-index')), reverse('membro-delegadu', args=[self.va.pk]))
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-delegadu-index'))
+		self.assertContains(resp, reverse('membro-delegadu', args=[self.vb.pk]))
+
+	def test_menu_item_for_allowed_roles_only(self):
+		self.login('presidente')
+		self.assertContains(self.client.get(reverse('report-dash')), reverse('membro-delegadu-index'))
+		self.login('sekraldeia')
+		self.assertNotContains(self.client.get(reverse('report-dash')), reverse('membro-delegadu-index'))
+
+	def test_wings_do_not_break_main_leaders_elsewhere(self):
+		self.login('presidente')
+		dash = self.client.get(reverse('alokasaun-dash'))
+		row = [r for r in dash.context['rows_suku'] if r['v'] == self.va][0]
+		self.assertEqual(row['coord'].membro, self.k)  # bukan sayap OJD
+		self.assertEqual(self.client.get('/').context['info']['lengkap'], 1)
+		page = self.client.get(reverse('membro-suku', args=[self.va.pk]))
+		self.assertEqual([p['nome'] for p in page.context['pemimpin']], ['Yakobus Koord', 'Rosalino Sekr'])
+		labels = {r['nome']: r['pozisaun'] for r in page.context['rows']}
+		self.assertEqual(labels['Anacleto Sayap'], 'Cordenador OJD Suku')
+
+	def test_form_allows_wing_only_for_member_of_that_organizasaun(self):
+		self.login('presidente')
+		m = self.make('DG0100', self.va, self.a1, aprovasaun='Aprovadu', organizasaun=self.opd)
+		base = {'membro': m.pk, 'nivel': 'Aldeia', 'pozisaun': 'Sekretariu', 'aldeia': self.a1.pk, 'data_hahu': '2026-02-01', 'ativu': 'Sim'}
+		bad = self.client.post(reverse('alokasaun-add'), dict(base, organizasaun=self.org.pk))
+		self.assertEqual(bad.status_code, 200)
+		self.assertContains(bad, 'la tama organizasaun')
+		ok = self.client.post(reverse('alokasaun-add'), dict(base, organizasaun=self.opd.pk))
+		self.assertRedirects(ok, reverse('alokasaun-list'))
+		a = Alokasaun.objects.get(membro=m)
+		self.assertEqual((a.nivel, a.organizasaun_id, a.aldeia_id), ('Aldeia', self.opd.pk, self.a1.pk))
+

@@ -1,0 +1,59 @@
+{% extends "main/layout.html" %}
+{% load static %}
+{% block content %}
+	<ol class="breadcrumb mb-2 mt-1">
+		<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+		{% if can_index %}<li class="breadcrumb-item"><a href="{% url 'membro-delegadu-index' %}">LISTA DELEGADU</a></li>{% endif %}
+		<li class="breadcrumb-item active" aria-current="page">SUKU {{ village.name|upper }}</li>
+	</ol>
+	<div class="no-print mb-2">
+		<a class="btn btn-sm btn-info" href="{% url 'membro-delegadu-pdf' village.pk %}" target="_blank" rel="noopener">Download PDF <i class="fa fa-file-pdf-o"></i></a>
+		<button type="button" class="btn btn-sm btn-secondary" onclick="window.print()">Imprime <i class="fa fa-print"></i></button>
+		{% if can_index %}<a class="btn btn-sm btn-secondary" href="{% url 'membro-delegadu-index' %}">Suku Seluk <i class="fa fa-arrow-left"></i></a>{% endif %}
+	</div>
+	<div class="card suku-sheet">
+		<div class="card-body">
+			<div class="doc-letterhead">
+				<img src="{% static 'main/images/bandeira_pd.png' %}" alt="Bendera Partido Democratico" width="150" height="85">
+				<div>
+					<div class="lh-name">{{ letterhead.nama }}</div>
+					<div>Postu {{ letterhead.postu }}, Suco {{ village.name }}, Dili-Timor Leste</div>
+					<div>Rua : {{ letterhead.alamat }}</div>
+					<div>Mobile : {{ letterhead.kontaktu }}</div>
+				</div>
+			</div>
+			<hr class="doc-rule">
+			<p class="doc-title">{{ doc_title }}<br>{{ doc_subtitle }}</p>
+			<div class="table-responsive">
+				<table class="table table-sm table-bordered doc-table">
+					<thead>
+						<tr class="th-navy"><th>NARAN KOMPLETU</th><th>POZISAUN</th><th>ALDEIA</th><th>NÚ. KARTAUN ELEITORAL</th><th>NÚ HP WA</th></tr>
+					</thead>
+					<tbody>
+						{% for r in data.suku_rows %}
+						<tr class="{% if r.utama %}font-weight-bold{% endif %}">
+							<td>{{ r.nome }}</td><td>{{ r.pozisaun }}</td><td class="text-center">{{ r.aldeia }}</td><td class="text-center font-weight-normal">{{ r.eleitoral }}</td><td class="text-center font-weight-normal">{{ r.hp }}</td>
+						</tr>
+						{% endfor %}
+						{% if data.suku_rows %}<tr class="doc-gap"><td colspan="5"></td></tr>{% endif %}
+						{% for b in data.blocks %}
+							{% for r in b.rows %}
+							<tr class="{% if r.utama %}font-weight-bold{% endif %}">
+								<td>{{ r.nome }}</td><td>{{ r.pozisaun }}</td>
+								{% if forloop.first %}<td class="text-center align-middle font-weight-bold" rowspan="{{ b.rows|length }}">{{ b.aldeia }}</td>{% endif %}
+								<td class="text-center font-weight-normal">{{ r.eleitoral }}</td>
+								{% if forloop.first %}<td class="text-center align-middle font-weight-normal" rowspan="{{ b.rows|length }}">{{ b.hp }}</td>{% endif %}
+							</tr>
+							{% empty %}
+							{% endfor %}
+							{% if not b.rows %}
+							<tr><td class="text-muted">Seidauk iha delegadu</td><td></td><td class="text-center font-weight-bold">{{ b.aldeia }}</td><td></td><td></td></tr>
+							{% endif %}
+							<tr class="doc-gap"><td colspan="5"></td></tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+{% endblock %}
