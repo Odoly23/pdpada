@@ -7,3 +7,4 @@ from .export_v import *
 from .dupla_v import *
 from .rekap_v import *
 from .delegadu_v import *
+from .organigrama_v import *

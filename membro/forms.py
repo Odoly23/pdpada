@@ -11,7 +11,7 @@ from config import roles
 from config.file_utils import sanitize_image, validate_image_content
 from config.upload_utils import validate_image_size
 from config.user_utils import c_user_group, c_user_scope
-from membro.models import Membro, Alokasaun, POZISAUN_POR_NIVEL
+from membro.models import Membro, Alokasaun, OrgPozisaun, OrgResponsavel, POZISAUN_POR_NIVEL
 
 BTN_CANCEL = """ <a class="btn btn-secondary" href="{{ cancel_url }}" title="Cancela"><i class="fa fa-close"></i> Cancela</a> """
 BTN_SAVE = """ <button class="btn btn-primary" type="submit" title="Rai"> Rai <i class="fa fa-save"></i></button> """
@@ -271,3 +271,66 @@ class AlokasaunForm(forms.ModelForm):
 			if atual:
 				raise ValidationError(f'{pozisaun} {nivel} ativu iha ona: {atual.membro.nome}. Halo nia la ativu uluk.')
 		return cleaned
+
+
+def _descendants(pos):
+	"""Semua turunan satu posisi (untuk mencegah siklus saat memilih induk)."""
+	found, stack = set(), [pos.pk]
+	while stack:
+		for child in OrgPozisaun.objects.filter(parent_id=stack.pop()).values_list('pk', flat=True):
+			if child not in found:
+				found.add(child)
+				stack.append(child)
+	return found
+
+
+class OrgPozisaunForm(forms.ModelForm):
+	class Meta:
+		model = OrgPozisaun
+		fields = ['naran', 'parent', 'urutan', 'deskrisaun', 'obs', 'ativu']
+		widgets = {'deskrisaun': forms.Textarea(attrs={'rows': 6}), 'obs': forms.Textarea(attrs={'rows': 2})}
+		help_texts = {'deskrisaun': 'Satu baris = satu tarefa.', 'parent': 'Husi pozisaun ida ne\'ebé hamutuk iha organigrama (kosongu = leten liu).'}
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		qs = OrgPozisaun.objects.all()
+		if self.instance.pk:
+			qs = qs.exclude(pk__in={self.instance.pk} | _descendants(self.instance))
+		self.fields['parent'].queryset = qs
+		self.helper = FormHelper()
+		self.helper.form_method = 'post'
+		self.helper.layout = Layout(
+			Row(Column('naran', css_class='form-group col-md-8 mb-0'), Column('urutan', css_class='form-group col-md-4 mb-0'), css_class='form-row'),
+			Row(Column('parent', css_class='form-group col-md-8 mb-0'), Column('ativu', css_class='form-group col-md-4 mb-0'), css_class='form-row'),
+			'deskrisaun', 'obs', HTML(BTN_CANCEL), HTML(BTN_SAVE))
+
+
+class OrgResponsavelForm(forms.ModelForm):
+	membro = MembroChoiceField(label="Membru (opsional)", queryset=Membro.objects.none(), required=False)
+	naran = forms.CharField(label="Naran", max_length=150, required=False, help_text='Kosongu se hili membru. Isi se la rejistu iha sistema.')
+
+	class Meta:
+		model = OrgResponsavel
+		fields = ['membro', 'naran', 'kargu', 'urutan']
+		help_texts = {'urutan': '1 = koordenador (letra bold).'}
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.fields['membro'].queryset = Membro.objects.filter(aprovasaun='Aprovadu', status='Ativu').select_related('village', 'aldeia')
+		self.helper = FormHelper()
+		self.helper.form_method = 'post'
+		self.helper.layout = Layout(
+			'membro', Row(Column('naran', css_class='form-group col-md-6 mb-0'), Column('kargu', css_class='form-group col-md-4 mb-0'),
+				Column('urutan', css_class='form-group col-md-2 mb-0'), css_class='form-row'),
+			HTML(BTN_CANCEL), HTML(BTN_SAVE))
+
+	def clean(self):
+		cleaned = super().clean()
+		membro, naran = cleaned.get('membro'), (cleaned.get('naran') or '').strip()
+		if membro and not naran:
+			naran = membro.nome
+		if not naran:
+			self.add_error('naran', 'Hili membru ka isi naran.')
+		cleaned['naran'] = naran
+		return cleaned
+

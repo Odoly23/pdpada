@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.urls import reverse
 from config import roles
 from custom.models import Municipality, AdministrativePost, Village, Aldeia, Organizasaun, Year
-from membro.models import Membro, Alokasaun, Historia
+from membro.models import Membro, Alokasaun, Historia, OrgPozisaun, OrgResponsavel
 from users.models import UserScope
 
 
@@ -596,7 +596,7 @@ class StrukturaDashTests(BaseCase):
 		self.login('presidente')
 		resp = self.client.get(reverse('alokasaun-dash'))
 		struktura = [i for i in resp.context['nav_items'] if i['label'] == 'Struktura'][0]
-		self.assertEqual(struktura['url'], reverse('alokasaun-dash'))
+		self.assertEqual([c['url'] for c in struktura['children']], [reverse('alokasaun-dash'), reverse('organigrama')])  # dropdown: Struktura PD dan Organigrama
 		self.assertTrue(struktura['active'])
 
 	def test_alokasaun_api_scoped(self):
@@ -2550,4 +2550,114 @@ class DelegaduTests(BaseCase):
 		self.assertRedirects(ok, reverse('alokasaun-list'))
 		a = Alokasaun.objects.get(membro=m)
 		self.assertEqual((a.nivel, a.organizasaun_id, a.aldeia_id), ('Aldeia', self.opd.pk, self.a1.pk))
+
+
+class OrganigramaTests(BaseCase):
+	def setUp(self):
+		self.root = OrgPozisaun.objects.get(parent__isnull=True)
+
+	def page(self, user):
+		self.login(user)
+		resp = self.client.get(reverse('organigrama'))
+		self.assertEqual(resp.status_code, 200)
+		return resp
+
+	def test_migration_seeds_the_twelve_positions_from_the_document(self):
+		names = list(OrgPozisaun.objects.order_by('urutan').values_list('naran', flat=True))
+		self.assertEqual(len(names), 12)
+		self.assertEqual(names[0], 'Presidente Komisaun · Vice-Pres-1 · Vice-Pres-2')
+		for n in ('Tezoreira', 'Seksaun Verifikasaun Dadus', 'Seksaun Konsumu', 'Seksaun Logistiku', 'Adm. no Notulensia Konferensia',
+				'Seksaun Animasaun', 'Seksaun Dekorasaun', 'Seksaun Preparasaun Atributu', 'Seksaun Dokumentasaun',
+				'Mestre Ceremonia (MC)', 'Ekipa Simu Bainaka'):
+			self.assertIn(n, names)
+		self.assertEqual(OrgPozisaun.objects.filter(parent=self.root).count(), 11)
+		tez = OrgPozisaun.objects.get(naran='Tezoreira')
+		self.assertEqual(len(tez.tarefas()), 5)
+		self.assertIn('loron 10', tez.obs)
+		self.assertFalse(OrgResponsavel.objects.exists())  # nama orang diisi lewat sistem
+
+	def test_chart_and_table_render_with_responsible_people(self):
+		tez = OrgPozisaun.objects.get(naran='Tezoreira')
+		m = self.make('OG00001', nome='Joaninha Ataide', aprovasaun='Aprovadu')
+		OrgResponsavel.objects.create(pozisaun=tez, membro=m, naran=m.nome, urutan=1)
+		OrgResponsavel.objects.create(pozisaun=tez, naran='Mn. Justina, Sub-Insp. Edukasaun', urutan=2)
+		resp = self.page('presidente')
+		for needle in ('org-tree', 'Tezoreira', 'Joaninha Ataide', 'Mn. Justina', 'Seidauk iha responsavel', 'Tarefa (5)',
+				'Deskrisaun Tarefas', 'Imprime', 'window.print()'):
+			self.assertContains(resp, needle)
+		self.assertContains(resp, reverse('membro-detail', args=[m.hashed]))  # membru terdaftar bertaut
+		self.assertEqual((resp.context['n_pozisaun'], resp.context['n_responsavel'], resp.context['n_kosong']), (12, 2, 11))
+		self.assertEqual(len(resp.context['roots']), 1)
+		self.assertEqual(len(resp.context['roots'][0]['children']), 11)
+		self.assertNotContains(resp, 'https://')
+
+	def test_view_roles_and_manage_buttons(self):
+		for u in ('presidente', 'koordpostu', 'koordsuku', 'sekrsuku', 'sekraldeia', 'koordorg', 'sekrorg'):
+			self.assertEqual(self.page(u).status_code, 200, u)
+		for u in ('sekrpostu', 'admin'):
+			self.login(u)
+			self.assertEqual(self.client.get(reverse('organigrama')).status_code, 403, u)
+		self.assertContains(self.page('presidente'), reverse('org-pozisaun-add'))
+		self.assertNotContains(self.page('koordpostu'), reverse('org-pozisaun-add'))
+
+	def test_menu_has_organigrama_under_struktura_and_dash_button(self):
+		resp = self.page('presidente')
+		html = resp.content.decode()
+		self.assertIn('Organigrama</a>', html)
+		self.login('presidente')
+		self.assertContains(self.client.get(reverse('alokasaun-dash')), reverse('organigrama'))
+
+	def test_only_presidente_manages_positions_and_responsible(self):
+		pos = OrgPozisaun.objects.get(naran='Seksaun Konsumu')
+		urls = [reverse('org-pozisaun-add'), reverse('org-pozisaun-update', args=[pos.pk]), reverse('org-responsavel-add', args=[pos.pk])]
+		self.login('koordpostu')
+		for u in urls:
+			self.assertEqual(self.client.get(u).status_code, 403, u)
+		self.login('presidente')
+		for u in urls:
+			self.assertEqual(self.client.get(u).status_code, 200, u)
+
+	def test_add_responsible_from_member_or_free_name(self):
+		self.login('presidente')
+		pos = OrgPozisaun.objects.get(naran='Seksaun Konsumu')
+		m = self.make('OG00002', nome='Ansa OMD', aprovasaun='Aprovadu')
+		self.client.post(reverse('org-responsavel-add', args=[pos.pk]), {'membro': m.pk, 'naran': '', 'kargu': '', 'urutan': 1})
+		self.client.post(reverse('org-responsavel-add', args=[pos.pk]), {'membro': '', 'naran': 'Mn. Sinta Comoro', 'kargu': 'Vice-Coord.', 'urutan': 2})
+		self.assertEqual([(r.naran, r.membro_id, r.kargu) for r in pos.responsavel.all()], [('Ansa OMD', m.pk, ''), ('Mn. Sinta Comoro', None, 'Vice-Coord.')])
+		bad = self.client.post(reverse('org-responsavel-add', args=[pos.pk]), {'membro': '', 'naran': '', 'urutan': 3})
+		self.assertEqual(bad.status_code, 200)
+		self.assertContains(bad, 'Hili membru ka isi naran')
+		self.assertEqual(pos.responsavel.count(), 2)
+		self.assertEqual(Historia.objects.filter(aksaun='Organigrama').count(), 2)
+
+	def test_edit_and_delete_responsible_and_position(self):
+		self.login('presidente')
+		pos = OrgPozisaun.objects.get(naran='Seksaun Animasaun')
+		r = OrgResponsavel.objects.create(pozisaun=pos, naran='Anay', urutan=1)
+		self.client.post(reverse('org-responsavel-update', args=[r.pk]), {'membro': '', 'naran': 'Anay Fatuhada', 'kargu': '', 'urutan': 1})
+		r.refresh_from_db()
+		self.assertEqual(r.naran, 'Anay Fatuhada')
+		self.assertEqual(self.client.get(reverse('org-responsavel-del', args=[r.pk])).status_code, 405)
+		self.client.post(reverse('org-responsavel-del', args=[r.pk]))
+		self.assertFalse(OrgResponsavel.objects.filter(pk=r.pk).exists())
+		self.client.post(reverse('org-pozisaun-del', args=[pos.pk]))
+		self.assertFalse(OrgPozisaun.objects.filter(pk=pos.pk).exists())
+
+	def test_position_with_children_cannot_be_deleted_and_no_cycles(self):
+		self.login('presidente')
+		self.client.post(reverse('org-pozisaun-del', args=[self.root.pk]))
+		self.assertTrue(OrgPozisaun.objects.filter(pk=self.root.pk).exists())
+		form = self.client.get(reverse('org-pozisaun-update', args=[self.root.pk])).context['form']
+		self.assertEqual(form.fields['parent'].queryset.count(), 0)  # semua turunan, tidak boleh jadi induk
+		sec = OrgPozisaun.objects.get(naran='Seksaun Konsumu')
+		self.assertNotIn(self.root.pk, [p.pk for p in self.client.get(reverse('org-pozisaun-update', args=[sec.pk])).context['form'].fields['parent'].queryset if p.pk == sec.pk])
+
+	def test_new_position_appears_in_chart(self):
+		self.login('presidente')
+		resp = self.client.post(reverse('org-pozisaun-add'), {'naran': 'Seksaun Seguransa', 'parent': self.root.pk, 'urutan': 13,
+			'deskrisaun': 'Garante seguransa\nKontrola entrada', 'obs': '', 'ativu': 'on'})
+		self.assertRedirects(resp, reverse('organigrama'))
+		page = self.client.get(reverse('organigrama'))
+		self.assertContains(page, 'Seksaun Seguransa')
+		self.assertContains(page, 'Tarefa (2)')
 

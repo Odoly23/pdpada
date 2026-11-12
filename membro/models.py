@@ -155,3 +155,40 @@ def sync_colocado(membro_id):
 	"""is_colocado = TRUE selama membru punya pozisaun ativu; FALSE setelah termina atau dihapus (data lama tetap tersimpan)."""
 	if membro_id:
 		Membro.objects.filter(pk=membro_id).update(is_colocado=Alokasaun.objects.filter(membro_id=membro_id, ativu='Sim').exists())
+
+
+class OrgPozisaun(models.Model):
+	"""Posisi pada organigrama komisaun (misalnya Tezoreira, Seksaun Logistiku) beserta deskrisaun tarefas."""
+	naran = models.CharField(max_length=150, verbose_name="Pozisaun")
+	parent = models.ForeignKey('self', on_delete=models.PROTECT, null=True, blank=True, related_name='sub', verbose_name="Iha okos husi")
+	urutan = models.PositiveSmallIntegerField(default=0, db_index=True, verbose_name="Nu. Urut")
+	deskrisaun = models.TextField(blank=True, verbose_name="Deskrisaun Tarefas")  # satu baris = satu tarefa
+	obs = models.TextField(blank=True, verbose_name="Observasaun")
+	ativu = models.BooleanField(default=True, verbose_name="Ativu")
+
+	class Meta:
+		ordering = ['urutan', 'id']
+		verbose_name = 'Pozisaun Organigrama'
+
+	def tarefas(self):
+		return [t.strip() for t in self.deskrisaun.splitlines() if t.strip()]
+
+	def __str__(self):
+		return self.naran
+
+
+class OrgResponsavel(models.Model):
+	"""Orang yang bertanggung jawab pada satu posisi organigrama; urutan 1 = koordinator (dicetak tebal)."""
+	pozisaun = models.ForeignKey(OrgPozisaun, on_delete=models.CASCADE, related_name='responsavel')
+	membro = models.ForeignKey(Membro, on_delete=models.SET_NULL, null=True, blank=True, related_name='+', verbose_name="Membru")
+	naran = models.CharField(max_length=150, verbose_name="Naran")  # salinan nama; juga untuk yang bukan membru terdaftar
+	kargu = models.CharField(max_length=80, blank=True, verbose_name="Kargu")  # contoh: Vice-Pres-1, Vice-Coord.
+	urutan = models.PositiveSmallIntegerField(default=1, verbose_name="Nu. Urut")
+
+	class Meta:
+		ordering = ['urutan', 'id']
+		verbose_name = 'Responsavel Organigrama'
+
+	def __str__(self):
+		return f'{self.naran} - {self.pozisaun}'
+

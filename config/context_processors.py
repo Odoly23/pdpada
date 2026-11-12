@@ -59,8 +59,11 @@ def _menu(request, group):
 		items.append(_dropdown('Relatoriu', 'fa-list', [
 			_item(request, 'Tabular', 'fa-table', 'report-dash'),
 			_item(request, 'Grafiku', 'fa-bar-chart', 'report-chart')]))
-		items.append(_item(request, 'Struktura', 'fa-sitemap', 'alokasaun-dash',
-			names=('alokasaun-dash', 'alokasaun-list', 'alokasaun-add', 'alokasaun-update')))
+		items.append(_dropdown('Struktura', 'fa-sitemap', [
+			_item(request, 'Struktura PD', 'fa-sitemap', 'alokasaun-dash',
+				names=('alokasaun-dash', 'alokasaun-list', 'alokasaun-add', 'alokasaun-update')),
+			_item(request, 'Organigrama', 'fa-share-alt', 'organigrama',
+				names=('organigrama', 'org-pozisaun-add', 'org-pozisaun-update', 'org-responsavel-add', 'org-responsavel-update'))]))
 		if group in roles.HISTORIA_ROLES:
 			items.append(_item(request, 'Historia', 'fa-history', 'historia-list'))
 	return items
