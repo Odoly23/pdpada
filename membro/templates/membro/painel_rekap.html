@@ -10,7 +10,7 @@
 	<div class="row">
 		<div class="col-md-3 mb-3">
 			<div class="card h-100">
-				<div class="card-header th-amber text-center">TINAN</div>
+				<div class="card-header th-navy text-center">TINAN</div>
 				<div class="list-group list-group-flush pick-list">
 					{% for y, n, active in objects1 %}
 					<a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center{% if active %} active{% endif %}" href="?ano={{ y.pk }}">{{ y.year }}<span class="badge badge-pill badge-light">{{ n }}</span></a>
@@ -20,7 +20,7 @@
 		</div>
 		<div class="col-md-4 mb-3">
 			<div class="card h-100">
-				<div class="card-header th-amber text-center">{{ unit_title }}</div>
+				<div class="card-header th-navy text-center">{{ unit_title }}</div>
 				<div class="list-group list-group-flush pick-list">
 					{% for s in objects2 %}
 					<a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center{% if s.active %} active{% endif %}" data-idx="{{ forloop.counter0 }}"
@@ -46,7 +46,7 @@
 		<div class="card-header">Aldeia iha Suku {{ selected.name }}</div>
 		<div class="card-body">
 			<table class="table table-sm table-bordered text-center mb-0">
-				<thead><tr class="th-amber"><th>Aldeia</th><th>Total</th></tr></thead>
+				<thead><tr class="th-navy"><th>Aldeia</th><th>Total</th></tr></thead>
 				<tbody>
 					{% for a, n, url in aldeias %}<tr><td>{{ a.name }}</td><td>{% if url and n %}<a href="{{ url }}">{{ n }}</a>{% else %}{{ n }}{% endif %}</td></tr>
 					{% empty %}<tr><td colspan="2" class="text-muted">Laiha aldeia.</td></tr>{% endfor %}

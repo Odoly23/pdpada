@@ -1312,7 +1312,7 @@ class TabularTests(BaseCase):
 		resp = self.page('presidente')
 		self.assertEqual([t['head'] for t in resp.context['tables']], ['Suku', 'Aldeia', 'Organizasaun', 'Tinan', 'Idade', 'Estado Civil'])
 		self.assertContains(resp, 'card-header bg-warning')
-		self.assertContains(resp, 'th-amber')
+		self.assertContains(resp, 'th-navy')
 		self.assertContains(resp, 'PRESIDENTE POSTU')
 		self.assertEqual(resp.context['tot']['total'], 3)
 		self.assertEqual((resp.context['tot']['ativu'], resp.context['tot']['inativu'], resp.context['tot']['falesidu']), (2, 1, 0))
@@ -2253,4 +2253,89 @@ class ConfirmModalTests(BaseCase):
 		self.login('presidente')
 		resp = self.client.get('/')
 		self.assertEqual(resp.content.decode().count('class="modal fade'), 1)  # hanya modal konfirmasi
+
+
+class SumariuMembroTests(BaseCase):
+	def setUp(self):
+		self.opd = Organizasaun.objects.create(code='OPD', name='OPD')
+		self.make('SM00001', self.va, self.a1, organizasaun=self.org)
+		self.make('SM00002', self.va, self.a1, organizasaun=self.opd)
+		self.make('SM00003', self.va, self.a2)
+		self.make('SM00004', self.vb, self.b1, organizasaun=self.org)
+
+	def page(self, user):
+		self.login(user)
+		resp = self.client.get(reverse('membro-sumariu'))
+		self.assertEqual(resp.status_code, 200)
+		return resp
+
+	def cells(self, resp):
+		return {r['obj'].name: [n for n, _ in r['cells']] for r in resp.context['rows']}
+
+	def test_postu_rows_are_suku_and_columns_are_organizasaun(self):
+		resp = self.page('presidente')
+		self.assertEqual(resp.context['row_title'], 'Suku')
+		self.assertEqual(resp.context['cols'], ['OJD', 'OPD', 'Laiha'])
+		self.assertEqual(self.cells(resp), {'Suku A': [1, 1, 1], 'Suku B': [1, 0, 0]})
+		self.assertEqual([r['total'] for r in resp.context['rows']], [3, 1])
+		self.assertEqual(resp.context['grand'], 4)
+		self.assertEqual([n for n, _ in resp.context['col_totals']], [2, 1, 1])
+		row = resp.context['rows'][0]
+		self.assertEqual(row['url'], '/membro/?village=%d' % self.va.pk)
+		self.assertEqual(row['cells'][1][1], '/membro/?village=%d&organizasaun=%d' % (self.va.pk, self.opd.pk))
+		self.assertEqual(row['cells'][2][1], '/membro/?village=%d&organizasaun=0' % self.va.pk)
+
+	def test_suku_role_rows_are_its_aldeia_only(self):
+		resp = self.page('koordsuku')
+		self.assertEqual(resp.context['row_title'], 'Aldeia')
+		self.assertEqual(self.cells(resp), {'A1': [1, 1, 0], 'A2': [0, 0, 1]})
+		self.assertNotContains(resp, 'B1')
+
+	def test_aldeia_role_sees_one_row(self):
+		self.assertEqual(self.cells(self.page('sekraldeia')), {'A1': [1, 1, 0]})
+
+	def test_organizasaun_role_only_sees_own_column_and_rows_with_members(self):
+		resp = self.page('sekrorg')
+		self.assertEqual(resp.context['cols'], ['OJD'])
+		self.assertEqual(self.cells(resp), {'Suku A': [1], 'Suku B': [1]})
+		self.assertEqual(resp.context['grand'], 2)
+
+	def test_chart_is_stacked_by_organizasaun_and_page_is_offline(self):
+		resp = self.page('presidente')
+		self.assertEqual(resp.context['chart']['label'], ['Suku A', 'Suku B'])
+		self.assertEqual({s['name']: s['data'] for s in resp.context['chart']['series']}, {'OJD': [1, 1], 'OPD': [1, 0], 'Laiha': [1, 0]})
+		self.assertContains(resp, 'id="chart_sumariu"')
+		self.assertContains(resp, 'table table-sm')
+		self.assertNotContains(resp, 'https://')
+
+	def test_menu_has_sumariu_before_lista_and_sekretariu_postu_is_refused(self):
+		resp = self.page('presidente')
+		html = resp.content.decode()
+		self.assertLess(html.index('Sumariu Membru</a>'), html.index('Lista Membru</a>'))
+		self.login('sekrpostu')
+		self.assertEqual(self.client.get(reverse('membro-sumariu')).status_code, 403)
+		self.login('admin')
+		self.assertEqual(self.client.get(reverse('membro-sumariu')).status_code, 403)
+
+
+class NoYellowTests(BaseCase):
+	def test_stylesheets_have_no_amber_hex(self):
+		import pathlib
+		for name in ('main/static/main/css/main.css', 'main/static/main/js_custom/chart.css'):
+			css = (pathlib.Path(settings.BASE_DIR) / name).read_text().lower()
+			for hexa in ('#ffbb00', '#f0ad00', '#a87600', 'rgb(255, 187, 0)'):
+				self.assertNotIn(hexa, css, f'{name} masih berisi {hexa}')
+
+	def test_templates_use_no_yellow_classes(self):
+		import pathlib
+		for p in pathlib.Path(settings.BASE_DIR).glob('*/templates/**/*.html'):
+			text = p.read_text()
+			for cls in ('th-amber', 'btn-warning'):
+				self.assertNotIn(cls, text, f'{p} masih memakai {cls}')
+
+	def test_all_tables_are_table_sm(self):
+		import pathlib, re
+		for p in pathlib.Path(settings.BASE_DIR).glob('*/templates/**/*.html'):
+			for tag in re.findall(r'<table[^>]*>', p.read_text()):
+				self.assertIn('table-sm', tag, f'{p}: {tag}')
 

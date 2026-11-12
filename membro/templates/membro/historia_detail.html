@@ -14,7 +14,7 @@
 					<a class="btn btn-sm btn-secondary" href="{% url 'historia-list' %}">Fila ba Historia <i class="fa fa-arrow-left"></i></a>
 					{% if can_membro %}<a class="btn btn-sm btn-info" href="{% url 'membro-detail' obj.membro.hashed %}">Hare Membru <i class="fa fa-user"></i></a>{% endif %}
 				</div>
-				<table class="table table-bordered">
+				<table class="table table-sm table-bordered">
 					<tbody>
 						<tr><th style="width:25%">Data</th><td>{{ obj.datetime|date:"d/m/Y H:i" }}</td></tr>
 						<tr><th>Aksaun</th><td>{{ obj.aksaun }}</td></tr>

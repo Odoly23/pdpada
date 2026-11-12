@@ -10,14 +10,14 @@
 .highcharts-light {
     /* Colors for data series and points */
     --highcharts-color-0: #0b1e8a;
-    --highcharts-color-1: #f0ad00;
-    --highcharts-color-2: #1a8a3c;
-    --highcharts-color-3: #c0392b;
+    --highcharts-color-1: #c8102e;
+    --highcharts-color-2: #5b6b8c;
+    --highcharts-color-3: #7a1020;
     --highcharts-color-4: #6f7fd6;
-    --highcharts-color-5: #0b7285;
-    --highcharts-color-6: #6f42c1;
-    --highcharts-color-7: #fd7e14;
-    --highcharts-color-8: #20c997;
+    --highcharts-color-5: #3a4a9f;
+    --highcharts-color-6: #9aa5c9;
+    --highcharts-color-7: #e2677b;
+    --highcharts-color-8: #343a40;
     --highcharts-color-9: #adb5bd;
 
     /* Chart background, point stroke for markers and columns etc */

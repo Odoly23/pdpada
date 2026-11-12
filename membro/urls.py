@@ -6,6 +6,7 @@ urlpatterns = [
 	path('', views.MembroList, name='membro-list'),
 	path('add/', views.MembroAdd, name='membro-add'),
 	path('painel/', views.PainelRekap, name='membro-painel'),
+	path('sumariu/', views.MembroSum, name='membro-sumariu'),
 	path('suku/<int:pk>/', views.SukuRekap, name='membro-suku'),
 	path('cari/', views.MembroCari, name='membro-cari'),
 	path('dupla/', views.MembroDupla, name='membro-dupla'),
