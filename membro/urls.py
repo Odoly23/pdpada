@@ -21,6 +21,7 @@ urlpatterns = [
 	path('alokasaun/<int:pk>/edit/', views.AlokasaunUpdate, name='alokasaun-update'),
 	path('alokasaun/<int:pk>/del/', views.AlokasaunDel, name='alokasaun-del'),
 	path('historia/', views.HistoriaList, name='historia-list'),
+	path('historia/<int:pk>/', views.HistoriaDetail, name='historia-detail'),
 	path('<str:hashid>/', views.MembroDetail, name='membro-detail'),
 	path('<str:hashid>/file/<str:kind>/', views.MembroFile, name='membro-file'),
 	path('<str:hashid>/edit/', views.MembroUpdate, name='membro-update'),

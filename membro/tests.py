@@ -2109,6 +2109,32 @@ class FilterButtonsAndTablesTests(BaseCase):
 		self.assertNotContains(resp, 'Custom Search Builder')
 		self.assertContains(resp, 'btn-filter')
 
+	def test_historia_list_is_short_and_detail_has_full_text(self):
+		self.login('presidente')
+		m = self.make('HD00001', nome='Nama Panjang')
+		long = 'Naran: A -> B\nSexu: Mane -> Feto'
+		h = Historia.objects.create(membro=m, membro_nome=str(m), aksaun='Edita', detalhe=long, user=self.users['presidente'])
+		resp = self.client.get(reverse('historia-list'))
+		self.assertContains(resp, reverse('historia-detail', args=[h.pk]))
+		self.assertContains(resp, '>Nama Panjang</td>')  # tanpa Nu. Eleitoral
+		self.assertNotContains(resp, 'HD00001')
+		self.assertNotContains(resp, 'Sexu: Mane -&gt; Feto')  # detalhe tidak di daftar
+		detail = self.client.get(reverse('historia-detail', args=[h.pk]))
+		self.assertEqual(detail.status_code, 200)
+		self.assertContains(detail, 'Sexu: Mane -&gt; Feto')
+		self.assertContains(detail, 'Nama Panjang (HD00001)')
+		self.assertContains(detail, reverse('membro-detail', args=[m.hashed]))
+		self.assertEqual(h.nama_pendek(), 'Nama Panjang')
+
+	def test_historia_detail_roles_and_missing(self):
+		h = Historia.objects.create(aksaun='Ekspor', membro_nome='Ekspor CSV', detalhe='x', user=self.users['presidente'])
+		for u, code in [('presidente', 200), ('koordpostu', 200), ('admin', 200), ('sekrpostu', 403), ('sekrsuku', 403), ('koordorg', 403)]:
+			self.login(u)
+			self.assertEqual(self.client.get(reverse('historia-detail', args=[h.pk])).status_code, code, u)
+		self.login('presidente')
+		self.assertEqual(self.client.get(reverse('historia-detail', args=[99999])).status_code, 404)
+		self.assertNotContains(self.client.get(reverse('historia-detail', args=[h.pk])), 'Hare Membru')  # tanpa membru
+
 	def test_historia_filter_by_action_and_style(self):
 		self.login('sekrsuku')
 		self.client.post(reverse('membro-add'), self.form_data(nu='FB10001'))

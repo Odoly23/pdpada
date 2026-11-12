@@ -13,15 +13,15 @@
 				<p class="text-muted"><small>Mostra to'o {{ limite }} rejistu ikus.</small></p>
 				<section id="no-more-tables">
 					<table class="table table-sm" id="example" style="width:100%">
-						<thead><tr><th>Data</th><th>Aksaun</th><th>Membru</th><th>Husi</th><th>Detalhe</th></tr></thead>
+						<thead><tr><th>Data</th><th>Aksaun</th><th>Membru</th><th>Husi</th><th></th></tr></thead>
 						<tbody>
 							{% for h in objects %}
 							<tr>
 								<td data-title="Data">{{ h.datetime|date:"d/m/Y H:i" }}</td>
 								<td data-title="Aksaun">{{ h.aksaun }}</td>
-								<td data-title="Membru">{% if h.membro and group != 'admin' %}<a href="{% url 'membro-detail' h.membro.hashed %}">{{ h.membro_nome }}</a>{% else %}{{ h.membro_nome }}{% endif %}</td>
+								<td data-title="Membru">{{ h.nama_pendek }}</td>
 								<td data-title="Husi">{{ h.user.get_username|default:"-" }}</td>
-								<td data-title="Detalhe" class="pre-wrap">{{ h.detalhe }}</td>
+								<td data-title="Detalhe"><a class="btn btn-sm btn-info" href="{% url 'historia-detail' h.pk %}">Detalhe <i class="fa fa-eye"></i></a></td>
 							</tr>
 							{% endfor %}
 						</tbody>

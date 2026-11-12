@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.urls import reverse
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from config import roles
 from config.decorators import allowed_users
 from config.user_utils import c_user_group
@@ -46,3 +46,16 @@ def HistoriaList(request):
 		'title': 'Historia Mudansa Data', 'legend': 'Historia Mudansa Data'
 	}
 	return render(request, 'membro/historia_list.html', context)
+
+
+@login_required
+@allowed_users(allowed_roles=roles.HISTORIA_ROLES)
+def HistoriaDetail(request, pk):
+	"""Detalhe lengkap satu rekaman historia (daftar hanya menampilkan ringkasan)."""
+	group = c_user_group(request.user)
+	obj = get_object_or_404(Historia.objects.select_related('user', 'membro'), pk=pk)
+	context = {
+		'group': group, 'obj': obj, 'can_membro': bool(obj.membro_id) and group in roles.LISTA_ROLES,
+		'title': 'Detalhe Historia', 'legend': 'Detalhe Historia'
+	}
+	return render(request, 'membro/historia_detail.html', context)
