@@ -20,7 +20,7 @@
 					<a class="btn btn-sm btn-danger" href="{% url 'aprovasaun-rejeita' hashid %}"><i class="fa fa-times"></i> Rejeita</a>
 					{% endif %}
 					{% if can_del %}
-					<form class="d-inline" method="post" action="{% url 'membro-del' hashid %}" onsubmit="return confirm('Ita boot Hakarak Hamoos Membru ne\'e?');">{% csrf_token %}
+					<form class="d-inline" method="post" action="{% url 'membro-del' hashid %}" data-confirm="Ita boot hakarak hamoos membru ne'e? Aksaun ida ne'e la bele fila fali." data-confirm-ok="Hamoos">{% csrf_token %}
 						<button class="btn btn-sm btn-danger" type="submit">Hamoos <i class="fa fa-trash"></i></button>
 					</form>
 					{% endif %}

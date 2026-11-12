@@ -1097,27 +1097,27 @@ class SukuRekapTests(BaseCase):
 		self.assertNotContains(resp, '/membro/?')
 		self.assertNotContains(resp, self.m1.hashed)
 
-	def test_ringkas_json_for_modal(self):
+	def test_suku_card_links_straight_to_detail_without_modal(self):
 		for u in ('presidente', 'sekrpostu'):
 			self.login(u)
-			j = self.client.get(reverse('membro-suku-ringkas', args=[self.va.pk])).json()
-			self.assertEqual(j['suku'], 'Suku A')
-			self.assertEqual((j['tot']['total'], j['tot']['mane'], j['tot']['feto']), (4, 3, 1), u)
-			self.assertEqual([p['nome'] for p in j['pemimpin']], ['Joao Koord', 'Aaa Sekr'], u)
-			self.assertEqual({a['nome']: a['n'] for a in j['aldeias']}, {'A1': 3, 'A2': 1}, u)
-			self.assertNotIn('SK0000', str(j))  # tanpa Nu. Eleitoral
-		for u in ('koordsuku', 'sekrsuku', 'admin'):
-			self.login(u)
-			self.assertEqual(self.client.get(reverse('membro-suku-ringkas', args=[self.va.pk])).status_code, 403, u)
+			resp = self.client.get('/')
+			self.assertContains(resp, 'href="%s"' % reverse('membro-suku', args=[self.va.pk]), msg_prefix=u)
+			self.assertNotContains(resp, 'sukuModal', msg_prefix=u)
+			self.assertNotContains(resp, 'data-ringkas', msg_prefix=u)
 
-	def test_varanda_info_strip_and_modal(self):
+	def test_detail_page_is_printable(self):
+		resp = self.page('presidente')
+		self.assertContains(resp, 'window.print()')
+		self.assertContains(resp, 'Imprime')
+		self.assertContains(resp, 'print-head')
+		self.assertContains(resp, 'btn btn-sm btn-info')
+
+	def test_varanda_info_strip(self):
 		self.login('presidente')
 		resp = self.client.get('/')
 		info = resp.context['info']
 		self.assertEqual((info['mane'], info['feto'], info['suku'], info['lengkap']), (4, 1, 2, 1))  # hanya Suku A punya dua pemimpin
 		self.assertEqual(info['baru'], 0)  # data uji tanpa waktu input
-		self.assertContains(resp, 'id="sukuModal"')
-		self.assertContains(resp, reverse('membro-suku-ringkas', args=[self.va.pk]))
 		self.assertContains(resp, 'btn btn-sm btn-info')
 		self.assertNotContains(resp, 'btn-outline')
 		Membro.objects.filter(pk=self.m1.pk).update(datetime=timezone.now())
@@ -2201,4 +2201,30 @@ class TabularPatternTests(BaseCase):
 	def test_suku_role_only_sees_own_rows(self):
 		suku = [t for t in self.page('koordsuku').context['tables'] if t['head'] == 'Suku'][0]
 		self.assertEqual([r['name'] for r in suku['rows']], ['Suku A'])
+
+
+class ConfirmModalTests(BaseCase):
+	"""Modal hanya untuk logout dan hapus data; aksi lain tidak memakai modal."""
+	def setUp(self):
+		self.m = self.make('CM00001')
+
+	def test_layout_has_one_confirm_modal_and_logout_uses_it(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('report-dash'))
+		self.assertContains(resp, 'id="confirmModal"')
+		self.assertContains(resp, 'data-confirm="Ita boot hakarak sai husi sistema?"', count=2)  # navbar dan sidebar
+		self.assertNotContains(resp, 'onsubmit="return confirm')
+
+	def test_delete_forms_use_modal_instead_of_browser_confirm(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-detail', args=[self.m.hashed]))
+		self.assertContains(resp, "data-confirm=\"Ita boot hakarak hamoos membru ne'e?")
+		self.assertNotContains(resp, 'confirm(\'')
+		self.login('admin')
+		self.assertContains(self.client.get(reverse('master-list', args=['suku'])), 'data-confirm="Ita boot hakarak hamoos data')
+
+	def test_varanda_has_no_other_modal(self):
+		self.login('presidente')
+		resp = self.client.get('/')
+		self.assertEqual(resp.content.decode().count('class="modal fade'), 1)  # hanya modal konfirmasi
 

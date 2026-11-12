@@ -1,6 +1,5 @@
 import datetime
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
 from django.utils import timezone
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, render
@@ -249,29 +248,3 @@ def SukuRekap(request, pk):
 		'meta_description': f'Lista membru suku {village.name}, Partido Democratico, Postu Dom Aleixo.',
 	}
 	return render(request, 'membro/suku_rekap.html', context)
-
-
-@login_required
-@allowed_users(allowed_roles=roles.POSTU_ROLES)
-def SukuRingkas(request, pk):
-	"""JSON ringkasan satu suku untuk modal di Varanda: Mane/Feto/status, pemimpin suku, dan total per aldeia.
-	Tanpa Nu. Eleitoral, telepon atau daftar nama anggota."""
-	village = get_object_or_404(Village, pk=pk)
-	ano = Year.objects.filter(is_active=True).first()
-	qs = membro_scope(request.user).filter(village=village)
-	if ano:
-		qs = qs.filter(year=ano)
-	tot = qs.aggregate(
-		total=Count('id'), mane=Count('id', filter=Q(sex='Mane')), feto=Count('id', filter=Q(sex='Feto')),
-		ativu=Count('id', filter=Q(status='Ativu')), inativu=Count('id', filter=Q(status='Inativu')),
-		falesidu=Count('id', filter=Q(status='Falesidu')))
-	counts = _counts(qs, 'aldeia_id')
-	leaders = {a.pozisaun: a.membro for a in Alokasaun.objects.filter(ativu='Sim', nivel='Suku', village=village).select_related('membro')}
-	return JsonResponse({
-		'suku': village.name, 'tinan': ano.year if ano else None, 'tot': tot,
-		'pemimpin': [{'label': name, 'nome': leaders[key].nome if key in leaders else None,
-			'idade': leaders[key].age() if key in leaders else None}
-			for key, name in (('Coordenador', 'Cordenador Suku'), ('Sekretariu', 'Sekjer Suku'))],
-		'aldeias': [{'nome': x.name, 'n': counts.get(x.pk, {}).get('n', 0)} for x in Aldeia.objects.filter(village=village)],
-		'url': reverse('membro-suku', args=[village.pk]),
-	})

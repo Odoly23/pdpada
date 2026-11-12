@@ -38,11 +38,11 @@
 		<div class="col-6 col-md-3 mb-2"><div class="info-box"><span class="stat-label">Membru Foun (30 Loron)</span><span class="info-n">{{ info.baru }}</span></div></div>
 		<div class="col-6 col-md-3 mb-2"><div class="info-box"><span class="stat-label">Struktura Suku Kompletu</span><span class="info-n">{{ info.lengkap }}/{{ info.suku }}</span></div></div>
 	</div>
-	<h6 class="rekap-head">MEMBRU TUIR SUKU <small class="text-muted">&middot; klik suku atu hare detalle</small></h6>
+	<h6 class="rekap-head">MEMBRU TUIR SUKU <small class="text-muted">&middot; klik suku atu hare detalle no imprime</small></h6>
 	<div class="row">
 		{% for c in suku_cards %}
 		<div class="col-6 col-md-4 col-lg-3 mb-3">
-			<a class="card aldeia-card h-100 suku-card" href="{{ c.url }}" data-ringkas="{% url 'membro-suku-ringkas' c.obj.pk %}">
+			<a class="card aldeia-card h-100 suku-card" href="{{ c.url }}">
 				<div class="card-body text-center">
 					<div class="aldeia-name">{{ c.obj.name }}</div>
 					<div class="aldeia-n">{{ c.n }}</div>
@@ -78,23 +78,6 @@
 		<div class="card-header text-center">{{ chart.title }}</div>
 		<div class="card-body"><figure class="highcharts-figure"><div id="chart_aldeia_postu" style="height: {{ chart.height }}px"></div></figure></div>
 	</div>
-	{% if level == 'postu' %}
-	<div class="modal fade" id="sukuModal" tabindex="-1" role="dialog" aria-labelledby="sukuModalTitle" aria-hidden="true">
-		<div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-			<div class="modal-content">
-				<div class="modal-header bg-primary text-white">
-					<h5 class="modal-title" id="sukuModalTitle">Suku</h5>
-					<button type="button" class="close text-white" data-dismiss="modal" aria-label="Taka"><span aria-hidden="true">&times;</span></button>
-				</div>
-				<div class="modal-body" id="sukuModalBody"><p class="text-center text-muted mb-0">Karrega...</p></div>
-				<div class="modal-footer">
-					<a class="btn btn-sm btn-info" id="sukuModalLink" href="#">Detalha Suku <i class="fa fa-arrow-right"></i></a>
-					<button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Taka <i class="fa fa-times"></i></button>
-				</div>
-			</div>
-		</div>
-	</div>
-	{% endif %}
 	{{ chart|json_script:"chart-data" }}
 {% endblock %}
 {% block scripts %}
@@ -102,31 +85,6 @@
 	<script>
 	(function () {
 		var d = JSON.parse(document.getElementById('chart-data').textContent);
-		// modal ringkasan suku: isi dibuat dengan textContent (aman dari injeksi HTML)
-		function el(tag, text, cls) { var e = document.createElement(tag); if (text !== undefined) { e.textContent = text; } if (cls) { e.className = cls; } return e; }
-		function row(label, value) { var r = el('div', undefined, 'd-flex justify-content-between border-bottom py-1'); r.appendChild(el('span', label)); r.appendChild(el('strong', value)); return r; }
-		document.querySelectorAll('[data-ringkas]').forEach(function (card) {
-			card.addEventListener('click', function (ev) {
-				if (ev.ctrlKey || ev.metaKey) { return; }
-				ev.preventDefault();
-				var body = document.getElementById('sukuModalBody');
-				body.replaceChildren(el('p', 'Karrega...', 'text-center text-muted mb-0'));
-				document.getElementById('sukuModalTitle').textContent = card.querySelector('.aldeia-name').textContent;
-				document.getElementById('sukuModalLink').href = card.getAttribute('href');
-				$('#sukuModal').modal('show');
-				fetch(card.getAttribute('data-ringkas'), { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (j) {
-					var t = j.tot, left = el('div', undefined, 'col-md-6'), right = el('div', undefined, 'col-md-6');
-					left.appendChild(el('h6', 'Total ' + t.total + (j.tinan ? ' (Tinan ' + j.tinan + ')' : ''), 'text-primary'));
-					[['Mane', t.mane], ['Feto', t.feto], ['Ativu', t.ativu], ['La Ativu', t.inativu], ['Mate', t.falesidu]].forEach(function (x) { left.appendChild(row(x[0], x[1])); });
-					j.pemimpin.forEach(function (p) { left.appendChild(row(p.label, p.nome ? p.nome + (p.idade !== null ? ' (' + p.idade + ')' : '') : 'seidauk iha')); });
-					right.appendChild(el('h6', 'Membru tuir aldeia', 'text-primary'));
-					j.aldeias.forEach(function (a) { right.appendChild(row(a.nome, a.n)); });
-					if (!j.aldeias.length) { right.appendChild(el('p', 'Laiha aldeia.', 'text-muted')); }
-					var wrap = el('div', undefined, 'row'); wrap.appendChild(left); wrap.appendChild(right);
-					body.replaceChildren(wrap);
-				}).catch(function () { body.replaceChildren(el('p', 'La konsege karrega. Koko fali.', 'text-danger mb-0')); });
-			});
-		});
 		Highcharts.setOptions({ lang: { noData: 'Laiha data' }, credits: { enabled: false }, exporting: { enabled: false } });
 		function seriesOf(d, sel) {
 			if (!d.mane) { return [{ name: 'Membru', data: d.obj, tooltip: { valueSuffix: ' Membru' } }]; }

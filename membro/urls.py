@@ -7,7 +7,6 @@ urlpatterns = [
 	path('add/', views.MembroAdd, name='membro-add'),
 	path('painel/', views.PainelRekap, name='membro-painel'),
 	path('suku/<int:pk>/', views.SukuRekap, name='membro-suku'),
-	path('suku/<int:pk>/ringkas/', views.SukuRingkas, name='membro-suku-ringkas'),
 	path('cari/', views.MembroCari, name='membro-cari'),
 	path('dupla/', views.MembroDupla, name='membro-dupla'),
 	path('export.csv', views.MembroExport, name='membro-export'),
