@@ -2,6 +2,7 @@ import datetime
 import os
 from django.contrib.auth.models import Group, User
 from django.test import TestCase
+from django.utils import timezone
 from django.urls import reverse
 from config import roles
 from custom.models import Municipality, AdministrativePost, Village, Aldeia, Organizasaun, Year
@@ -1096,6 +1097,32 @@ class SukuRekapTests(BaseCase):
 		self.assertNotContains(resp, '/membro/?')
 		self.assertNotContains(resp, self.m1.hashed)
 
+	def test_ringkas_json_for_modal(self):
+		for u in ('presidente', 'sekrpostu'):
+			self.login(u)
+			j = self.client.get(reverse('membro-suku-ringkas', args=[self.va.pk])).json()
+			self.assertEqual(j['suku'], 'Suku A')
+			self.assertEqual((j['tot']['total'], j['tot']['mane'], j['tot']['feto']), (4, 3, 1), u)
+			self.assertEqual([p['nome'] for p in j['pemimpin']], ['Joao Koord', 'Aaa Sekr'], u)
+			self.assertEqual({a['nome']: a['n'] for a in j['aldeias']}, {'A1': 3, 'A2': 1}, u)
+			self.assertNotIn('SK0000', str(j))  # tanpa Nu. Eleitoral
+		for u in ('koordsuku', 'sekrsuku', 'admin'):
+			self.login(u)
+			self.assertEqual(self.client.get(reverse('membro-suku-ringkas', args=[self.va.pk])).status_code, 403, u)
+
+	def test_varanda_info_strip_and_modal(self):
+		self.login('presidente')
+		resp = self.client.get('/')
+		info = resp.context['info']
+		self.assertEqual((info['mane'], info['feto'], info['suku'], info['lengkap']), (4, 1, 2, 1))  # hanya Suku A punya dua pemimpin
+		self.assertEqual(info['baru'], 0)  # data uji tanpa waktu input
+		self.assertContains(resp, 'id="sukuModal"')
+		self.assertContains(resp, reverse('membro-suku-ringkas', args=[self.va.pk]))
+		self.assertContains(resp, 'btn btn-sm btn-info')
+		self.assertNotContains(resp, 'btn-outline')
+		Membro.objects.filter(pk=self.m1.pk).update(datetime=timezone.now())
+		self.assertEqual(self.client.get('/').context['info']['baru'], 1)
+
 	def test_vacant_leaders_are_shown_as_not_yet(self):
 		resp = self.page('presidente', self.vb.pk)
 		self.assertEqual([p['nome'] for p in resp.context['pemimpin']], [None, None])
@@ -1570,18 +1597,18 @@ class LandingTests(BaseCase):
 				self.assertContains(resp, needle)
 			self.assertNotContains(resp, 'https://')
 
-	def test_postu_varanda_links_and_search_follow_role(self):
+	def test_postu_varanda_cards_show_only_name_and_total(self):
 		self.make('LD00001')
 		resp = self.varanda('presidente')
-		self.assertContains(resp, 'id="search-q"')
+		self.assertNotContains(resp, 'id="search-q"')
 		self.assertContains(resp, reverse('membro-suku', args=[self.va.pk]))
+		self.assertContains(resp, '<div class="aldeia-name">Suku A</div>')  # nama suku saja, tanpa kata "Suku" tambahan
+		self.assertNotContains(resp, 'aldeia-sex')  # Mane/Feto hanya di grafik
 		self.assertNotContains(resp, 'Aldeia A1')
 		resp = self.varanda('sekrpostu')  # Sekretariu Postu: rekapitulasi saja
-		self.assertNotContains(resp, 'id="search-q"')
 		self.assertNotContains(resp, '/membro/?')
 		self.assertNotContains(resp, 'Lista Membru')
-		self.assertNotContains(resp, 'Hein Aprovasaun')
-		self.assertNotContains(resp, 'Struktura')
+		self.assertNotContains(resp, reverse('alokasaun-dash'))
 
 	def test_postu_varanda_query_count_is_constant(self):
 		self.login('presidente')
@@ -1613,10 +1640,11 @@ class LandingTests(BaseCase):
 		self.assertFalse(resp.context['can_search'])
 		self.assertNotContains(resp, 'id="search-q"')
 
-	def test_search_box_only_for_member_roles(self):
-		resp, _ = self.tiles('sekrsuku')
-		self.assertContains(resp, 'id="search-q"')
-		self.assertContains(resp, 'data-url="/membro/api/cari/"')
+	def test_varanda_has_no_search_box_but_menu_keeps_pesquiza(self):
+		for u in ('sekrsuku', 'presidente'):
+			resp, _ = self.tiles(u)
+			self.assertNotContains(resp, 'id="search-q"', msg_prefix=u)
+			self.assertContains(resp, reverse('membro-cari'), msg_prefix=u)  # Pesquiza tetap ada di menu
 
 	def test_user_without_role_gets_notice(self):
 		User.objects.create_user('tanpa', password='Teste-12345!')

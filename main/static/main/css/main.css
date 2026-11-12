@@ -462,3 +462,8 @@ div.dataTables_wrapper div.dataTables_length label { font-weight: 400; color: #6
 /* semua tombol persegi (tanpa radius): btn, btn-sm, btn-info, tombol filter, grup tombol */
 .btn, .btn-sm, .btn-lg, .btn-filter, .btn-filter .count, .btn-group > .btn, .btn-group-sm > .btn, .input-group > .btn,
 .input-group-append .btn, .input-group-prepend .btn, div.dt-buttons .btn, .badge-pill.count { border-radius: 0 !important; }
+
+.info-box { background: #fff; border: 1px solid #dfe2f2; border-top: 3px solid #ffbb00; padding: .6rem .5rem; height: 100%; }
+.info-n { display: block; font-size: 1.6rem; font-weight: 800; color: var(--navy); line-height: 1.2; }
+.info-strip .stat-label { font-size: .8rem; }
+.modal-header.bg-primary { background-color: var(--navy) !important; border-radius: 0; } .modal-content { border-radius: 0; } .modal-header .close { opacity: .9; }
