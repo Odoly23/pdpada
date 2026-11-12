@@ -2339,3 +2339,101 @@ class NoYellowTests(BaseCase):
 			for tag in re.findall(r'<table[^>]*>', p.read_text()):
 				self.assertIn('table-sm', tag, f'{p}: {tag}')
 
+
+class AlokasaunColocadoTests(BaseCase):
+	"""is_colocado: membru yang sudah punya pozisaun ativu tidak muncul di form; setelah termina bisa dialokasikan lagi."""
+	def setUp(self):
+		self.m1 = self.make('CO00001', aprovasaun='Aprovadu')
+		self.m2 = self.make('CO00002', aprovasaun='Aprovadu')
+		self.login('presidente')
+
+	def data(self, membro, **kw):
+		d = {'membro': membro.pk, 'nivel': 'Suku', 'pozisaun': 'Coordenador', 'village': self.va.pk,
+			'data_hahu': '2026-01-01', 'ativu': 'Sim'}
+		d.update(kw)
+		return d
+
+	def choices(self, url=None):
+		resp = self.client.get(url or reverse('alokasaun-add'))
+		return set(resp.context['form'].fields['membro'].queryset.values_list('nu_eleitoral', flat=True))
+
+	def test_default_false_and_listed_in_form(self):
+		self.assertFalse(Membro.objects.get(pk=self.m1.pk).is_colocado)
+		self.assertEqual(self.choices(), {'CO00001', 'CO00002'})
+
+	def test_allocation_sets_flag_and_hides_name_from_form(self):
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1))
+		self.assertTrue(Membro.objects.get(pk=self.m1.pk).is_colocado)
+		self.assertEqual(self.choices(), {'CO00002'})
+
+	def test_posting_an_allocated_member_is_rejected_server_side(self):
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1))
+		resp = self.client.post(reverse('alokasaun-add'), self.data(self.m1, nivel='Postu', pozisaun='Presidente'))
+		self.assertEqual(resp.status_code, 200)
+		self.assertEqual(Alokasaun.objects.count(), 1)
+
+	def test_termina_keeps_old_row_and_frees_the_member(self):
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1))
+		a = Alokasaun.objects.get()
+		resp = self.client.post(reverse('alokasaun-termina', args=[a.pk]))
+		self.assertRedirects(resp, reverse('alokasaun-list'))
+		a.refresh_from_db()
+		self.assertEqual(a.ativu, 'Lae')
+		self.assertIsNotNone(a.data_termina)  # data lama tetap tersimpan
+		self.assertFalse(Membro.objects.get(pk=self.m1.pk).is_colocado)
+		self.assertEqual(self.choices(), {'CO00001', 'CO00002'})
+		self.assertTrue(Historia.objects.filter(aksaun='Termina Pozisaun', membro=self.m1).exists())
+
+	def test_new_allocation_after_termina_keeps_both_rows_and_counts_people(self):
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1))
+		self.client.post(reverse('alokasaun-termina', args=[Alokasaun.objects.get().pk]))
+		resp = self.client.post(reverse('alokasaun-add'), self.data(self.m2, data_hahu='2026-06-01'))
+		self.assertRedirects(resp, reverse('alokasaun-list'))
+		self.assertEqual(Alokasaun.objects.count(), 2)
+		self.assertEqual(Alokasaun.objects.filter(ativu='Sim').count(), 1)
+		self.assertEqual(self.choices(), {'CO00001'})  # m2 kini terisi, m1 bebas lagi
+		rows = self.client.get(reverse('alokasaun-list')).context['objects']
+		self.assertEqual([r.pernah for r in rows], [2, 2])  # dua orang pernah memegang posisi ini
+
+	def test_same_member_can_be_allocated_again_after_termina(self):
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1))
+		self.client.post(reverse('alokasaun-termina', args=[Alokasaun.objects.get().pk]))
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1, nivel='Aldeia', pozisaun='Sekretariu', aldeia=self.a1.pk,
+			village='', data_hahu='2026-07-01'))
+		self.assertEqual(Alokasaun.objects.filter(membro=self.m1).count(), 2)
+		self.assertTrue(Membro.objects.get(pk=self.m1.pk).is_colocado)
+
+	def test_delete_clears_flag_and_edit_keeps_own_holder_selectable(self):
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1))
+		a = Alokasaun.objects.get()
+		self.assertEqual(self.choices(reverse('alokasaun-update', args=[a.pk])), {'CO00001', 'CO00002'})
+		self.client.post(reverse('alokasaun-del', args=[a.pk]))
+		self.assertFalse(Membro.objects.get(pk=self.m1.pk).is_colocado)
+
+	def test_activating_second_active_position_via_edit_is_refused(self):
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1))
+		self.client.post(reverse('alokasaun-termina', args=[Alokasaun.objects.get().pk]))
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1, nivel='Postu', pozisaun='Presidente'))
+		old = Alokasaun.objects.get(ativu='Lae')
+		resp = self.client.post(reverse('alokasaun-update', args=[old.pk]), self.data(self.m1))
+		self.assertEqual(resp.status_code, 200)
+		self.assertContains(resp, 'iha ona pozisaun ativu')
+
+	def test_termina_only_by_presidente_post_and_idempotent(self):
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1))
+		a = Alokasaun.objects.get()
+		self.login('koordpostu')
+		self.assertEqual(self.client.post(reverse('alokasaun-termina', args=[a.pk])).status_code, 403)
+		self.login('presidente')
+		self.assertEqual(self.client.get(reverse('alokasaun-termina', args=[a.pk])).status_code, 405)
+		self.client.post(reverse('alokasaun-termina', args=[a.pk]))
+		self.client.post(reverse('alokasaun-termina', args=[a.pk]))
+		self.assertEqual(Historia.objects.filter(aksaun='Termina Pozisaun').count(), 1)
+
+	def test_migration_backfill_logic_matches_sync(self):
+		from membro.models import sync_colocado
+		Alokasaun.objects.create(membro=self.m2, nivel='Postu', pozisaun='Presidente', data_hahu=datetime.date(2026, 1, 1))
+		Membro.objects.update(is_colocado=False)
+		sync_colocado(self.m2.pk)
+		self.assertTrue(Membro.objects.get(pk=self.m2.pk).is_colocado)
+

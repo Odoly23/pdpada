@@ -20,6 +20,7 @@ urlpatterns = [
 	path('alokasaun/', views.AlokasaunList, name='alokasaun-list'),
 	path('alokasaun/add/', views.AlokasaunAdd, name='alokasaun-add'),
 	path('alokasaun/<int:pk>/edit/', views.AlokasaunUpdate, name='alokasaun-update'),
+	path('alokasaun/<int:pk>/termina/', views.AlokasaunTermina, name='alokasaun-termina'),
 	path('alokasaun/<int:pk>/del/', views.AlokasaunDel, name='alokasaun-del'),
 	path('historia/', views.HistoriaList, name='historia-list'),
 	path('historia/<int:pk>/', views.HistoriaDetail, name='historia-detail'),

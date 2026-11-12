@@ -16,7 +16,7 @@
 				<section id="no-more-tables">
 					<table class="table table-sm" id="example" width="100%" cellspacing="0">
 						<thead>
-							<tr><th>Nu.</th><th>Naran</th><th>Pozisaun</th><th>Nivel</th><th>Unidade</th><th>Data Hahu</th><th>Data Termina</th><th>Ativu</th>{% if can_aloka %}<th>#</th>{% endif %}</tr>
+							<tr><th>Nu.</th><th>Naran</th><th>Pozisaun</th><th>Nivel</th><th>Unidade</th><th>Data Hahu</th><th>Data Termina</th><th>Ativu</th><th>Ema ba Pozisaun</th>{% if can_aloka %}<th>#</th>{% endif %}</tr>
 						</thead>
 						<tbody>
 							{% for obj in objects %}
@@ -29,9 +29,13 @@
 								<td data-title="Data Hahu">{{ obj.data_hahu|date:"d/m/Y" }}</td>
 								<td data-title="Data Termina">{{ obj.data_termina|date:"d/m/Y"|default:"-" }}</td>
 								<td data-title="Ativu">{{ obj.ativu }}</td>
+								<td data-title="Ema ba Pozisaun">{{ obj.pernah }}</td>
 								{% if can_aloka %}
 								<td>
 									<a class="btn btn-sm btn-success" href="{% url 'alokasaun-update' obj.pk %}" title="Edita"><i class="fa fa-edit"></i></a>
+									{% if obj.ativu == 'Sim' %}<form class="d-inline" method="post" action="{% url 'alokasaun-termina' obj.pk %}">{% csrf_token %}
+										<button class="btn btn-sm btn-info" type="submit" title="Termina pozisaun">Termina <i class="fa fa-stop"></i></button>
+									</form>{% endif %}
 									<form class="d-inline" method="post" action="{% url 'alokasaun-del' obj.pk %}" data-confirm="Ita boot hakarak hamoos data ne'e? Aksaun ida ne'e la bele fila fali." data-confirm-ok="Hamoos">{% csrf_token %}
 										<button class="btn btn-sm btn-danger" type="submit" title="Hamoos"><i class="fa fa-times"></i></button>
 									</form>

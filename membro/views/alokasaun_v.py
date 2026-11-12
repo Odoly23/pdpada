@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Count
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -17,7 +18,12 @@ from membro.utils import log_historia, apply_alokasaun_filters
 def AlokasaunList(request):
 	group = c_user_group(request.user)
 	objects = alokasaun_scope(request.user).select_related('membro', 'village', 'aldeia', 'organizasaun')
-	objects = apply_alokasaun_filters(objects, request.GET)
+	objects = list(apply_alokasaun_filters(objects, request.GET))
+	# berapa orang yang pernah/sedang memegang posisi yang sama (data lama tetap tersimpan setelah termina)
+	keys = ('nivel', 'pozisaun', 'village_id', 'aldeia_id', 'organizasaun_id')
+	pernah = {tuple(r[k] for k in keys): r['n'] for r in Alokasaun.objects.order_by().values(*keys).annotate(n=Count('id'))}
+	for obj in objects:
+		obj.pernah = pernah.get((obj.nivel, obj.pozisaun, obj.village_id, obj.aldeia_id, obj.organizasaun_id), 1)
 	context = {
 		'group': group, 'objects': objects, 'can_aloka': group in roles.ALOKA_ROLES,
 		'title': 'Struktura no Pozisaun', 'legend': 'Struktura no Pozisaun'
@@ -73,6 +79,25 @@ def AlokasaunUpdate(request, pk):
 		'title': 'Edita Pozisaun', 'legend': 'Edita Pozisaun'
 	}
 	return render(request, 'membro/alokasaun_form.html', context)
+
+
+@login_required
+@allowed_users(allowed_roles=roles.ALOKA_ROLES)
+@require_POST
+def AlokasaunTermina(request, pk):
+	"""Akhiri pozisaun: data lama tetap tersimpan (ativu Lae + data termina) dan membru bisa dialokasikan lagi."""
+	obj = get_object_or_404(Alokasaun, pk=pk)
+	if obj.ativu != 'Sim':
+		messages.info(request, 'Pozisaun ne\'e termina ona.')
+		return redirect('alokasaun-list')
+	obj.ativu = 'Lae'
+	obj.data_termina = obj.data_termina or max(timezone.localdate(), obj.data_hahu)
+	obj.datetime = timezone.now()
+	obj.user = request.user
+	obj.save()
+	log_historia(request.user, obj.membro, 'Termina Pozisaun', f'{obj.pozisaun} {obj.nivel} {obj.unit() or ""}'.strip())
+	messages.success(request, f'Pozisaun termina ona. {obj.membro.nome} bele hetan pozisaun foun.')
+	return redirect('alokasaun-list')
 
 
 @login_required

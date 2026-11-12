@@ -1,6 +1,7 @@
 import datetime
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.core.files.uploadedfile import UploadedFile
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Row, Column, HTML
@@ -183,8 +184,11 @@ class AlokasaunForm(forms.ModelForm):
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
-		self.fields['membro'].queryset = Membro.objects.filter(
-			aprovasaun='Aprovadu', status='Ativu').select_related('village', 'aldeia')
+		# membru yang sudah punya pozisaun ativu (is_colocado) tidak tampil; saat edit, pemegangnya sendiri tetap tampil
+		bebas = Q(is_colocado=False)
+		if self.instance.pk:
+			bebas |= Q(pk=self.instance.membro_id)
+		self.fields['membro'].queryset = Membro.objects.filter(bebas, aprovasaun='Aprovadu', status='Ativu').select_related('village', 'aldeia')
 		self.fields['organizasaun'].queryset = Organizasaun.objects.filter(is_active=True)
 		self.helper = FormHelper()
 		self.helper.form_method = 'post'
@@ -248,6 +252,9 @@ class AlokasaunForm(forms.ModelForm):
 		if cleaned.get('data_termina') and cleaned.get('data_hahu') and cleaned['data_termina'] < cleaned['data_hahu']:
 			self.add_error('data_termina', 'Data termina tenke depois data hahu.')
 		if cleaned.get('ativu') == 'Sim' and not self.errors:
+			lain = Alokasaun.objects.filter(membro=membro, ativu='Sim').exclude(pk=self.instance.pk or 0).first()
+			if lain:
+				raise ValidationError(f'{membro.nome} iha ona pozisaun ativu: {lain.pozisaun} {lain.nivel}. Termina uluk pozisaun ne\'e.')
 			qs = Alokasaun.objects.filter(nivel=nivel, pozisaun=pozisaun, ativu='Sim')
 			if nivel == 'Suku':
 				qs = qs.filter(village=village)

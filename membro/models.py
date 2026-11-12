@@ -44,6 +44,7 @@ class Membro(HashedModel):
 	data_hakbit = models.DateField(null=True, blank=True, verbose_name="Data Hakbit (Tama PD)")
 	status = models.CharField(choices=STATUS, max_length=10, default='Ativu', verbose_name="Status")
 	aprovasaun = models.CharField(choices=APROVASAUN, max_length=10, default='Pendente', verbose_name="Aprovasaun")
+	is_colocado = models.BooleanField(default=False, db_index=True, verbose_name="Iha Pozisaun")  # TRUE = iha pozisaun ativu; la hatudu iha form aloka
 	razaun_rejeita = models.TextField(null=True, blank=True, verbose_name="Razaun Rejeita")
 	aprovadu_husi = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
 	data_aprovasaun = models.DateTimeField(null=True, blank=True)
@@ -104,6 +105,19 @@ class Alokasaun(models.Model):
 			models.CheckConstraint(condition=models.Q(ativu__in=['Sim', 'Lae']), name='aloka_ativu_valid'),
 		]
 
+	def save(self, *args, **kwargs):
+		old = Alokasaun.objects.filter(pk=self.pk).values_list('membro_id', flat=True).first() if self.pk else None
+		super().save(*args, **kwargs)
+		sync_colocado(self.membro_id)
+		if old and old != self.membro_id:  # alokasaun dipindah ke membru lain
+			sync_colocado(old)
+
+	def delete(self, *args, **kwargs):
+		membro_id = self.membro_id
+		result = super().delete(*args, **kwargs)
+		sync_colocado(membro_id)
+		return result
+
 	def unit(self):
 		return self.village or self.aldeia or self.organizasaun
 
@@ -135,3 +149,9 @@ class Historia(models.Model):
 	def __str__(self):
 		template = '{0.datetime:%Y-%m-%d %H:%M} {0.aksaun} {0.membro_nome}'
 		return template.format(self)
+
+
+def sync_colocado(membro_id):
+	"""is_colocado = TRUE selama membru punya pozisaun ativu; FALSE setelah termina atau dihapus (data lama tetap tersimpan)."""
+	if membro_id:
+		Membro.objects.filter(pk=membro_id).update(is_colocado=Alokasaun.objects.filter(membro_id=membro_id, ativu='Sim').exists())
