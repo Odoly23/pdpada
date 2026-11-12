@@ -4,8 +4,16 @@
 		<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
 		<li class="breadcrumb-item active" aria-current="page">SUKU {{ village.name|upper }}</li>
 	</ol>
+	<div class="no-print mb-2">
+		<button type="button" class="btn btn-sm btn-info" onclick="window.print()">Imprime <i class="fa fa-print"></i></button>
+		<a class="btn btn-sm btn-secondary" href="{% url 'home' %}">Fila ba Varanda <i class="fa fa-arrow-left"></i></a>
+	</div>
 	<div class="card suku-sheet">
 		<div class="card-body">
+			<div class="print-only print-head">
+				<strong>PARTIDO DEMOCRATICO &middot; POSTU ADMINISTRATIVU DOM ALEIXO</strong><br>
+				Lista Membru Suku {{ village.name }}{% if ano_ativu %} &middot; Tinan {{ ano_ativu }}{% endif %} &middot; Imprime iha {% now "d/m/Y H:i" %}
+			</div>
 			<p class="suku-lead">Lista kompañeiru husi suku <strong>{{ village.name }}</strong> ho total membru : <strong>[{{ tot.total }}]</strong></p>
 			{% for p in pemimpin %}
 			<p class="suku-lead mb-1">{{ forloop.counter }}. {{ p.label }} :
@@ -35,7 +43,6 @@
 					</tbody>
 				</table>
 			</div>
-			<a class="btn btn-sm btn-secondary" href="{% url 'home' %}">Fila ba Varanda <i class="fa fa-arrow-left"></i></a>
 		</div>
 	</div>
 {% endblock %}

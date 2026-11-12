@@ -1,4 +1,6 @@
+import datetime
 from django.contrib.auth.decorators import login_required
+from django.utils import timezone
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -83,7 +85,9 @@ def VarandaRekap(request):
 	level = _level(group)
 	ano = Year.objects.filter(is_active=True).first()
 	qs = membro_scope(request.user).filter(year=ano) if ano else membro_scope(request.user)
-	total = qs.count()
+	agg = qs.aggregate(total=Count('id'), mane=Count('id', filter=Q(sex='Mane')), feto=Count('id', filter=Q(sex='Feto')),
+		baru=Count('id', filter=Q(datetime__gte=timezone.now() - datetime.timedelta(days=30))))
+	total = agg['total']
 	suku_rows, aldeia_rows = _counts(qs, 'village_id'), _counts(qs, 'aldeia_id')
 	villages, aldeias = _units(level, e, aldeia_rows, suku_rows)
 
@@ -96,12 +100,16 @@ def VarandaRekap(request):
 		objects2.append({'obj': x, 'n': row.get('n', 0), 'mane': row.get('mane', 0), 'feto': row.get('feto', 0),
 			'url': _list_url(group, aldeia=x.pk)})
 
-	suku_cards = []
+	suku_cards, info = [], None
 	if level == 'postu':  # Postu: hitung per suku dulu; aldeia baru muncul setelah suku diklik
 		for x, n in objects1:
 			row = suku_rows.get(x.pk, {})
 			suku_cards.append({'obj': x, 'n': n, 'mane': row.get('mane', 0), 'feto': row.get('feto', 0), 'url': reverse('membro-suku', args=[x.pk])})
 		objects2 = []
+		# Struktura suku lengkap = Coordenador dan Sekretariu suku sama-sama sudah dialokasikan
+		lengkap = Alokasaun.objects.filter(ativu='Sim', nivel='Suku', village__isnull=False).values('village_id').annotate(
+			k=Count('pozisaun', distinct=True)).filter(k__gte=2).count()
+		info = {'mane': agg['mane'], 'feto': agg['feto'], 'baru': agg['baru'], 'lengkap': lengkap, 'suku': len(suku_cards)}
 
 	if level == 'postu':
 		chart = _chart([c['obj'].name for c in suku_cards], [c['n'] for c in suku_cards], 'Grafiku Mane no Feto Tuir Suku',
@@ -118,7 +126,7 @@ def VarandaRekap(request):
 
 	context = {
 		'group': group, 'role_label': ROLE_NAME.get(group, ''), 'e': e, 'level': level, 'banner': _banner(group, e),
-		'total': total, 'total_url': _list_url(group), 'objects1': objects1, 'objects2': objects2, 'suku_cards': suku_cards, 'chart': chart,
+		'total': total, 'total_url': _list_url(group), 'objects1': objects1, 'objects2': objects2, 'suku_cards': suku_cards, 'info': info, 'chart': chart,
 		'can_list': group in roles.LISTA_ROLES, 'can_add': group in roles.INPUT_ROLES,
 		'can_struktura': group in roles.STRUKTURA_ROLES, 'group_cards': False,
 		'title': 'Varanda', 'legend': 'Varanda',

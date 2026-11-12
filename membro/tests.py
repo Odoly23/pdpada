@@ -2,6 +2,7 @@ import datetime
 import os
 from django.contrib.auth.models import Group, User
 from django.test import TestCase
+from django.utils import timezone
 from django.urls import reverse
 from config import roles
 from custom.models import Municipality, AdministrativePost, Village, Aldeia, Organizasaun, Year
@@ -1096,6 +1097,32 @@ class SukuRekapTests(BaseCase):
 		self.assertNotContains(resp, '/membro/?')
 		self.assertNotContains(resp, self.m1.hashed)
 
+	def test_suku_card_links_straight_to_detail_without_modal(self):
+		for u in ('presidente', 'sekrpostu'):
+			self.login(u)
+			resp = self.client.get('/')
+			self.assertContains(resp, 'href="%s"' % reverse('membro-suku', args=[self.va.pk]), msg_prefix=u)
+			self.assertNotContains(resp, 'sukuModal', msg_prefix=u)
+			self.assertNotContains(resp, 'data-ringkas', msg_prefix=u)
+
+	def test_detail_page_is_printable(self):
+		resp = self.page('presidente')
+		self.assertContains(resp, 'window.print()')
+		self.assertContains(resp, 'Imprime')
+		self.assertContains(resp, 'print-head')
+		self.assertContains(resp, 'btn btn-sm btn-info')
+
+	def test_varanda_info_strip(self):
+		self.login('presidente')
+		resp = self.client.get('/')
+		info = resp.context['info']
+		self.assertEqual((info['mane'], info['feto'], info['suku'], info['lengkap']), (4, 1, 2, 1))  # hanya Suku A punya dua pemimpin
+		self.assertEqual(info['baru'], 0)  # data uji tanpa waktu input
+		self.assertContains(resp, 'btn btn-sm btn-info')
+		self.assertNotContains(resp, 'btn-outline')
+		Membro.objects.filter(pk=self.m1.pk).update(datetime=timezone.now())
+		self.assertEqual(self.client.get('/').context['info']['baru'], 1)
+
 	def test_vacant_leaders_are_shown_as_not_yet(self):
 		resp = self.page('presidente', self.vb.pk)
 		self.assertEqual([p['nome'] for p in resp.context['pemimpin']], [None, None])
@@ -1286,7 +1313,7 @@ class TabularTests(BaseCase):
 		self.assertEqual([t['head'] for t in resp.context['tables']], ['Suku', 'Aldeia', 'Organizasaun', 'Tinan', 'Idade', 'Estado Civil'])
 		self.assertContains(resp, 'card-header bg-warning')
 		self.assertContains(resp, 'th-amber')
-		self.assertContains(resp, 'REKAPITULASAUN MEMBRU PD')
+		self.assertContains(resp, 'PRESIDENTE POSTU')
 		self.assertEqual(resp.context['tot']['total'], 3)
 		self.assertEqual((resp.context['tot']['ativu'], resp.context['tot']['inativu'], resp.context['tot']['falesidu']), (2, 1, 0))
 
@@ -1570,18 +1597,18 @@ class LandingTests(BaseCase):
 				self.assertContains(resp, needle)
 			self.assertNotContains(resp, 'https://')
 
-	def test_postu_varanda_links_and_search_follow_role(self):
+	def test_postu_varanda_cards_show_only_name_and_total(self):
 		self.make('LD00001')
 		resp = self.varanda('presidente')
-		self.assertContains(resp, 'id="search-q"')
+		self.assertNotContains(resp, 'id="search-q"')
 		self.assertContains(resp, reverse('membro-suku', args=[self.va.pk]))
+		self.assertContains(resp, '<div class="aldeia-name">Suku A</div>')  # nama suku saja, tanpa kata "Suku" tambahan
+		self.assertNotContains(resp, 'aldeia-sex')  # Mane/Feto hanya di grafik
 		self.assertNotContains(resp, 'Aldeia A1')
 		resp = self.varanda('sekrpostu')  # Sekretariu Postu: rekapitulasi saja
-		self.assertNotContains(resp, 'id="search-q"')
 		self.assertNotContains(resp, '/membro/?')
 		self.assertNotContains(resp, 'Lista Membru')
-		self.assertNotContains(resp, 'Hein Aprovasaun')
-		self.assertNotContains(resp, 'Struktura')
+		self.assertNotContains(resp, reverse('alokasaun-dash'))
 
 	def test_postu_varanda_query_count_is_constant(self):
 		self.login('presidente')
@@ -1613,10 +1640,11 @@ class LandingTests(BaseCase):
 		self.assertFalse(resp.context['can_search'])
 		self.assertNotContains(resp, 'id="search-q"')
 
-	def test_search_box_only_for_member_roles(self):
-		resp, _ = self.tiles('sekrsuku')
-		self.assertContains(resp, 'id="search-q"')
-		self.assertContains(resp, 'data-url="/membro/api/cari/"')
+	def test_varanda_has_no_search_box_but_menu_keeps_pesquiza(self):
+		for u in ('sekrsuku', 'presidente'):
+			resp, _ = self.tiles(u)
+			self.assertNotContains(resp, 'id="search-q"', msg_prefix=u)
+			self.assertContains(resp, reverse('membro-cari'), msg_prefix=u)  # Pesquiza tetap ada di menu
 
 	def test_user_without_role_gets_notice(self):
 		User.objects.create_user('tanpa', password='Teste-12345!')
@@ -2142,3 +2170,61 @@ class FilterButtonsAndTablesTests(BaseCase):
 		self.login('presidente')
 		html = self.client.get('/').content.decode()
 		self.assertLess(html.index('jquery.dataTables.min.js'), html.index('datatable_defaults.js'))
+
+
+class TabularPatternTests(BaseCase):
+	def setUp(self):
+		self.make('TP00001', self.va, self.a1, sex='Mane')
+		self.make('TP00002', self.va, self.a1, sex='Feto')
+		self.make('TP00003', self.vb, self.b1, sex='Feto')
+
+	def page(self, user):
+		self.login(user)
+		resp = self.client.get(reverse('report-dash'))
+		self.assertEqual(resp.status_code, 200)
+		return resp
+
+	def test_banner_follows_role_scope(self):
+		self.assertEqual(self.page('presidente').context['banner'], ('PRESIDENTE POSTU', 'POSTU DOM ALEIXO'))
+		self.assertEqual(self.page('koordsuku').context['banner'][1], 'SUKU SUKU A')
+		self.assertEqual(self.page('sekrorg').context['banner'][1], 'ORGANIZASAUN OJD')
+
+	def test_area_tables_have_mane_and_feto_columns(self):
+		resp = self.page('presidente')
+		suku = [t for t in resp.context['tables'] if t['head'] == 'Suku'][0]
+		self.assertTrue(suku['sexu'])
+		self.assertEqual([(r['name'], r['total'], r['mane'], r['feto']) for r in suku['rows']], [('Suku A', 2, 1, 1), ('Suku B', 1, 0, 1)])
+		self.assertContains(resp, '<th>Mane</th><th>Feto</th>', html=False)
+		age = [t for t in resp.context['tables'] if t['head'] == 'Idade'][0]
+		self.assertFalse(age.get('sexu'))
+
+	def test_suku_role_only_sees_own_rows(self):
+		suku = [t for t in self.page('koordsuku').context['tables'] if t['head'] == 'Suku'][0]
+		self.assertEqual([r['name'] for r in suku['rows']], ['Suku A'])
+
+
+class ConfirmModalTests(BaseCase):
+	"""Modal hanya untuk logout dan hapus data; aksi lain tidak memakai modal."""
+	def setUp(self):
+		self.m = self.make('CM00001')
+
+	def test_layout_has_one_confirm_modal_and_logout_uses_it(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('report-dash'))
+		self.assertContains(resp, 'id="confirmModal"')
+		self.assertContains(resp, 'data-confirm="Ita boot hakarak sai husi sistema?"', count=2)  # navbar dan sidebar
+		self.assertNotContains(resp, 'onsubmit="return confirm')
+
+	def test_delete_forms_use_modal_instead_of_browser_confirm(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-detail', args=[self.m.hashed]))
+		self.assertContains(resp, "data-confirm=\"Ita boot hakarak hamoos membru ne'e?")
+		self.assertNotContains(resp, 'confirm(\'')
+		self.login('admin')
+		self.assertContains(self.client.get(reverse('master-list', args=['suku'])), 'data-confirm="Ita boot hakarak hamoos data')
+
+	def test_varanda_has_no_other_modal(self):
+		self.login('presidente')
+		resp = self.client.get('/')
+		self.assertEqual(resp.content.decode().count('class="modal fade'), 1)  # hanya modal konfirmasi
+

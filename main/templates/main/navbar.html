@@ -48,7 +48,7 @@
 				<div class="dropdown-menu dropdown-menu-right">
 					<span class="dropdown-header">{{ user.first_name|default:user.username }}{% if nav_role %}<br>{{ nav_role }}{% endif %}</span>
 					<a class="dropdown-item" href="{% url 'change-password' %}"><i class="fa fa-key"></i> Troka Password</a>
-					<form method="post" action="{% url 'logout' %}">{% csrf_token %}
+					<form method="post" action="{% url 'logout' %}" data-confirm="Ita boot hakarak sai husi sistema?" data-confirm-ok="Sai">{% csrf_token %}
 						<button class="dropdown-item text-danger" type="submit"><i class="fa fa-sign-out"></i> Sai</button>
 					</form>
 				</div>
@@ -79,7 +79,7 @@
 			{% if notif_items %}<li><a href="{{ notif_items.0.url }}"><i class="fa fa-bell"></i>Notifikasaun<span id="notifbadge-sb" class="badge badge-danger">{% if notif_total %}{{ notif_total }}{% endif %}</span></a></li>{% endif %}
 			<li><a href="{% url 'change-password' %}"><i class="fa fa-key"></i>Password</a></li>
 			<li>
-				<form method="post" action="{% url 'logout' %}">{% csrf_token %}
+				<form method="post" action="{% url 'logout' %}" data-confirm="Ita boot hakarak sai husi sistema?" data-confirm-ok="Sai">{% csrf_token %}
 					<button type="submit"><i class="fa fa-sign-out"></i>Sai</button>
 				</form>
 			</li>

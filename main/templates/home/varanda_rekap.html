@@ -12,9 +12,6 @@
 				<span class="chip">{{ role_label }}</span>
 				{% if ano_ativu %}<span class="chip chip-soft"><i class="fa fa-calendar"></i> Tinan {{ ano_ativu }}</span>{% endif %}
 			</p>
-			{% if can_list %}
-			<div class="hero-search rekap-search">{% include 'membro/_search_box.html' with large=True %}</div>
-			{% endif %}
 			<div class="rekap-total">
 				<span class="stat-label">Total Membru</span>
 				<div class="rekap-number">{% if total_url %}<a href="{{ total_url }}">{{ total }}</a>{% else %}{{ total }}{% endif %}</div>
@@ -23,27 +20,32 @@
 				{% for v, n in objects1 %}<span class="rekap-suku"><strong>{{ v.name }}</strong> {{ n }}</span>{% if not forloop.last %}<span class="rekap-sep">&middot;</span>{% endif %}{% endfor %}
 			</p>{% endif %}
 			<div class="rekap-actions">
-				<a class="btn btn-sm btn-primary" href="{% url 'membro-painel' %}">Painel <i class="fa fa-tachometer"></i></a>
-				<a class="btn btn-sm btn-danger" href="{% url 'report-dash' %}">Relatoriu Tabular <i class="fa fa-table"></i></a>
-				<a class="btn btn-sm btn-secondary" href="{% url 'report-chart' %}">Grafiku <i class="fa fa-bar-chart"></i></a>
-				{% if can_add %}<a class="btn btn-sm btn-primary" href="{% url 'membro-add' %}">Aumenta Membru <i class="fa fa-user-plus"></i></a>{% endif %}
-				{% if can_list %}<a class="btn btn-sm btn-secondary" href="{% url 'membro-list' %}">Lista Membru <i class="fa fa-list"></i></a>{% endif %}
-				{% if can_struktura %}<a class="btn btn-sm btn-secondary" href="{% url 'alokasaun-dash' %}">Struktura <i class="fa fa-sitemap"></i></a>{% endif %}
-				{% if notif_items and notif_total %}<a class="btn btn-sm btn-warning" href="{{ notif_items.0.url }}">{{ notif_total }} notifikasaun <i class="fa fa-bell"></i></a>{% endif %}
+				<a class="btn btn-sm btn-info" href="{% url 'membro-painel' %}">Painel <i class="fa fa-tachometer"></i></a>
+				<a class="btn btn-sm btn-info" href="{% url 'report-dash' %}">Relatoriu Tabular <i class="fa fa-table"></i></a>
+				<a class="btn btn-sm btn-info" href="{% url 'report-chart' %}">Grafiku <i class="fa fa-bar-chart"></i></a>
+				{% if can_add %}<a class="btn btn-sm btn-info" href="{% url 'membro-add' %}">Aumenta Membru <i class="fa fa-user-plus"></i></a>{% endif %}
+				{% if can_list %}<a class="btn btn-sm btn-info" href="{% url 'membro-list' %}">Lista Membru <i class="fa fa-list"></i></a>{% endif %}
+				{% if can_struktura %}<a class="btn btn-sm btn-info" href="{% url 'alokasaun-dash' %}">Struktura <i class="fa fa-sitemap"></i></a>{% endif %}
+				{% if notif_items and notif_total %}<a class="btn btn-sm btn-info" href="{{ notif_items.0.url }}">{{ notif_total }} notifikasaun <i class="fa fa-bell"></i></a>{% endif %}
 			</div>
 		</div>
 	</div>
 
 	{% if level == 'postu' %}
-	<h6 class="rekap-head">MEMBRU TUIR SUKU <small class="text-muted">&middot; klik suku atu hare aldeia</small></h6>
+	<div class="row info-strip text-center">
+		<div class="col-6 col-md-3 mb-2"><div class="info-box"><span class="stat-label">Total Mane</span><span class="info-n">{{ info.mane }}</span></div></div>
+		<div class="col-6 col-md-3 mb-2"><div class="info-box"><span class="stat-label">Total Feto</span><span class="info-n">{{ info.feto }}</span></div></div>
+		<div class="col-6 col-md-3 mb-2"><div class="info-box"><span class="stat-label">Membru Foun (30 Loron)</span><span class="info-n">{{ info.baru }}</span></div></div>
+		<div class="col-6 col-md-3 mb-2"><div class="info-box"><span class="stat-label">Struktura Suku Kompletu</span><span class="info-n">{{ info.lengkap }}/{{ info.suku }}</span></div></div>
+	</div>
+	<h6 class="rekap-head">MEMBRU TUIR SUKU <small class="text-muted">&middot; klik suku atu hare detalle no imprime</small></h6>
 	<div class="row">
 		{% for c in suku_cards %}
 		<div class="col-6 col-md-4 col-lg-3 mb-3">
 			<a class="card aldeia-card h-100 suku-card" href="{{ c.url }}">
 				<div class="card-body text-center">
-					<div class="aldeia-name">Suku {{ c.obj.name }}</div>
+					<div class="aldeia-name">{{ c.obj.name }}</div>
 					<div class="aldeia-n">{{ c.n }}</div>
-					<div class="aldeia-sex"><i class="fa fa-male"></i> {{ c.mane }} <span class="rekap-sep">&middot;</span> <i class="fa fa-female"></i> {{ c.feto }}</div>
 				</div>
 			</a>
 		</div>
@@ -55,16 +57,13 @@
 	<h6 class="rekap-head">MEMBRU TUIR ALDEIA</h6>
 	{% regroup objects2 by obj.village as by_suku %}
 	{% for g in by_suku %}
-	{% if group_cards %}<div class="rekap-suku-head">Suku {{ g.grouper.name }} <span class="badge badge-pill badge-warning">{{ g.list|length }} aldeia</span></div>{% endif %}
 	<div class="row">
 		{% for a in g.list %}
 		<div class="col-6 col-md-4 {% if group_cards %}col-lg-2{% else %}col-lg-3{% endif %} mb-3">
 			<div class="card aldeia-card h-100">
 				<div class="card-body text-center">
 					<div class="aldeia-name">{% if a.url %}<a href="{{ a.url }}">{{ a.obj.name }}</a>{% else %}{{ a.obj.name }}{% endif %}</div>
-					{% if not group_cards %}<div class="aldeia-suku">Suku {{ a.obj.village.name }}</div>{% endif %}
 					<div class="aldeia-n">{{ a.n }}</div>
-					<div class="aldeia-sex"><i class="fa fa-male"></i> {{ a.mane }} <span class="rekap-sep">&middot;</span> <i class="fa fa-female"></i> {{ a.feto }}</div>
 				</div>
 			</div>
 		</div>

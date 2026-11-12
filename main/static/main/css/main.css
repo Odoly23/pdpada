@@ -458,3 +458,28 @@ div.dataTables_wrapper div.dataTables_length label { font-weight: 400; color: #6
 .suku-stats .stat-number { font-size: 1.6rem; }
 .suku-name { font-weight: 700; color: var(--navy); }
 .suku-table td { vertical-align: middle; }
+
+/* semua tombol persegi (tanpa radius): btn, btn-sm, btn-info, tombol filter, grup tombol */
+.btn, .btn-sm, .btn-lg, .btn-filter, .btn-filter .count, .btn-group > .btn, .btn-group-sm > .btn, .input-group > .btn,
+.input-group-append .btn, .input-group-prepend .btn, div.dt-buttons .btn, .badge-pill.count { border-radius: 0 !important; }
+
+.info-box { background: #fff; border: 1px solid #dfe2f2; border-top: 3px solid #ffbb00; padding: .6rem .5rem; height: 100%; }
+.info-n { display: block; font-size: 1.6rem; font-weight: 800; color: var(--navy); line-height: 1.2; }
+.info-strip .stat-label { font-size: .8rem; }
+.modal-header.bg-primary { background-color: var(--navy) !important; border-radius: 0; } .modal-content { border-radius: 0; } .modal-header .close { opacity: .9; }
+
+/* cetak: halaman detail suku rapi di kertas (tanpa menu/tombol, garis hitam, baris tidak terpotong) */
+.print-only { display: none; }
+@media print {
+	.print-only { display: block; }
+	.print-head { text-align: center; margin-bottom: .75rem; font-size: 11pt; }
+	.suku-sheet, .suku-sheet .card-body { border: 0 !important; box-shadow: none !important; padding: 0 !important; }
+	.suku-table, .suku-table td, .suku-table th { border: 1px solid #000 !important; color: #000 !important; }
+	.suku-table { font-size: 10pt; }
+	.suku-table thead { display: table-header-group; }
+	.suku-table tr { page-break-inside: avoid; }
+	tr.th-amber th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+	.table-responsive { overflow: visible !important; }
+	a { color: #000 !important; text-decoration: none !important; }
+	.modal, .modal-backdrop { display: none !important; }
+}
