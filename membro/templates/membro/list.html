@@ -11,7 +11,7 @@
 			<div class="card-body">
 				<div class="mb-2 no-print">
 					{% if can_add %}<a class="btn btn-sm btn-primary" href="{% url 'membro-add' %}">Aumenta <i class="fa fa-plus"></i></a>{% endif %}
-					{% if can_aprova %}<a class="btn btn-sm btn-warning" href="{% url 'aprovasaun-list' %}">Hein Aprovasaun <i class="fa fa-check-square-o"></i></a>{% endif %}
+					{% if can_aprova %}<a class="btn btn-sm btn-info" href="{% url 'aprovasaun-list' %}">Hein Aprovasaun <i class="fa fa-check-square-o"></i></a>{% endif %}
 					{% if can_export %}<a class="btn btn-sm btn-success" href="{% url 'membro-export' %}?{{ request.GET.urlencode }}" title="Ekspor CSV kompletu tuir filtru">Ekspor CSV <i class="fa fa-download"></i></a>{% endif %}
 					<a class="btn btn-sm btn-secondary" href="{% url 'membro-cari' %}">Pesquiza <i class="fa fa-search"></i></a>
 					{% if ano_ativu %}

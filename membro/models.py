@@ -128,6 +128,10 @@ class Historia(models.Model):
 			models.Index(fields=['aksaun', '-datetime'], name='historia_aksaun_idx'),
 		]
 
+	def nama_pendek(self):
+		"""Naran membru tanpa Nu. Eleitoral, untuk daftar yang ringkas."""
+		return self.membro_nome.split(' (')[0]
+
 	def __str__(self):
 		template = '{0.datetime:%Y-%m-%d %H:%M} {0.aksaun} {0.membro_nome}'
 		return template.format(self)

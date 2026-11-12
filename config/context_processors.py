@@ -42,6 +42,7 @@ def _menu(request, group):
 				_item(request, 'Grafiku', 'fa-bar-chart', 'report-chart')]))
 			return items
 		membru = [
+			_item(request, 'Sumariu Membru', 'fa-th-large', 'membro-sumariu'),
 			_item(request, 'Lista Membru', 'fa-list', 'membro-list', names=('membro-list', 'membro-detail', 'membro-update')),
 			_item(request, 'Pesquiza', 'fa-search', 'membro-cari'),
 		]

@@ -1,0 +1,82 @@
+{% extends "main/layout.html" %}
+{% load static %}
+{% block content %}
+	<ol class="breadcrumb mb-2 mt-1">
+		<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+		<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
+	</ol>
+	<div class="row">
+		<div class="col-sm-12 mb-2">
+			<div class="card">
+				<div class="card-header bg-primary text-white text-center">{{ banner.0 }} <br/> {{ banner.1 }}</div>
+			</div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-sm-12">
+			<div class="card shadow-lg pt-0 rounded">
+				<div class="card-header">
+					{% if can_add %}<a class="btn btn-sm btn-primary mb-2" href="{% url 'membro-add' %}">Aumenta Membru <i class="fa fa-plus"></i></a>{% endif %}
+					<a class="btn btn-sm btn-secondary mb-2" href="{% url 'membro-list' %}">Lista Jeral Membru <i class="fa fa-list"></i></a>
+					<a class="btn btn-sm btn-danger mb-2" href="{% url 'report-dash' %}">Relatoriu Tabular <i class="fa fa-table"></i></a>
+				</div>
+				<div class="card">
+					<div class="card-header text-center">Membru Tinan Ativu {% if ano %}{{ ano.year }}{% endif %}</div>
+				</div>
+				<div class="card-body text-center">
+					<table class="table table-sm table-bordered display nowrap" style="width:100%;text-align: center;">
+						<thead>
+							<tr class="th-navy"><th style="vertical-align: middle;" rowspan="2">{{ row_title }}</th><th style="vertical-align: middle;" rowspan="2">Total</th><th colspan="{{ cols|length }}">Organizasaun</th></tr>
+							<tr class="th-navy">{% for c in cols %}<th>{{ c }}</th>{% endfor %}</tr>
+						</thead>
+						<tbody>
+							{% for r in rows %}
+							<tr>
+								<td>{{ r.obj.name }}</td>
+								<td><a href="{{ r.url }}">{{ r.total }}</a></td>
+								{% for n, u in r.cells %}<td>{% if n %}<a href="{{ u }}">{{ n }}</a>{% else %}<span class="text-muted">0</span>{% endif %}</td>{% endfor %}
+							</tr>
+							{% empty %}
+							<tr><td colspan="{{ cols|length|add:2 }}" class="text-muted">Laiha membru.</td></tr>
+							{% endfor %}
+						</tbody>
+						{% if rows %}
+						<tfoot>
+							<tr class="font-weight-bold">
+								<td>TOTAL</td><td><a href="{{ grand_url }}">{{ grand }}</a></td>
+								{% for n, u in col_totals %}<td>{% if n %}<a href="{{ u }}">{{ n }}</a>{% else %}<span class="text-muted">0</span>{% endif %}</td>{% endfor %}
+							</tr>
+						</tfoot>
+						{% endif %}
+					</table>
+				</div> <!--end card-body-->
+			</div> <!--end card-->
+		</div> <!--end col-->
+		<div class="col-md-12 mt-3">
+			<div class="card">
+				<div class="card-header">Grafiku membru tinan {% if ano %}{{ ano.year }}{% endif %}</div>
+				<div class="card-body">
+					<figure class="highcharts-figure"><div id="chart_sumariu"></div></figure>
+				</div>
+			</div>
+		</div>
+	</div> <!--end row-->
+	{{ chart|json_script:"chart-data" }}
+{% endblock %}
+{% block scripts %}
+	{% include 'main/highcharts_scripts.html' %}
+	<script>
+	(function () {
+		var d = JSON.parse(document.getElementById('chart-data').textContent);
+		Highcharts.setOptions({ lang: { noData: 'Laiha data' }, credits: { enabled: false }, exporting: { enabled: false } });
+		Highcharts.chart('chart_sumariu', {
+			chart: { type: d.label.length > 12 ? 'bar' : 'column', styledMode: true },
+			title: { text: '' }, legend: { enabled: true },
+			xAxis: { categories: d.label },
+			yAxis: { title: { text: 'Total Membru' }, allowDecimals: false, stackLabels: { enabled: false } },
+			plotOptions: { column: { stacking: 'normal' }, bar: { stacking: 'normal' } },
+			series: d.series.map(function (s, i) { return { name: s.name, data: s.data, colorIndex: i % 10, tooltip: { valueSuffix: ' Membru' } }; })
+		});
+	})();
+	</script>
+{% endblock %}

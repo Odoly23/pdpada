@@ -248,3 +248,57 @@ def SukuRekap(request, pk):
 		'meta_description': f'Lista membru suku {village.name}, Partido Democratico, Postu Dom Aleixo.',
 	}
 	return render(request, 'membro/suku_rekap.html', context)
+
+
+@login_required
+@allowed_users(allowed_roles=roles.LISTA_ROLES)
+def MembroSum(request):
+	"""Sumariu Membru (sebelum Lista Membru): baris suku/aldeia sesuai peran, kolom organizasaun, angka bertaut ke lista."""
+	group = c_user_group(request.user)
+	e = c_user_emp(request.user)
+	level = _level(group)
+	ano = Year.objects.filter(is_active=True).first()
+	qs = membro_scope(request.user).filter(year=ano) if ano else membro_scope(request.user)
+
+	if level == 'suku':
+		row_title, row_field, key = 'Aldeia', 'aldeia_id', 'aldeia'
+		units = Aldeia.objects.filter(village_id=e.village_id) if e else Aldeia.objects.none()
+	elif level == 'aldeia':
+		row_title, row_field, key = 'Aldeia', 'aldeia_id', 'aldeia'
+		units = Aldeia.objects.filter(pk=e.aldeia_id) if e else Aldeia.objects.none()
+	else:  # postu dan organisasi: baris per suku
+		row_title, row_field, key = 'Suku', 'village_id', 'village'
+		units = Village.objects.all()
+	orgs = Organizasaun.objects.filter(pk=e.organizasaun_id) if level == 'org' and e else Organizasaun.objects.filter(is_active=True)
+	cols = [(o.pk, o.code) for o in orgs]
+	if level != 'org':
+		cols.append((0, 'Laiha'))  # membru tanpa organizasaun
+
+	cell = {}
+	for r in qs.order_by().values(row_field, 'organizasaun_id').annotate(n=Count('id')):
+		cell[(r[row_field], r['organizasaun_id'] or 0)] = r['n']
+
+	def url(**params):
+		return _list_url(group, **params)
+
+	rows = []
+	for u in units:
+		cells = [(cell.get((u.pk, cid), 0), url(**{key: u.pk, 'organizasaun': cid})) for cid, _ in cols]
+		total = sum(c for c, _ in cells) if level != 'org' else sum(v for (rid, _), v in cell.items() if rid == u.pk)
+		rows.append({'obj': u, 'total': total, 'url': url(**{key: u.pk}), 'cells': cells})
+	if level == 'org':  # organisasi hanya baris yang punya anggotanya
+		rows = [r for r in rows if r['total']]
+	col_totals = [(sum(r['cells'][i][0] for r in rows), url(organizasaun=cid)) for i, (cid, _) in enumerate(cols)]
+	grand = sum(r['total'] for r in rows)
+
+	used = [i for i in range(len(cols)) if col_totals[i][0]]
+	chart = {'label': [r['obj'].name for r in rows],
+		'series': [{'name': cols[i][1], 'data': [r['cells'][i][0] for r in rows]} for i in used]}
+	context = {
+		'group': group, 'banner': _banner(group, e), 'ano': ano, 'row_title': row_title, 'cols': [c[1] for c in cols],
+		'rows': rows, 'col_totals': col_totals, 'grand': grand, 'grand_url': url(), 'chart': chart,
+		'can_add': group in roles.INPUT_ROLES,
+		'title': 'Sumariu Membru', 'legend': 'Sumariu Membru',
+		'meta_description': 'Sumariu membru Partido Democratico, Postu Dom Aleixo, tuir suku, aldeia no organizasaun.',
+	}
+	return render(request, 'membro/sumariu.html', context)

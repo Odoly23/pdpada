@@ -15,7 +15,7 @@
 				{% for grp in groups_nome %}
 				<div class="table-responsive mb-3">
 				<table class="table table-sm table-bordered">
-					<thead><tr class="th-amber"><th colspan="7">{{ grp.0.nome }} · {{ grp.0.date_of_birth|date:"d/m/Y" }} ({{ grp|length }} rejistu)</th></tr></thead>
+					<thead><tr class="th-navy"><th colspan="7">{{ grp.0.nome }} · {{ grp.0.date_of_birth|date:"d/m/Y" }} ({{ grp|length }} rejistu)</th></tr></thead>
 					<tbody>
 						{% for m in grp %}
 						<tr>
@@ -39,7 +39,7 @@
 				{% for grp in groups_tel %}
 				<div class="table-responsive mb-3">
 				<table class="table table-sm table-bordered">
-					<thead><tr class="th-amber"><th colspan="6">{{ grp.0.telefone }} ({{ grp|length }} rejistu)</th></tr></thead>
+					<thead><tr class="th-navy"><th colspan="6">{{ grp.0.telefone }} ({{ grp|length }} rejistu)</th></tr></thead>
 					<tbody>
 						{% for m in grp %}
 						<tr>

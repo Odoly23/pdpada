@@ -1,0 +1,30 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1">
+	<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+	<li class="breadcrumb-item"><a href="{% url 'historia-list' %}">HISTORIA</a></li>
+	<li class="breadcrumb-item active" aria-current="page">DETALHE</li>
+</ol>
+<div class="row">
+	<div class="col-sm-12">
+		<div class="card shadow-lg pt-0 rounded">
+			<div class="card-header">{{ legend|upper }}</div>
+			<div class="card-body">
+				<div class="mb-3 no-print">
+					<a class="btn btn-sm btn-secondary" href="{% url 'historia-list' %}">Fila ba Historia <i class="fa fa-arrow-left"></i></a>
+					{% if can_membro %}<a class="btn btn-sm btn-info" href="{% url 'membro-detail' obj.membro.hashed %}">Hare Membru <i class="fa fa-user"></i></a>{% endif %}
+				</div>
+				<table class="table table-sm table-bordered">
+					<tbody>
+						<tr><th style="width:25%">Data</th><td>{{ obj.datetime|date:"d/m/Y H:i" }}</td></tr>
+						<tr><th>Aksaun</th><td>{{ obj.aksaun }}</td></tr>
+						<tr><th>Membru</th><td>{{ obj.membro_nome|default:"-" }}</td></tr>
+						<tr><th>Husi</th><td>{{ obj.user.get_username|default:"-" }}</td></tr>
+						<tr><th>Detalhe</th><td class="pre-wrap">{{ obj.detalhe|default:"-" }}</td></tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
