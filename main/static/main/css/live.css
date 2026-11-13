@@ -62,3 +62,13 @@ tr.flash td { animation: flash 1.6s ease; }
 @media (max-width: 1100px) { .live-top { grid-template-columns: minmax(0, 1fr); } .live-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .live-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 560px) { .live-wrap { padding: 12px; } .live-kpis { grid-template-columns: minmax(0, 1fr); } .live-actions { flex-direction: row; } .live-actions > * { flex: 1; } }
 @media (prefers-reduced-motion: reduce) { .live-dot, tr.flash td { animation: none; } .bar i { transition: none; } }
+
+/* label perbandingan votu dan total membru */
+.kb { display: inline-block; margin-top: 10px; padding: 4px 12px; font-size: .85rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.kb-menus { background: transparent; color: #fff; border: 2px solid #fff; }
+.kb-liu { background: var(--red); color: #fff; border: 2px solid var(--red); }
+.kb-hanesan { background: #fff; color: var(--navy); border: 2px solid #fff; }
+.kpi .kb { display: inline-block; margin-top: 10px; padding: 4px 12px; font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; }
+.kpi .kb-menus { color: #fff; background: transparent; border-color: #fff; }
+.kpi .kb-liu { color: #fff; background: var(--red); border-color: var(--red); }
+.kpi .kb-hanesan { color: var(--navy); background: #fff; border-color: #fff; }

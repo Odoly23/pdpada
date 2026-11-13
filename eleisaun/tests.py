@@ -196,7 +196,8 @@ class LiveDashboardTests(EleisaunBase):
 		Resultado.objects.create(eleisaun=el, tempat=self.t2, votos_partidu=99, submetidu=False)  # dibuka kembali: tidak dihitung
 		self.login('presidente')
 		j = self.client.get(reverse('eleisaun-live-data')).json()
-		self.assertEqual(j['kpi'], {'votos': 40, 'membru': 10, 'persentajen': 400.0, 'submetidu': 1, 'tempat': 2})
+		self.assertEqual(j['kpi'], {'votos': 40, 'membru': 10, 'persentajen': 400.0, 'submetidu': 1, 'tempat': 2,
+			'kompara': {'kode': 'liu', 'label': 'Liu total dadus', 'diferensa': 30}})
 		self.assertEqual({t['tempat']: (t['votos'], t['submetidu']) for t in j['tempat']}, {'Eskola A': (40, True), 'Eskola B': (0, False)})
 		self.assertEqual(self.client.get(reverse('eleisaun-live-data'))['Cache-Control'], 'no-store')
 
@@ -325,3 +326,53 @@ class MenuTests(EleisaunBase):
 		self.assertNotIn(reverse('eleisaun-komparasaun'), html)
 		self.login('admin')
 		self.assertIn(reverse('eleisaun-admin'), self.client.get(reverse('user-painel')).content.decode())
+
+
+class KomparaLabelTests(EleisaunBase):
+	"""Label perbandingan votu PD dengan total membru, dalam Tetun INL."""
+	def hasil(self, v1, v2):
+		el = self.live()
+		Resultado.objects.create(eleisaun=el, tempat=self.t1, votos_partidu=v1, submetidu=True)
+		Resultado.objects.create(eleisaun=el, tempat=self.t2, votos_partidu=v2, submetidu=True)
+		self.login('presidente')
+
+	def test_helper_three_states(self):
+		from eleisaun.utils import kompara
+		self.assertEqual(kompara(3, 10), {'kode': 'menus', 'label': 'Menus husi total dadus', 'diferensa': -7})
+		self.assertEqual(kompara(15, 10), {'kode': 'liu', 'label': 'Liu total dadus', 'diferensa': 5})
+		self.assertEqual(kompara(10, 10), {'kode': 'hanesan', 'label': 'Hanesan ho total dadus', 'diferensa': 0})
+
+	def test_less_than_total_members_label(self):
+		self.hasil(3, 4)  # 7 votu, 10 membru
+		resp = self.client.get(reverse('eleisaun-komparasaun'))
+		self.assertEqual(resp.context['totals']['kompara']['kode'], 'menus')
+		self.assertContains(resp, 'Menus husi total dadus')
+		self.assertNotContains(resp, 'Liu total dadus')
+		self.assertEqual(self.client.get(reverse('eleisaun-live-data')).json()['kpi']['kompara']['label'], 'Menus husi total dadus')
+
+	def test_more_than_total_members_label(self):
+		self.hasil(10, 5)  # 15 votu, 10 membru
+		resp = self.client.get(reverse('eleisaun-komparasaun'))
+		self.assertEqual(resp.context['totals']['kompara']['kode'], 'liu')
+		self.assertContains(resp, 'Liu total dadus')
+		self.assertContains(resp, '+5')
+		self.assertEqual(self.client.get(reverse('eleisaun-live-data')).json()['kpi']['kompara']['kode'], 'liu')
+
+	def test_equal_label_and_per_suku_labels(self):
+		self.hasil(6, 4)  # Suku A: 6 votu vs 6 membru; Suku B: 4 votu vs 4 membru
+		resp = self.client.get(reverse('eleisaun-komparasaun'))
+		self.assertEqual([r['kompara']['kode'] for r in resp.context['rows']], ['hanesan', 'hanesan'])
+		self.assertEqual(resp.context['totals']['kompara']['label'], 'Hanesan ho total dadus')
+
+	def test_labels_can_differ_per_suku(self):
+		self.hasil(2, 9)  # Suku A: 2 vs 6 menus; Suku B: 9 vs 4 liu
+		rows = self.client.get(reverse('eleisaun-komparasaun')).context['rows']
+		self.assertEqual([r['kompara']['kode'] for r in rows], ['menus', 'liu'])
+
+	def test_live_page_shows_label_element_and_handler(self):
+		self.live()
+		self.login('presidente')
+		page = self.client.get(reverse('eleisaun-live'))
+		self.assertContains(page, 'id="komparaLabel"')
+		self.assertContains(page, 'j.kpi.kompara.label')
+

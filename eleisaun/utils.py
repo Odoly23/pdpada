@@ -16,6 +16,15 @@ def _membro_qs():
 	return Membro.objects.filter(year=ano) if ano else Membro.objects.all()
 
 
+def kompara(votos, membru):
+	"""Label perbandingan votu PD dengan total membru (Tetun INL): menus, liu, atau hanesan."""
+	if votos < membru:
+		return {'kode': 'menus', 'label': 'Menus husi total dadus', 'diferensa': votos - membru}
+	if votos > membru:
+		return {'kode': 'liu', 'label': 'Liu total dadus', 'diferensa': votos - membru}
+	return {'kode': 'hanesan', 'label': 'Hanesan ho total dadus', 'diferensa': 0}
+
+
 def persen(a, b):
 	return round(a * 100 / b, 1) if b else 0
 
@@ -38,7 +47,8 @@ def live_payload():
 	membru = _membro_qs().count()
 	return {
 		'ativu': True, 'eleisaun': el.naran, 'tinan': el.tinan, 'atualizadu': timezone.localtime().strftime('%H:%M:%S'),
-		'kpi': {'votos': votos, 'membru': membru, 'persentajen': persen(votos, membru), 'submetidu': submetidu, 'tempat': len(rows)},
+		'kpi': {'votos': votos, 'membru': membru, 'persentajen': persen(votos, membru), 'submetidu': submetidu, 'tempat': len(rows),
+			'kompara': kompara(votos, membru)},
 		'tempat': rows,
 	}
 
@@ -61,9 +71,9 @@ def komparasaun_data():
 	rows = []
 	for v in Village.objects.order_by('name'):
 		m, vt = membru.get(v.pk, 0), votos.get(v.pk, 0)
-		rows.append({'suku': v.name, 'membru': m, 'votos': vt, 'persentajen': persen(vt, m),
+		rows.append({'suku': v.name, 'membru': m, 'votos': vt, 'persentajen': persen(vt, m), 'kompara': kompara(vt, m),
 			'tempat': tempat_total.get(v.pk, 0), 'submetidu': tempat_sub.get(v.pk, 0)})
 	tm, tv = sum(r['membru'] for r in rows), sum(r['votos'] for r in rows)
-	totals = {'membru': tm, 'votos': tv, 'persentajen': persen(tv, tm), 'diferensa': tv - tm,
+	totals = {'membru': tm, 'votos': tv, 'persentajen': persen(tv, tm), 'diferensa': tv - tm, 'kompara': kompara(tv, tm),
 		'tempat': sum(r['tempat'] for r in rows), 'submetidu': sum(r['submetidu'] for r in rows)}
 	return el, rows, totals

@@ -25,17 +25,20 @@
 						<div class="col-6 col-md-3 mb-2"><span class="stat-label">Votu / Membru</span><span class="stat-number d-block">{{ totals.persentajen }}%</span></div>
 						<div class="col-6 col-md-3 mb-2"><span class="stat-label">Tempat Submetidu</span><span class="stat-number d-block">{{ totals.submetidu }}/{{ totals.tempat }}</span></div>
 					</div>
-					<p class="text-center text-muted mb-3">Diferensa votu - membru: <strong>{{ totals.diferensa }}</strong>{% if totals.diferensa >= 0 %} (votu liu membru){% else %} (votu menus husi membru){% endif %}</p>
+					<p class="text-center mb-3">
+						<span class="kb kb-{{ totals.kompara.kode }}">{{ totals.kompara.label }}</span>
+						<span class="text-muted ml-2">Diferensa votu no membru: <strong>{% if totals.diferensa > 0 %}+{% endif %}{{ totals.diferensa }}</strong></span>
+					</p>
 					<figure class="highcharts-figure"><div id="chart_kompara"></div></figure>
 					<div class="table-responsive mt-3">
 						<table class="table table-sm table-bordered text-center">
-							<thead><tr class="th-navy"><th>Suku</th><th>Total Membru</th><th>Total Votu PD</th><th>Votu / Membru</th><th>Tempat Submetidu</th></tr></thead>
+							<thead><tr class="th-navy"><th>Suku</th><th>Total Membru</th><th>Total Votu PD</th><th>Votu / Membru</th><th>Komparasaun</th><th>Tempat Submetidu</th></tr></thead>
 							<tbody>
 								{% for r in rows %}
-								<tr><td class="text-left">{{ r.suku }}</td><td>{{ r.membru }}</td><td>{{ r.votos }}</td><td>{{ r.persentajen }}%</td><td>{{ r.submetidu }}/{{ r.tempat }}</td></tr>
-								{% empty %}<tr><td colspan="5" class="text-muted">Laiha suku.</td></tr>{% endfor %}
+								<tr><td class="text-left">{{ r.suku }}</td><td>{{ r.membru }}</td><td>{{ r.votos }}</td><td>{{ r.persentajen }}%</td><td><span class="kb kb-{{ r.kompara.kode }}">{{ r.kompara.label }}</span> <small class="text-muted">({% if r.kompara.diferensa > 0 %}+{% endif %}{{ r.kompara.diferensa }})</small></td><td>{{ r.submetidu }}/{{ r.tempat }}</td></tr>
+								{% empty %}<tr><td colspan="6" class="text-muted">Laiha suku.</td></tr>{% endfor %}
 							</tbody>
-							{% if rows %}<tfoot><tr class="font-weight-bold"><td class="text-left">TOTAL</td><td>{{ totals.membru }}</td><td>{{ totals.votos }}</td><td>{{ totals.persentajen }}%</td><td>{{ totals.submetidu }}/{{ totals.tempat }}</td></tr></tfoot>{% endif %}
+							{% if rows %}<tfoot><tr class="font-weight-bold"><td class="text-left">TOTAL</td><td>{{ totals.membru }}</td><td>{{ totals.votos }}</td><td>{{ totals.persentajen }}%</td><td><span class="kb kb-{{ totals.kompara.kode }}">{{ totals.kompara.label }}</span></td><td>{{ totals.submetidu }}/{{ totals.tempat }}</td></tr></tfoot>{% endif %}
 						</table>
 					</div>
 				</div>

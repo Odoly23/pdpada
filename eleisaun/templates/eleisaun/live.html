@@ -50,7 +50,7 @@
 
 	<section class="live-kpis" id="kpis" hidden>
 		<article class="kpi kpi-main"><span>Total Votu PD</span><strong data-k="votos">0</strong></article>
-		<article class="kpi"><span>Votu kompara ho Membru</span><strong data-k="persentajen" data-dec="1">0</strong><em>%</em><div class="bar"><i id="barPersen"></i></div></article>
+		<article class="kpi"><span>Votu kompara ho Membru</span><strong data-k="persentajen" data-dec="1">0</strong><em>%</em><div class="bar"><i id="barPersen"></i></div><span class="kb kb-hanesan" id="komparaLabel">&mdash;</span></article>
 		<article class="kpi"><span>Tempat Submetidu</span><strong><b data-k="submetidu">0</b><em>/</em><b data-k="tempat">0</b></strong><div class="bar"><i id="barTempat"></i></div></article>
 		<article class="kpi"><span>Total Membru</span><strong data-k="membru">0</strong><small id="eleSub"></small></article>
 	</section>
@@ -172,6 +172,7 @@
 			document.querySelectorAll('[data-k="' + k + '"]').forEach(function (n) { countTo(n, j.kpi[k]); });
 		});
 		$('#barPersen').style.width = Math.min(j.kpi.persentajen, 100) + '%';
+		var kb = $('#komparaLabel'); kb.textContent = j.kpi.kompara.label; kb.className = 'kb kb-' + j.kpi.kompara.kode;
 		$('#barTempat').style.width = (j.kpi.tempat ? j.kpi.submetidu * 100 / j.kpi.tempat : 0) + '%';
 		chart.xAxis[0].setCategories(j.tempat.map(function (t) { return t.tempat; }), false);
 		chart.series[0].setData(j.tempat.map(function (t) { return t.votos; }), true);
