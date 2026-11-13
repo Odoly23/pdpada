@@ -542,3 +542,4 @@ div.dataTables_wrapper div.dataTables_length label { font-weight: 400; color: #6
 	.org-table { font-size: 9pt; }
 	.org-table tr { break-inside: avoid; }
 }
+.badge-primary { background-color: var(--navy); color: #fff; }
