@@ -60,7 +60,7 @@ def UserUpdate(request, pk):
 		form = UserForm(request.POST, instance=obj)
 		if form.is_valid():
 			if obj.pk == request.user.pk and (not form.cleaned_data['is_active'] or form.cleaned_data['group'] != roles.ADMIN):
-				form.add_error(None, 'La bele desativa ka troka peran ba ita nia an rasik.')
+				form.add_error(None, 'La bele desativa ka troka permisaun ba ita nia an rasik.')
 			else:
 				form.save()
 				messages.success(request, 'Uzuáriu atualiza ona.')

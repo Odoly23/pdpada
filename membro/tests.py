@@ -1649,7 +1649,7 @@ class LandingTests(BaseCase):
 	def test_user_without_role_gets_notice(self):
 		User.objects.create_user('tanpa', password='Teste-12345!')
 		self.client.login(username='tanpa', password='Teste-12345!')
-		self.assertContains(self.client.get('/'), 'seidauk iha peran')
+		self.assertContains(self.client.get('/'), 'seidauk iha permisaun')
 
 	def test_landing_is_lightweight(self):
 		self.login('sekrsuku')

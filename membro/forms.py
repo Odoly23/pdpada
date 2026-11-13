@@ -253,7 +253,7 @@ class AlokasaunForm(forms.ModelForm):
 				self.add_error('membro', 'Membru ne\'e la tama organizasaun ne\'e.')
 		cleaned['village'], cleaned['aldeia'], cleaned['organizasaun'] = village, aldeia, org
 		if cleaned.get('data_termina') and cleaned.get('data_hahu') and cleaned['data_termina'] < cleaned['data_hahu']:
-			self.add_error('data_termina', 'Data termina tenke depois data hahu.')
+			self.add_error('data_termina', 'Data termina tenke hafoin data hahu.')
 		if cleaned.get('ativu') == 'Sim' and not self.errors:
 			lain = Alokasaun.objects.filter(membro=membro, ativu='Sim').exclude(pk=self.instance.pk or 0).first()
 			if lain:

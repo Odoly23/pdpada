@@ -8,7 +8,7 @@ from custom.models import Municipality, AdministrativePost, Organizasaun, Year
 
 
 class Command(BaseCommand):
-	help = 'Isi data inisial: peran (group), Dili/Dom Aleixo, OJD/OPD/MPD, tinan ativu no user admin.'
+	help = 'Isi data inisial: permisaun (group), Dili/Dom Aleixo, OJD/OPD/MPD, tinan ativu no user admin.'
 
 	def handle(self, *args, **options):
 		for key, _ in roles.ROLE_LABELS:

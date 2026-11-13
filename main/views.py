@@ -56,7 +56,7 @@ def _tiles(group, counts):
 
 	if group == roles.ADMIN:
 		add('Painel Admin', 'Sumariu uzuáriu no data master', 'fa-tachometer', reverse('user-painel'))
-		add('Uzuáriu', 'Kria no jere konta ho peran no suku', 'fa-users', reverse('user-list'))
+		add('Uzuáriu', 'Kria no jere konta ho permisaun no suku', 'fa-users', reverse('user-list'))
 		add('Suku no Aldeia', 'Rejistu suku Postu Dom Aleixo', 'fa-map-marker', reverse('master-list', args=['suku']))
 		add('Organizasaun', 'OJD, OPD, MPD no seluk', 'fa-flag', reverse('master-list', args=['organizasaun']))
 		add('Tinan Ativu', 'Troka tinan ne\'ebé uza ba relatoriu', 'fa-calendar', reverse('master-list', args=['ano']))
