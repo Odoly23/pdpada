@@ -4,7 +4,7 @@ from django.core.files.uploadedfile import UploadedFile
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Row, Column, HTML
 from config import roles
-from config.file_utils import sanitize_image, validate_image_content, validate_pdf_content, validate_pdf_size
+from config.file_utils import sanitize_image, validate_image_content
 from config.upload_utils import validate_image_size
 from custom.models import Aldeia
 from eleisaun.models import Eleisaun, TempatVoting, FiskaisTempat, Resultado
@@ -72,24 +72,20 @@ class FiskaisForm(forms.ModelForm):
 
 
 class ResultadoForm(forms.ModelForm):
+	"""Fiskais hanya mengisi total votu PD dan foto hasil; tempat otomatis dari penugasan Admin."""
 	class Meta:
 		model = Resultado
-		fields = ['votos_partidu', 'votos_total', 'foto', 'formulariu', 'obs']
-		widgets = {'obs': forms.Textarea(attrs={'rows': 2})}
+		fields = ['votos_partidu', 'foto']
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.fields['foto'].required = True
-		self.fields['formulariu'].required = True
 		# FileInput biasa: tanpa tautan/URL ke file tersimpan (penyimpanan privat)
-		self.fields['foto'].widget = forms.FileInput(attrs={'accept': 'image/jpeg,image/png'})
-		self.fields['formulariu'].widget = forms.FileInput(attrs={'accept': 'application/pdf'})
+		self.fields['foto'].widget = forms.FileInput(attrs={'accept': 'image/jpeg,image/png', 'capture': 'environment'})
 		self.helper = FormHelper()
 		self.helper.form_method = 'post'
 		self.helper.layout = Layout(
-			Row(Column('votos_partidu', css_class='form-group col-md-6 mb-0'), Column('votos_total', css_class='form-group col-md-6 mb-0'), css_class='form-row'),
-			Row(Column('foto', css_class='form-group col-md-6 mb-0'), Column('formulariu', css_class='form-group col-md-6 mb-0'), css_class='form-row'),
-			'obs',
+			Row(Column('votos_partidu', css_class='form-group col-md-6 mb-0'), Column('foto', css_class='form-group col-md-6 mb-0'), css_class='form-row'),
 			HTML('<button class="btn btn-sm btn-primary" type="submit" title="Submete">Submete Rezultadu <i class="fa fa-check"></i></button>'))
 
 	def clean_foto(self):
@@ -100,17 +96,3 @@ class ResultadoForm(forms.ModelForm):
 			validate_image_content(f)
 			return sanitize_image(f)
 		return f
-
-	def clean_formulariu(self):
-		f = self.cleaned_data.get('formulariu')
-		if f and isinstance(f, UploadedFile):
-			validate_pdf_size(f)
-			validate_pdf_content(f)
-		return f
-
-	def clean(self):
-		cleaned = super().clean()
-		partidu, total = cleaned.get('votos_partidu'), cleaned.get('votos_total')
-		if partidu is not None and total is not None and partidu > total:
-			self.add_error('votos_partidu', 'Votu PD la bele boot liu total votu iha tempat.')
-		return cleaned

@@ -6,7 +6,6 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from PIL import Image
-from pypdf import PdfWriter
 from config import roles
 from custom.models import Municipality, AdministrativePost, Village, Aldeia, Year
 from eleisaun.models import Eleisaun, TempatVoting, FiskaisTempat, Resultado
@@ -20,13 +19,6 @@ def jpeg(color=(200, 30, 30)):
 	buf = io.BytesIO()
 	Image.new('RGB', (120, 80), color).save(buf, 'JPEG')
 	return SimpleUploadedFile('foto.jpg', buf.getvalue(), content_type='image/jpeg')
-
-
-def pdf():
-	w, buf = PdfWriter(), io.BytesIO()
-	w.add_blank_page(width=200, height=200)
-	w.write(buf)
-	return SimpleUploadedFile('form.pdf', buf.getvalue(), content_type='application/pdf')
 
 
 @override_settings(PRIVATE_ROOT=TMP)
@@ -70,7 +62,7 @@ class EleisaunBase(TestCase):
 		return Eleisaun.objects.create(naran='Eleisaun Postu', tinan=2026, ativu=ativu)
 
 	def submit(self, **kw):
-		data = {'votos_partidu': 40, 'votos_total': 100, 'foto': jpeg(), 'formulariu': pdf(), 'obs': ''}
+		data = {'votos_partidu': 40, 'foto': jpeg()}
 		data.update(kw)
 		return self.client.post(reverse('eleisaun-input'), data)
 
@@ -119,7 +111,7 @@ class FiskaisInputTests(EleisaunBase):
 		page = self.client.get(reverse('eleisaun-input'))
 		self.assertFalse(page.context['locked'])
 		self.assertEqual(page.context['form'].instance.votos_partidu, 40)  # data lama tetap ada
-		self.client.post(reverse('eleisaun-input'), {'votos_partidu': 55, 'votos_total': 100, 'obs': ''})  # file lama tidak perlu diunggah ulang
+		self.client.post(reverse('eleisaun-input'), {'votos_partidu': 55})  # foto lama tidak perlu diunggah ulang
 		r.refresh_from_db()
 		self.assertEqual((r.votos_partidu, r.submetidu), (55, True))
 		self.assertTrue(Historia.objects.filter(aksaun='Loke Resultado').exists())
@@ -137,23 +129,25 @@ class FiskaisInputTests(EleisaunBase):
 		self.login('fiskais1')
 		self.assertContains(self.client.get(reverse('eleisaun-input')), 'seidauk hetan tempat')
 
-	def test_files_are_validated_and_both_required(self):
+	def test_form_has_only_votes_and_photo_and_tempat_is_automatic(self):
 		self.live()
 		self.login('fiskais1')
-		bad_pdf = SimpleUploadedFile('x.pdf', b'bukan pdf', content_type='application/pdf')
-		resp = self.submit(formulariu=bad_pdf)
-		self.assertEqual(resp.status_code, 200)
-		self.assertEqual(Resultado.objects.count(), 0)
+		page = self.client.get(reverse('eleisaun-input'))
+		self.assertEqual(list(page.context['form'].fields), ['votos_partidu', 'foto'])
+		self.assertContains(page, 'ESKOLA A')  # tempat dari penugasan Admin
+		self.assertNotContains(page, 'name="tempat"')
+		self.submit(tempat=self.t2.pk)  # tempat tidak bisa dipilih sendiri
+		self.assertEqual(Resultado.objects.get().tempat, self.t1)
+
+	def test_photo_is_validated_and_both_fields_required(self):
+		self.live()
+		self.login('fiskais1')
 		bad_img = SimpleUploadedFile('x.jpg', b'bukan gambar', content_type='image/jpeg')
 		self.assertEqual(self.submit(foto=bad_img).status_code, 200)
-		self.assertEqual(self.client.post(reverse('eleisaun-input'), {'votos_partidu': 5}).status_code, 200)
-		self.assertEqual(Resultado.objects.count(), 0)
-
-	def test_party_votes_cannot_exceed_total_votes(self):
-		self.live()
-		self.login('fiskais1')
-		resp = self.submit(votos_partidu=200, votos_total=100)
-		self.assertContains(resp, 'la bele boot liu')
+		pdf_as_photo = SimpleUploadedFile('x.pdf', b'%PDF-1.4 palsu', content_type='application/pdf')
+		self.assertEqual(self.submit(foto=pdf_as_photo).status_code, 200)
+		self.assertEqual(self.client.post(reverse('eleisaun-input'), {'votos_partidu': 5}).status_code, 200)  # tanpa foto
+		self.assertEqual(self.client.post(reverse('eleisaun-input'), {'foto': jpeg()}).status_code, 200)  # tanpa votu
 		self.assertEqual(Resultado.objects.count(), 0)
 
 	def test_uploaded_photo_is_reencoded_and_stored_privately(self):
@@ -162,7 +156,6 @@ class FiskaisInputTests(EleisaunBase):
 		self.submit()
 		r = Resultado.objects.get()
 		self.assertRegex(r.foto.name, r'^resultado/[0-9a-f]{64}\.jpg$')
-		self.assertRegex(r.formulariu.name, r'^resultado/[0-9a-f]{64}\.pdf$')
 		with self.assertRaises(ValueError):
 			r.foto.url  # tanpa URL publik
 
@@ -176,9 +169,9 @@ class FiskaisInputTests(EleisaunBase):
 			resp = self.client.get(reverse('eleisaun-file', args=[r.pk, 'foto']))
 			self.assertEqual(resp.status_code, code, u)
 		self.login('presidente')
-		resp = self.client.get(reverse('eleisaun-file', args=[r.pk, 'formulariu']))
-		self.assertEqual((resp['Content-Type'], resp['Cache-Control']), ('application/pdf', 'private, no-store'))
-		self.assertEqual(self.client.get(reverse('eleisaun-file', args=[r.pk, 'lain'])).status_code, 404)
+		resp = self.client.get(reverse('eleisaun-file', args=[r.pk, 'foto']))
+		self.assertEqual((resp['Content-Type'], resp['Cache-Control']), ('image/jpeg', 'private, no-store'))
+		self.assertEqual(self.client.get(reverse('eleisaun-file', args=[r.pk, 'formulariu'])).status_code, 404)  # PDF tidak ada lagi
 
 
 class LiveDashboardTests(EleisaunBase):

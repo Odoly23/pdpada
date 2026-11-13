@@ -28,6 +28,3 @@ def validate_image_size(image):
 def upload_resultado_foto(instance, filename):
 	return _secure_name('resultado', 'jpg')  # foto hasil selalu dikonversi ke JPEG
 
-
-def upload_resultado_pdf(instance, filename):
-	return _secure_name('resultado', 'pdf')

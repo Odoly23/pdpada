@@ -1,8 +1,8 @@
 from django.contrib.auth.models import User
 from django.db import models
-from config.file_utils import validate_image_content, validate_pdf_content, validate_pdf_size
+from config.file_utils import validate_image_content
 from config.storage import private_storage
-from config.upload_utils import upload_resultado_foto, upload_resultado_pdf, validate_image_size
+from config.upload_utils import upload_resultado_foto, validate_image_size
 from custom.models import Village, Aldeia
 
 
@@ -56,12 +56,7 @@ class Resultado(models.Model):
 	eleisaun = models.ForeignKey(Eleisaun, on_delete=models.PROTECT, related_name='resultados', verbose_name="Eleisaun")
 	tempat = models.ForeignKey(TempatVoting, on_delete=models.PROTECT, related_name='resultados', verbose_name="Tempat")
 	votos_partidu = models.PositiveIntegerField(verbose_name="Total Votu PD")
-	votos_total = models.PositiveIntegerField(null=True, blank=True, verbose_name="Total Votu iha Tempat (opsional)")
-	foto = models.ImageField(upload_to=upload_resultado_foto, storage=private_storage, null=True, blank=True,
-		verbose_name="Foto Rezultadu", validators=[validate_image_size, validate_image_content])
-	formulariu = models.FileField(upload_to=upload_resultado_pdf, storage=private_storage, null=True, blank=True,
-		verbose_name="Formulariu Rezultadu (PDF)", validators=[validate_pdf_size, validate_pdf_content])
-	obs = models.TextField(blank=True, verbose_name="Observasaun")
+	foto = models.ImageField(upload_to=upload_resultado_foto, storage=private_storage, verbose_name="Foto Rezultadu", validators=[validate_image_size, validate_image_content])
 	submetidu = models.BooleanField(default=False, db_index=True, verbose_name="Submetidu (terkunci)")
 	submetidu_em = models.DateTimeField(null=True, blank=True)
 	submetidu_husi = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')

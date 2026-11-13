@@ -84,16 +84,13 @@ def ResultadoInput(request):
 @login_required
 @allowed_users(allowed_roles=roles.FISKAIS_ROLES + roles.POSTU_ROLES)
 def ResultadoFile(request, pk, kind):
-	"""Foto/PDF hasil dari penyimpanan privat: Postu, atau fiskais yang men-submit sendiri."""
+	"""Foto hasil dari penyimpanan privat: Postu, atau fiskais yang men-submit sendiri."""
 	res = get_object_or_404(Resultado.objects.select_related('tempat'), pk=pk)
 	if c_user_group(request.user) == roles.FISKAIS and res.submetidu_husi_id != request.user.pk:
 		raise Http404
-	if kind == 'foto':
-		field, ctype, name = res.foto, 'image/jpeg', 'foto-rezultadu.jpg'
-	elif kind == 'formulariu':
-		field, ctype, name = res.formulariu, 'application/pdf', 'formulariu-rezultadu.pdf'
-	else:
+	if kind != 'foto':
 		raise Http404
+	field, ctype, name = res.foto, 'image/jpeg', 'foto-rezultadu.jpg'
 	if not field:
 		raise Http404
 	try:
