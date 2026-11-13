@@ -549,3 +549,13 @@ div.dataTables_wrapper div.dataTables_length label { font-weight: 400; color: #6
 .kb-menus { background: #fff; color: var(--navy); border: 2px solid var(--navy); }
 .kb-liu { background: var(--red); color: #fff; border: 2px solid var(--red); }
 .kb-hanesan { background: var(--navy); color: #fff; border: 2px solid var(--navy); }
+
+/* Lista Delegadu semua suku: judul per suku, tiap suku mulai halaman baru saat dicetak */
+.doc-suku { font-size: 1.15rem; font-weight: 700; color: var(--navy); margin: 1.25rem 0 .5rem; padding-bottom: .25rem; border-bottom: 2px solid var(--red); }
+.doc-suku small { font-weight: 400; color: #6c757d; }
+@media print {
+	.doc-section { break-before: page; }
+	.doc-section:first-of-type { break-before: auto; }
+	.doc-suku { color: #000; border-bottom: 1px solid #000; font-size: 12pt; }
+	.doc-suku small { color: #000; }
+}

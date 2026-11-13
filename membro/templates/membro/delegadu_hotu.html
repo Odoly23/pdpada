@@ -1,0 +1,42 @@
+{% extends "main/layout.html" %}
+{% load static %}
+{% block content %}
+	<ol class="breadcrumb mb-2 mt-1">
+		<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+		<li class="breadcrumb-item"><a href="{% url 'membro-delegadu-index' %}">LISTA DELEGADU</a></li>
+		<li class="breadcrumb-item active" aria-current="page">SUKU HOTU</li>
+	</ol>
+	<div class="no-print mb-2">
+		<a class="btn btn-sm btn-info" href="{% url 'membro-delegadu-hotu-pdf' %}" target="_blank" rel="noopener">Download PDF <i class="fa fa-file-pdf-o"></i></a>
+		<button type="button" class="btn btn-sm btn-secondary" onclick="window.print()">Imprime <i class="fa fa-print"></i></button>
+		<a class="btn btn-sm btn-secondary" href="{% url 'membro-delegadu-index' %}">Hili Suku <i class="fa fa-arrow-left"></i></a>
+	</div>
+	<div class="card suku-sheet">
+		<div class="card-body">
+			<div class="doc-letterhead">
+				<img src="{% static 'main/images/bandeira_pd.png' %}" alt="Bendera Partido Democratico" width="150" height="85">
+				<div>
+					<div class="lh-name">{{ letterhead.nama }}</div>
+					<div>Postu {{ letterhead.postu }}, Dili-Timor Leste</div>
+					<div>Rua : {{ letterhead.alamat }}</div>
+					<div>Mobile : {{ letterhead.kontaktu }}</div>
+				</div>
+			</div>
+			<hr class="doc-rule">
+			<p class="doc-title">{{ doc_title }}<br>{{ doc_subtitle }}</p>
+			<div class="row text-center no-print mb-3">
+				<div class="col-4"><span class="stat-label">Suku</span><span class="stat-number d-block">{{ totais.suku }}</span></div>
+				<div class="col-4"><span class="stat-label">Aldeia</span><span class="stat-number d-block">{{ totais.aldeia }}</span></div>
+				<div class="col-4"><span class="stat-label">Delegadu</span><span class="stat-number d-block">{{ totais.delegadu }}</span></div>
+			</div>
+			{% for d in datas %}
+			<section class="doc-section">
+				<h3 class="doc-suku">SUKU {{ d.village.name|upper }} <small>&middot; {{ d.n_aldeia }} aldeia &middot; {{ d.n_delegadu }} delegadu</small></h3>
+				{% include 'membro/_delegadu_table.html' with data=d %}
+			</section>
+			{% empty %}
+			<p class="text-muted text-center">Seidauk iha suku.</p>
+			{% endfor %}
+		</div>
+	</div>
+{% endblock %}

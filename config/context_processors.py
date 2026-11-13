@@ -46,6 +46,8 @@ def _menu(request, group):
 			items.append(_dropdown('Relatoriu', 'fa-list', [
 				_item(request, 'Tabular', 'fa-table', 'report-dash'),
 				_item(request, 'Grafiku', 'fa-bar-chart', 'report-chart')]))
+			items.append(_item(request, 'Lista Delegadu', 'fa-address-book', 'membro-delegadu-index',
+				names=('membro-delegadu-index', 'membro-delegadu', 'membro-delegadu-hotu')))
 			return items
 		membru = [
 			_item(request, 'Sumariu Membru', 'fa-th-large', 'membro-sumariu'),
@@ -54,7 +56,7 @@ def _menu(request, group):
 		]
 		if group in roles.DELEGADU_ROLES:
 			membru.append(_item(request, 'Lista Delegadu', 'fa-address-book', 'membro-delegadu-index',
-				names=('membro-delegadu-index', 'membro-delegadu')))
+				names=('membro-delegadu-index', 'membro-delegadu', 'membro-delegadu-hotu')))
 		if group in roles.INPUT_ROLES:
 			membru.append(_item(request, 'Aumenta Membru', 'fa-user-plus', 'membro-add'))
 		if group in roles.APROVA_ROLES:

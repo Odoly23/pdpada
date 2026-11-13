@@ -29,7 +29,7 @@ Deploy ke PythonAnywhere: lihat [`docs/DEPLOY_PYTHONANYWHERE.md`](docs/DEPLOY_PY
 ## Fitur utama
 
 - **Varanda** (beranda): hero dengan bendera utuh, pencarian cepat, dan kartu pintasan sesuai peran. **Painel** (`/membro/painel/`): banner peran, tabel matriks bertaut, dan grafik.
-- **Lista Delegadu** (menu Membru): daftar pemimpin suku dan delegadu tiap aldeia (Koord/Sekretario + sayap organisasi seperti Koord OJD Aldeia) dengan Nu. Kartaun Eleitoral dan Nu. HP, tampil seperti dokumen resmi, bisa dicetak dan diunduh sebagai PDF (`reportlab`). Kop surat dapat diubah lewat environment `PD_NAMA_SEKRETARIADO`, `PD_POSTU`, `PD_ALAMAT`, `PD_KONTAKTU`. Akses: Presidente, Coordenador Postu, dan peran suku (hanya sukunya).
+- **Lista Delegadu** (menu Membru): daftar pemimpin suku dan delegadu tiap aldeia (Koord/Sekretario + sayap organisasi seperti Koord OJD Aldeia) dengan Nu. Kartaun Eleitoral dan Nu. HP, tampil seperti dokumen resmi, bisa dicetak dan diunduh sebagai PDF (`reportlab`). Kop surat dapat diubah lewat environment `PD_NAMA_SEKRETARIADO`, `PD_POSTU`, `PD_ALAMAT`, `PD_KONTAKTU`. Akses: peran Postu (Presidente, Coordenador, Sekretariu Postu) melihat dan mencetak **delegadu semua suku sekaligus** (*Suku Hotu*, satu suku per halaman, juga PDF) atau per suku; peran suku hanya sukunya.
 - **Eleisaun (votu partidu) dan Live Dashboard**: Admin mengisi eleisaun (per periode), tempat votasaun, dan menugaskan akun berperan **Fiskais Partidu** ke satu tempat; Admin juga yang membuka/menutup dashboard live dan membuka kunci hasil. Tempat votasi otomatis dari penugasan Admin; fiskais hanya menginput **total votu PD + foto hasil** (isi foto diperiksa) **satu kali**; setelah submit formulir terkunci sampai Admin menekan *Loke Fali*. Peran data partai melihat **Live Dashboard** layar penuh (jam dinding bulat animatif, layar tetap menyala lewat Wake Lock, data diperbarui tiap 10 detik, tanpa data pribadi) dan Postu melihat **Komparasaun Membru no Votu** per suku. Menu: Eleisaun (peran data), Input Rezultadu (fiskais), Eleisaun no Tempat (Admin).
 - **Pesquiza**: cari membru berdasarkan nama, Nu. Eleitoral, atau telepon, dengan saran otomatis; hanya dalam wilayah user.
 - **Ekspor CSV penuh** (peran Postu): sesuai filter dan wilayah, aman dari formula injection, tercatat di Historia.
@@ -59,7 +59,7 @@ Deploy ke PythonAnywhere: lihat [`docs/DEPLOY_PYTHONANYWHERE.md`](docs/DEPLOY_PY
 |---|---|---|---|---|
 | `presidente` | semua | – | ya | aloka pozisaun, hamoos membru, lihat historia |
 | `koord_postu` | semua | – | ya | hamoos membru, lihat historia |
-| `sekr_postu` | hanya rekapitulasi dan grafik (Varanda, Painel, Relatoriu); tanpa lista/detalhe/pesquiza/struktura/historia/ekspor | – | – | – |
+| `sekr_postu` | rekapitulasi, grafik, dan Lista Delegadu (per suku atau semua suku, cetak/PDF); tanpa lista/detalhe/pesquiza/struktura/historia/ekspor membru | – | – | – |
 | `koord_suku` / `sekr_suku` | sukunya | sekr_suku | – | – |
 | `koord_aldeia` / `sekr_aldeia` | aldeianya | sekr_aldeia | – | – |
 | `koord_org` | anggota organisasinya | – | – | – |

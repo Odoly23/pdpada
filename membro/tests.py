@@ -2507,8 +2507,8 @@ class DelegaduTests(BaseCase):
 		self.assertGreaterEqual(len(PdfReader(io.BytesIO(resp.content)).pages), 2)
 
 	def test_access_by_role(self):
-		for u, code in [('presidente', 200), ('koordpostu', 200), ('koordsuku', 200), ('sekrsuku', 200),
-				('sekrpostu', 403), ('sekraldeia', 403), ('koordorg', 403), ('sekrorg', 403), ('admin', 403)]:
+		for u, code in [('presidente', 200), ('koordpostu', 200), ('sekrpostu', 200), ('koordsuku', 200), ('sekrsuku', 200),
+				('sekraldeia', 403), ('koordorg', 403), ('sekrorg', 403), ('admin', 403)]:
 			self.login(u)
 			self.assertEqual(self.client.get(reverse('membro-delegadu', args=[self.va.pk])).status_code, code, u)
 			self.assertEqual(self.client.get(reverse('membro-delegadu-pdf', args=[self.va.pk])).status_code, code, u)
@@ -2660,4 +2660,68 @@ class OrganigramaTests(BaseCase):
 		page = self.client.get(reverse('organigrama'))
 		self.assertContains(page, 'Seksaun Seguransa')
 		self.assertContains(page, 'Tarefa (2)')
+
+
+class DelegaduHotuTests(DelegaduTests):
+	"""Postu melihat dan mencetak delegadu semua suku sekaligus, atau per suku."""
+	def setUp(self):
+		super().setUp()
+		d = datetime.date(2026, 1, 1)
+		m = self.make('DH0001', self.vb, self.b1, nome='Koord Suku B', aprovasaun='Aprovadu', telefone='77000111')
+		Alokasaun.objects.create(membro=m, nivel='Aldeia', pozisaun='Coordenador', aldeia=self.b1, village=self.vb, data_hahu=d)
+
+	def test_postu_roles_including_sekretariu_see_all_suku_in_one_page(self):
+		for u in ('presidente', 'koordpostu', 'sekrpostu'):
+			self.login(u)
+			resp = self.client.get(reverse('membro-delegadu-hotu'))
+			self.assertEqual(resp.status_code, 200, u)
+			self.assertEqual([d['village'].name for d in resp.context['datas']], ['Suku A', 'Suku B'], u)
+			self.assertEqual(resp.context['totais'], {'suku': 2, 'aldeia': 3, 'delegadu': 7}, u)
+			for needle in ('SUKU SUKU A', 'SUKU SUKU B', 'Yakobus Koord', 'Koord Suku B', 'DG0001', 'DH0001',
+					'LISTA DELEGADO/A IHA SUKU 2 NO ALDEIA 3, TUIR KONFERÉNSIA', 'Download PDF', 'Imprime', 'window.print()', 'doc-section'):
+				self.assertContains(resp, needle, msg_prefix=u)
+		self.assertNotContains(resp, 'https://')
+
+	def test_only_postu_roles_open_all_suku(self):
+		for u in ('koordsuku', 'sekrsuku', 'sekraldeia', 'koordorg', 'sekrorg', 'admin', 'fiskais1'):
+			if u not in self.users:
+				continue
+			self.login(u)
+			self.assertEqual(self.client.get(reverse('membro-delegadu-hotu')).status_code, 403, u)
+			self.assertEqual(self.client.get(reverse('membro-delegadu-hotu-pdf')).status_code, 403, u)
+		self.client.logout()
+		self.assertEqual(self.client.get(reverse('membro-delegadu-hotu')).status_code, 302)
+
+	def test_all_suku_pdf_has_every_suku_and_is_audited(self):
+		from pypdf import PdfReader
+		for u in ('presidente', 'sekrpostu'):
+			self.login(u)
+			resp = self.client.get(reverse('membro-delegadu-hotu-pdf'))
+			self.assertEqual((resp.status_code, resp['Content-Type'], resp['Cache-Control']), (200, 'application/pdf', 'private, no-store'), u)
+			pages = PdfReader(io.BytesIO(resp.content)).pages
+			text = ''.join(pg.extract_text() for pg in pages)
+			for needle in ('LISTA DELEGADO/A IHA SUKU 2', 'SUKU SUKU A', 'SUKU SUKU B', 'Yakobus Koord', 'Koord Suku B'):
+				self.assertIn(needle, text, u)
+			self.assertGreaterEqual(len(pages), 2)  # tiap suku mulai halaman baru
+		self.assertTrue(Historia.objects.filter(aksaun='Ekspor', detalhe__contains='Suku Hotu').exists())
+
+	def test_per_suku_view_and_pdf_still_work_for_postu_with_hotu_button(self):
+		self.login('sekrpostu')
+		resp = self.client.get(reverse('membro-delegadu', args=[self.va.pk]))
+		self.assertEqual(resp.status_code, 200)
+		self.assertContains(resp, reverse('membro-delegadu-hotu'))
+		self.assertEqual(self.client.get(reverse('membro-delegadu-pdf', args=[self.va.pk])).status_code, 200)
+		self.login('koordsuku')
+		self.assertNotContains(self.client.get(reverse('membro-delegadu', args=[self.va.pk])), reverse('membro-delegadu-hotu'))
+
+	def test_index_offers_all_suku_only_to_postu_and_menu_for_sekretariu(self):
+		self.login('sekrpostu')
+		resp = self.client.get(reverse('membro-delegadu-index'))
+		self.assertEqual(resp.status_code, 200)
+		self.assertContains(resp, reverse('membro-delegadu-hotu'))
+		self.assertContains(resp, reverse('membro-delegadu', args=[self.vb.pk]))
+		self.assertIn(reverse('membro-delegadu-index'), self.client.get(reverse('home')).content.decode())  # menu Sekretariu Postu
+		self.assertEqual(self.client.get(reverse('membro-list')).status_code, 403)  # data membru lain tetap tertutup
+		self.login('koordsuku')
+		self.assertRedirects(self.client.get(reverse('membro-delegadu-index')), reverse('membro-delegadu', args=[self.va.pk]))
 
