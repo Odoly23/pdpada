@@ -44,6 +44,7 @@ class Membro(HashedModel):
 	data_hakbit = models.DateField(null=True, blank=True, verbose_name="Data Hakbit (Tama PD)")
 	status = models.CharField(choices=STATUS, max_length=10, default='Ativu', verbose_name="Status")
 	aprovasaun = models.CharField(choices=APROVASAUN, max_length=10, default='Pendente', verbose_name="Aprovasaun")
+	is_colocado = models.BooleanField(default=False, db_index=True, verbose_name="Iha Pozisaun")  # TRUE = iha pozisaun ativu; la hatudu iha form aloka
 	razaun_rejeita = models.TextField(null=True, blank=True, verbose_name="Razaun Rejeita")
 	aprovadu_husi = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
 	data_aprovasaun = models.DateTimeField(null=True, blank=True)
@@ -104,8 +105,21 @@ class Alokasaun(models.Model):
 			models.CheckConstraint(condition=models.Q(ativu__in=['Sim', 'Lae']), name='aloka_ativu_valid'),
 		]
 
+	def save(self, *args, **kwargs):
+		old = Alokasaun.objects.filter(pk=self.pk).values_list('membro_id', flat=True).first() if self.pk else None
+		super().save(*args, **kwargs)
+		sync_colocado(self.membro_id)
+		if old and old != self.membro_id:  # alokasaun dipindah ke membru lain
+			sync_colocado(old)
+
+	def delete(self, *args, **kwargs):
+		membro_id = self.membro_id
+		result = super().delete(*args, **kwargs)
+		sync_colocado(membro_id)
+		return result
+
 	def unit(self):
-		return self.village or self.aldeia or self.organizasaun
+		return self.aldeia or self.village or self.organizasaun
 
 	def __str__(self):
 		template = '{0.membro} - {0.pozisaun} {0.nivel}'
@@ -135,3 +149,46 @@ class Historia(models.Model):
 	def __str__(self):
 		template = '{0.datetime:%Y-%m-%d %H:%M} {0.aksaun} {0.membro_nome}'
 		return template.format(self)
+
+
+def sync_colocado(membro_id):
+	"""is_colocado = TRUE selama membru punya pozisaun ativu; FALSE setelah termina atau dihapus (data lama tetap tersimpan)."""
+	if membro_id:
+		Membro.objects.filter(pk=membro_id).update(is_colocado=Alokasaun.objects.filter(membro_id=membro_id, ativu='Sim').exists())
+
+
+class OrgPozisaun(models.Model):
+	"""Posisi pada organigrama komisaun (misalnya Tezoreira, Seksaun Logistiku) beserta deskrisaun tarefas."""
+	naran = models.CharField(max_length=150, verbose_name="Pozisaun")
+	parent = models.ForeignKey('self', on_delete=models.PROTECT, null=True, blank=True, related_name='sub', verbose_name="Iha okos husi")
+	urutan = models.PositiveSmallIntegerField(default=0, db_index=True, verbose_name="Nu. Urut")
+	deskrisaun = models.TextField(blank=True, verbose_name="Deskrisaun Tarefas")  # satu baris = satu tarefa
+	obs = models.TextField(blank=True, verbose_name="Observasaun")
+	ativu = models.BooleanField(default=True, verbose_name="Ativu")
+
+	class Meta:
+		ordering = ['urutan', 'id']
+		verbose_name = 'Pozisaun Organigrama'
+
+	def tarefas(self):
+		return [t.strip() for t in self.deskrisaun.splitlines() if t.strip()]
+
+	def __str__(self):
+		return self.naran
+
+
+class OrgResponsavel(models.Model):
+	"""Orang yang bertanggung jawab pada satu posisi organigrama; urutan 1 = koordinator (dicetak tebal)."""
+	pozisaun = models.ForeignKey(OrgPozisaun, on_delete=models.CASCADE, related_name='responsavel')
+	membro = models.ForeignKey(Membro, on_delete=models.SET_NULL, null=True, blank=True, related_name='+', verbose_name="Membru")
+	naran = models.CharField(max_length=150, verbose_name="Naran")  # salinan nama; juga untuk yang bukan membru terdaftar
+	kargu = models.CharField(max_length=80, blank=True, verbose_name="Kargu")  # contoh: Vice-Pres-1, Vice-Coord.
+	urutan = models.PositiveSmallIntegerField(default=1, verbose_name="Nu. Urut")
+
+	class Meta:
+		ordering = ['urutan', 'id']
+		verbose_name = 'Responsavel Organigrama'
+
+	def __str__(self):
+		return f'{self.naran} - {self.pozisaun}'
+

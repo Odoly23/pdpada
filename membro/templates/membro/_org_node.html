@@ -1,0 +1,23 @@
+<li class="org-item">
+	<div class="org-card{% if depth == 0 %} org-root{% endif %}">
+		<div class="org-head"><span class="org-no">{{ node.pos.urutan }}</span> {{ node.pos.naran }}</div>
+		<div class="org-body">
+			{% if node.resp %}
+			<ol class="org-people">
+				{% for r in node.resp %}
+				<li{% if forloop.first %} class="org-lead"{% endif %}>{% if r.membro_id %}<a href="{% url 'membro-detail' r.membro.hashed %}">{{ r.naran }}</a>{% else %}{{ r.naran }}{% endif %}{% if r.kargu %} <small class="text-muted">· {{ r.kargu }}</small>{% endif %}</li>
+				{% endfor %}
+			</ol>
+			{% else %}<div class="text-muted small">Seidauk iha responsavel</div>{% endif %}
+			{% if node.tarefas %}<details class="org-tasks"><summary>Tarefa ({{ node.tarefas|length }})</summary>
+				<ol>{% for t in node.tarefas %}<li>{{ t }}</li>{% endfor %}</ol>
+				{% if node.pos.obs %}<div class="org-obs">{{ node.pos.obs }}</div>{% endif %}
+			</details>{% endif %}
+		</div>
+	</div>
+	{% if node.children %}
+	<ul class="org-children">
+		{% for child in node.children %}{% include "membro/_org_node.html" with node=child depth=1 %}{% endfor %}
+	</ul>
+	{% endif %}
+</li>

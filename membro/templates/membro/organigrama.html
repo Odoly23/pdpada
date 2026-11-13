@@ -1,0 +1,86 @@
+{% extends "main/layout.html" %}
+{% block content %}
+	<ol class="breadcrumb mb-2 mt-1">
+		<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+		<li class="breadcrumb-item"><a href="{% url 'alokasaun-dash' %}">STRUKTURA PD</a></li>
+		<li class="breadcrumb-item active" aria-current="page">ORGANIGRAMA</li>
+	</ol>
+	<div class="row">
+		<div class="col-sm-12 mb-2">
+			<div class="card">
+				<div class="card-header bg-primary text-white text-center">PARTIDO DEMOCRÁTICO <br/> POSTU ADMINISTRATIVU DOM ALEIXO (PD-PADA)</div>
+			</div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-sm-12">
+			<div class="card shadow-lg pt-0 rounded">
+				<div class="card-header no-print">
+					{% if can_manage %}<a class="btn btn-sm btn-primary mb-2" href="{% url 'org-pozisaun-add' %}">Aumenta Pozisaun <i class="fa fa-plus"></i></a>{% endif %}
+					<a class="btn btn-sm btn-secondary mb-2" href="{% url 'alokasaun-dash' %}">Struktura PD <i class="fa fa-sitemap"></i></a>
+					<button type="button" class="btn btn-sm btn-info mb-2" onclick="window.print()">Imprime <i class="fa fa-print"></i></button>
+					<a class="btn btn-sm btn-secondary mb-2" href="#tabela">Tabela Tarefa <i class="fa fa-table"></i></a>
+				</div>
+				<div class="card">
+					<div class="card-header text-center">Organigrama Komisaun</div>
+				</div>
+				<div class="card-body">
+					<div class="row text-center org-stats no-print mb-4">
+						<div class="col-4"><span class="stat-label">Pozisaun</span><span class="stat-number d-block">{{ n_pozisaun }}</span></div>
+						<div class="col-4"><span class="stat-label">Responsavel</span><span class="stat-number d-block">{{ n_responsavel }}</span></div>
+						<div class="col-4"><span class="stat-label">Seidauk Iha Responsavel</span><span class="stat-number d-block">{{ n_kosong }}</span></div>
+					</div>
+					<div class="org-scroll">
+						<ul class="org-tree">
+							{% for node in roots %}{% include "membro/_org_node.html" with node=node depth=0 %}
+							{% empty %}<li class="text-center text-muted">Seidauk iha pozisaun.</li>{% endfor %}
+						</ul>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="col-sm-12 mt-3" id="tabela">
+			<div class="card">
+				<div class="card-header">Pozisaun, Responsavel no Deskrisaun Tarefas</div>
+				<div class="card-body">
+					<div class="table-responsive">
+						<table class="table table-sm table-bordered org-table">
+							<thead><tr class="th-navy"><th>No.</th><th>Pozisaun</th><th>Responsavel</th><th>Deskrisaun Tarefas</th><th>Obs.</th>{% if can_manage %}<th class="no-print">#</th>{% endif %}</tr></thead>
+							<tbody>
+								{% for n in flat %}
+								<tr>
+									<td class="text-center">{{ n.pos.urutan }}</td>
+									<td>{{ n.pos.naran }}</td>
+									<td>
+										<ol class="org-people mb-0">
+											{% for r in n.resp %}
+											<li{% if forloop.first %} class="org-lead"{% endif %}>{{ r.naran }}{% if r.kargu %} <small class="text-muted">· {{ r.kargu }}</small>{% endif %}
+												{% if can_manage %}<span class="no-print">
+													<a href="{% url 'org-responsavel-update' r.pk %}" title="Edita"><i class="fa fa-edit"></i></a>
+													<form class="d-inline" method="post" action="{% url 'org-responsavel-del' r.pk %}" data-confirm="Ita boot hakarak hamoos responsavel ne'e husi pozisaun? Aksaun ida ne'e la bele fila fali." data-confirm-ok="Hamoos">{% csrf_token %}<button class="btn btn-link btn-sm p-0 text-danger" type="submit" title="Hamoos"><i class="fa fa-times"></i></button></form>
+												</span>{% endif %}
+											</li>
+											{% empty %}<span class="text-muted">–</span>{% endfor %}
+										</ol>
+									</td>
+									<td>{% if n.tarefas %}<ol class="mb-0 pl-3">{% for t in n.tarefas %}<li>{{ t }}</li>{% endfor %}</ol>{% endif %}</td>
+									<td class="small">{{ n.pos.obs }}</td>
+									{% if can_manage %}
+									<td class="no-print text-nowrap">
+										<a class="btn btn-sm btn-primary" href="{% url 'org-responsavel-add' n.pos.pk %}" title="Aumenta responsavel"><i class="fa fa-user-plus"></i></a>
+										<a class="btn btn-sm btn-success" href="{% url 'org-pozisaun-update' n.pos.pk %}" title="Edita pozisaun"><i class="fa fa-edit"></i></a>
+										<form class="d-inline" method="post" action="{% url 'org-pozisaun-del' n.pos.pk %}" data-confirm="Ita boot hakarak hamoos pozisaun ne'e no nia responsavel sira? Aksaun ida ne'e la bele fila fali." data-confirm-ok="Hamoos">{% csrf_token %}
+											<button class="btn btn-sm btn-danger" type="submit" title="Hamoos"><i class="fa fa-times"></i></button>
+										</form>
+									</td>
+									{% endif %}
+								</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock %}

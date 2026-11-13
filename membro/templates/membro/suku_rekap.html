@@ -6,6 +6,7 @@
 	</ol>
 	<div class="no-print mb-2">
 		<button type="button" class="btn btn-sm btn-info" onclick="window.print()">Imprime <i class="fa fa-print"></i></button>
+		{% if can_delegadu %}<a class="btn btn-sm btn-info" href="{% url 'membro-delegadu' village.pk %}">Lista Delegadu <i class="fa fa-address-book"></i></a>{% endif %}
 		<a class="btn btn-sm btn-secondary" href="{% url 'home' %}">Fila ba Varanda <i class="fa fa-arrow-left"></i></a>
 	</div>
 	<div class="card suku-sheet">

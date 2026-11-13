@@ -181,3 +181,9 @@ LOGGING = {
 		'pdpada': {'handlers': list(_log_handlers), 'level': 'INFO', 'propagate': False},
 	},
 }
+
+# Kop surat dokumen resmi (PDF Lista Delegadu); bisa diubah lewat environment
+PD_NAMA_SEKRETARIADO = os.environ.get('PD_NAMA_SEKRETARIADO', 'SEKRETARIADO PARTIDO DEMOCRÁTICO')
+PD_POSTU = os.environ.get('PD_POSTU', 'Dom-Aleixo')
+PD_ALAMAT = os.environ.get('PD_ALAMAT', 'Perumnas Bairo Ailok Laran')
+PD_KONTAKTU = os.environ.get('PD_KONTAKTU', '+670 77279439 / +670 77332283')

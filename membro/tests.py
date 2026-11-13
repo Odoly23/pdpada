@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.urls import reverse
 from config import roles
 from custom.models import Municipality, AdministrativePost, Village, Aldeia, Organizasaun, Year
-from membro.models import Membro, Alokasaun, Historia
+from membro.models import Membro, Alokasaun, Historia, OrgPozisaun, OrgResponsavel
 from users.models import UserScope
 
 
@@ -596,7 +596,7 @@ class StrukturaDashTests(BaseCase):
 		self.login('presidente')
 		resp = self.client.get(reverse('alokasaun-dash'))
 		struktura = [i for i in resp.context['nav_items'] if i['label'] == 'Struktura'][0]
-		self.assertEqual(struktura['url'], reverse('alokasaun-dash'))
+		self.assertEqual([c['url'] for c in struktura['children']], [reverse('alokasaun-dash'), reverse('organigrama')])  # dropdown: Struktura PD dan Organigrama
 		self.assertTrue(struktura['active'])
 
 	def test_alokasaun_api_scoped(self):
@@ -2338,4 +2338,326 @@ class NoYellowTests(BaseCase):
 		for p in pathlib.Path(settings.BASE_DIR).glob('*/templates/**/*.html'):
 			for tag in re.findall(r'<table[^>]*>', p.read_text()):
 				self.assertIn('table-sm', tag, f'{p}: {tag}')
+
+
+class AlokasaunColocadoTests(BaseCase):
+	"""is_colocado: membru yang sudah punya pozisaun ativu tidak muncul di form; setelah termina bisa dialokasikan lagi."""
+	def setUp(self):
+		self.m1 = self.make('CO00001', aprovasaun='Aprovadu')
+		self.m2 = self.make('CO00002', aprovasaun='Aprovadu')
+		self.login('presidente')
+
+	def data(self, membro, **kw):
+		d = {'membro': membro.pk, 'nivel': 'Suku', 'pozisaun': 'Coordenador', 'village': self.va.pk,
+			'data_hahu': '2026-01-01', 'ativu': 'Sim'}
+		d.update(kw)
+		return d
+
+	def choices(self, url=None):
+		resp = self.client.get(url or reverse('alokasaun-add'))
+		return set(resp.context['form'].fields['membro'].queryset.values_list('nu_eleitoral', flat=True))
+
+	def test_default_false_and_listed_in_form(self):
+		self.assertFalse(Membro.objects.get(pk=self.m1.pk).is_colocado)
+		self.assertEqual(self.choices(), {'CO00001', 'CO00002'})
+
+	def test_allocation_sets_flag_and_hides_name_from_form(self):
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1))
+		self.assertTrue(Membro.objects.get(pk=self.m1.pk).is_colocado)
+		self.assertEqual(self.choices(), {'CO00002'})
+
+	def test_posting_an_allocated_member_is_rejected_server_side(self):
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1))
+		resp = self.client.post(reverse('alokasaun-add'), self.data(self.m1, nivel='Postu', pozisaun='Presidente'))
+		self.assertEqual(resp.status_code, 200)
+		self.assertEqual(Alokasaun.objects.count(), 1)
+
+	def test_termina_keeps_old_row_and_frees_the_member(self):
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1))
+		a = Alokasaun.objects.get()
+		resp = self.client.post(reverse('alokasaun-termina', args=[a.pk]))
+		self.assertRedirects(resp, reverse('alokasaun-list'))
+		a.refresh_from_db()
+		self.assertEqual(a.ativu, 'Lae')
+		self.assertIsNotNone(a.data_termina)  # data lama tetap tersimpan
+		self.assertFalse(Membro.objects.get(pk=self.m1.pk).is_colocado)
+		self.assertEqual(self.choices(), {'CO00001', 'CO00002'})
+		self.assertTrue(Historia.objects.filter(aksaun='Termina Pozisaun', membro=self.m1).exists())
+
+	def test_new_allocation_after_termina_keeps_both_rows_and_counts_people(self):
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1))
+		self.client.post(reverse('alokasaun-termina', args=[Alokasaun.objects.get().pk]))
+		resp = self.client.post(reverse('alokasaun-add'), self.data(self.m2, data_hahu='2026-06-01'))
+		self.assertRedirects(resp, reverse('alokasaun-list'))
+		self.assertEqual(Alokasaun.objects.count(), 2)
+		self.assertEqual(Alokasaun.objects.filter(ativu='Sim').count(), 1)
+		self.assertEqual(self.choices(), {'CO00001'})  # m2 kini terisi, m1 bebas lagi
+		rows = self.client.get(reverse('alokasaun-list')).context['objects']
+		self.assertEqual([r.pernah for r in rows], [2, 2])  # dua orang pernah memegang posisi ini
+
+	def test_same_member_can_be_allocated_again_after_termina(self):
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1))
+		self.client.post(reverse('alokasaun-termina', args=[Alokasaun.objects.get().pk]))
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1, nivel='Aldeia', pozisaun='Sekretariu', aldeia=self.a1.pk,
+			village='', data_hahu='2026-07-01'))
+		self.assertEqual(Alokasaun.objects.filter(membro=self.m1).count(), 2)
+		self.assertTrue(Membro.objects.get(pk=self.m1.pk).is_colocado)
+
+	def test_delete_clears_flag_and_edit_keeps_own_holder_selectable(self):
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1))
+		a = Alokasaun.objects.get()
+		self.assertEqual(self.choices(reverse('alokasaun-update', args=[a.pk])), {'CO00001', 'CO00002'})
+		self.client.post(reverse('alokasaun-del', args=[a.pk]))
+		self.assertFalse(Membro.objects.get(pk=self.m1.pk).is_colocado)
+
+	def test_activating_second_active_position_via_edit_is_refused(self):
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1))
+		self.client.post(reverse('alokasaun-termina', args=[Alokasaun.objects.get().pk]))
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1, nivel='Postu', pozisaun='Presidente'))
+		old = Alokasaun.objects.get(ativu='Lae')
+		resp = self.client.post(reverse('alokasaun-update', args=[old.pk]), self.data(self.m1))
+		self.assertEqual(resp.status_code, 200)
+		self.assertContains(resp, 'iha ona pozisaun ativu')
+
+	def test_termina_only_by_presidente_post_and_idempotent(self):
+		self.client.post(reverse('alokasaun-add'), self.data(self.m1))
+		a = Alokasaun.objects.get()
+		self.login('koordpostu')
+		self.assertEqual(self.client.post(reverse('alokasaun-termina', args=[a.pk])).status_code, 403)
+		self.login('presidente')
+		self.assertEqual(self.client.get(reverse('alokasaun-termina', args=[a.pk])).status_code, 405)
+		self.client.post(reverse('alokasaun-termina', args=[a.pk]))
+		self.client.post(reverse('alokasaun-termina', args=[a.pk]))
+		self.assertEqual(Historia.objects.filter(aksaun='Termina Pozisaun').count(), 1)
+
+	def test_migration_backfill_logic_matches_sync(self):
+		from membro.models import sync_colocado
+		Alokasaun.objects.create(membro=self.m2, nivel='Postu', pozisaun='Presidente', data_hahu=datetime.date(2026, 1, 1))
+		Membro.objects.update(is_colocado=False)
+		sync_colocado(self.m2.pk)
+		self.assertTrue(Membro.objects.get(pk=self.m2.pk).is_colocado)
+
+
+class DelegaduTests(BaseCase):
+	def setUp(self):
+		self.opd = Organizasaun.objects.create(code='OPD', name='OPD')
+		d = datetime.date(2026, 1, 1)
+		def person(nu, nome, aldeia, org=None, tel=None, village=None):
+			return self.make(nu, village or self.va, aldeia, nome=nome, aprovasaun='Aprovadu', organizasaun=org, telefone=tel)
+		self.k = person('DG0001', 'Yakobus Koord', self.a1, tel='77279439')
+		self.s = person('DG0002', 'Rosalino Sekr', self.a1, tel='77332283')
+		self.kw = person('DG0003', 'Anacleto Sayap', self.a2, org=self.org, tel='73573571')
+		self.ka = person('DG0004', 'Francisco Aldeia', self.a1, tel='77594908')
+		self.kj = person('DG0005', 'Nelson Sayap Aldeia', self.a1, org=self.org)
+		self.kb = person('DG0006', 'Orang Suku B', self.b1, village=self.vb)
+		Alokasaun.objects.create(membro=self.k, nivel='Suku', pozisaun='Coordenador', village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.s, nivel='Suku', pozisaun='Sekretariu', village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.kw, nivel='Suku', pozisaun='Coordenador', village=self.va, organizasaun=self.org, data_hahu=d)
+		Alokasaun.objects.create(membro=self.ka, nivel='Aldeia', pozisaun='Coordenador', aldeia=self.a1, village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.kj, nivel='Aldeia', pozisaun='Coordenador', aldeia=self.a1, village=self.va, organizasaun=self.org, data_hahu=d)
+		Alokasaun.objects.create(membro=self.kb, nivel='Suku', pozisaun='Coordenador', village=self.vb, data_hahu=d)
+
+	def page(self, user, pk=None):
+		self.login(user)
+		resp = self.client.get(reverse('membro-delegadu', args=[pk or self.va.pk]))
+		self.assertEqual(resp.status_code, 200)
+		return resp
+
+	def test_data_has_suku_leaders_wings_and_aldeia_blocks(self):
+		data = self.page('presidente').context['data']
+		self.assertEqual([(r['pozisaun'], r['nome']) for r in data['suku_rows']], [
+			('Koord Suku', 'Yakobus Koord'), ('Sekretario Suku', 'Rosalino Sekr'), ('Koord OJD Suku', 'Anacleto Sayap')])
+		self.assertEqual(data['suku_rows'][2]['aldeia'], 'A2')  # aldeia anggota
+		self.assertEqual(data['n_aldeia'], 2)
+		a1 = [b for b in data['blocks'] if b['aldeia'] == 'A1'][0]
+		self.assertEqual([(r['pozisaun'], r['nome']) for r in a1['rows']], [('Koord Aldeia', 'Francisco Aldeia'), ('Koord OJD', 'Nelson Sayap Aldeia')])
+		self.assertEqual(a1['hp'], '77594908')  # HP koordinator aldeia
+		a2 = [b for b in data['blocks'] if b['aldeia'] == 'A2'][0]
+		self.assertEqual(a2['rows'], [])
+		self.assertNotIn('Orang Suku B', str(data))
+
+	def test_page_looks_like_the_document(self):
+		resp = self.page('presidente')
+		for needle in ('LISTA DELEGADO/A ALDEIA 2 IHA SUKU SUKU A, TUIR KONFERÉNSIA', 'NÚ. KARTAUN ELEITORAL', 'NÚ HP WA', 'SEKRETARIADO PARTIDO DEMOCRÁTICO',
+				'DG0001', '77279439', 'Seidauk iha delegadu', 'Download PDF', 'Imprime', 'window.print()', 'rowspan="2"'):
+			self.assertContains(resp, needle)
+		self.assertNotContains(resp, 'https://')
+
+	def test_pdf_is_real_pdf_with_letterhead_and_is_audited(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-delegadu-pdf', args=[self.va.pk]))
+		self.assertEqual((resp.status_code, resp['Content-Type']), (200, 'application/pdf'))
+		self.assertTrue(resp.content.startswith(b'%PDF'))
+		self.assertEqual(resp['Cache-Control'], 'private, no-store')
+		from pypdf import PdfReader
+		text = ''.join(p.extract_text() for p in PdfReader(io.BytesIO(resp.content)).pages)
+		for needle in ('SEKRETARIADO PARTIDO DEMOCR', 'LISTA DELEGADO/A ALDEIA 2', 'Yakobus Koord', 'Koord OJD Suku', 'DG0001', 'Seidauk iha delegadu'):
+			self.assertIn(needle, text)
+		self.assertTrue(Historia.objects.filter(aksaun='Ekspor', detalhe__contains='Lista Delegadu PDF').exists())
+
+	def test_long_suku_splits_over_pages(self):
+		for i in range(30):
+			a = Aldeia.objects.create(village=self.va, name=f'Aldeia Extra {i}')
+			for j, p in enumerate(('Coordenador', 'Sekretariu')):
+				m = self.make(f'LG{i:03d}{j}', self.va, a, nome=f'Delegadu {i}-{j}', aprovasaun='Aprovadu')
+				Alokasaun.objects.create(membro=m, nivel='Aldeia', pozisaun=p, aldeia=a, village=self.va, data_hahu=datetime.date(2026, 1, 1))
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-delegadu-pdf', args=[self.va.pk]))
+		from pypdf import PdfReader
+		self.assertGreaterEqual(len(PdfReader(io.BytesIO(resp.content)).pages), 2)
+
+	def test_access_by_role(self):
+		for u, code in [('presidente', 200), ('koordpostu', 200), ('koordsuku', 200), ('sekrsuku', 200),
+				('sekrpostu', 403), ('sekraldeia', 403), ('koordorg', 403), ('sekrorg', 403), ('admin', 403)]:
+			self.login(u)
+			self.assertEqual(self.client.get(reverse('membro-delegadu', args=[self.va.pk])).status_code, code, u)
+			self.assertEqual(self.client.get(reverse('membro-delegadu-pdf', args=[self.va.pk])).status_code, code, u)
+
+	def test_suku_role_only_own_suku_and_index_redirects(self):
+		self.login('koordsuku')
+		self.assertEqual(self.client.get(reverse('membro-delegadu', args=[self.vb.pk])).status_code, 404)
+		self.assertEqual(self.client.get(reverse('membro-delegadu-pdf', args=[self.vb.pk])).status_code, 404)
+		self.assertRedirects(self.client.get(reverse('membro-delegadu-index')), reverse('membro-delegadu', args=[self.va.pk]))
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-delegadu-index'))
+		self.assertContains(resp, reverse('membro-delegadu', args=[self.vb.pk]))
+
+	def test_menu_item_for_allowed_roles_only(self):
+		self.login('presidente')
+		self.assertContains(self.client.get(reverse('report-dash')), reverse('membro-delegadu-index'))
+		self.login('sekraldeia')
+		self.assertNotContains(self.client.get(reverse('report-dash')), reverse('membro-delegadu-index'))
+
+	def test_wings_do_not_break_main_leaders_elsewhere(self):
+		self.login('presidente')
+		dash = self.client.get(reverse('alokasaun-dash'))
+		row = [r for r in dash.context['rows_suku'] if r['v'] == self.va][0]
+		self.assertEqual(row['coord'].membro, self.k)  # bukan sayap OJD
+		self.assertEqual(self.client.get('/').context['info']['lengkap'], 1)
+		page = self.client.get(reverse('membro-suku', args=[self.va.pk]))
+		self.assertEqual([p['nome'] for p in page.context['pemimpin']], ['Yakobus Koord', 'Rosalino Sekr'])
+		labels = {r['nome']: r['pozisaun'] for r in page.context['rows']}
+		self.assertEqual(labels['Anacleto Sayap'], 'Cordenador OJD Suku')
+
+	def test_form_allows_wing_only_for_member_of_that_organizasaun(self):
+		self.login('presidente')
+		m = self.make('DG0100', self.va, self.a1, aprovasaun='Aprovadu', organizasaun=self.opd)
+		base = {'membro': m.pk, 'nivel': 'Aldeia', 'pozisaun': 'Sekretariu', 'aldeia': self.a1.pk, 'data_hahu': '2026-02-01', 'ativu': 'Sim'}
+		bad = self.client.post(reverse('alokasaun-add'), dict(base, organizasaun=self.org.pk))
+		self.assertEqual(bad.status_code, 200)
+		self.assertContains(bad, 'la tama organizasaun')
+		ok = self.client.post(reverse('alokasaun-add'), dict(base, organizasaun=self.opd.pk))
+		self.assertRedirects(ok, reverse('alokasaun-list'))
+		a = Alokasaun.objects.get(membro=m)
+		self.assertEqual((a.nivel, a.organizasaun_id, a.aldeia_id), ('Aldeia', self.opd.pk, self.a1.pk))
+
+
+class OrganigramaTests(BaseCase):
+	def setUp(self):
+		self.root = OrgPozisaun.objects.get(parent__isnull=True)
+
+	def page(self, user):
+		self.login(user)
+		resp = self.client.get(reverse('organigrama'))
+		self.assertEqual(resp.status_code, 200)
+		return resp
+
+	def test_migration_seeds_the_twelve_positions_from_the_document(self):
+		names = list(OrgPozisaun.objects.order_by('urutan').values_list('naran', flat=True))
+		self.assertEqual(len(names), 12)
+		self.assertEqual(names[0], 'Presidente Komisaun · Vice-Pres-1 · Vice-Pres-2')
+		for n in ('Tezoreira', 'Seksaun Verifikasaun Dadus', 'Seksaun Konsumu', 'Seksaun Logistiku', 'Adm. no Notulensia Konferensia',
+				'Seksaun Animasaun', 'Seksaun Dekorasaun', 'Seksaun Preparasaun Atributu', 'Seksaun Dokumentasaun',
+				'Mestre Ceremonia (MC)', 'Ekipa Simu Bainaka'):
+			self.assertIn(n, names)
+		self.assertEqual(OrgPozisaun.objects.filter(parent=self.root).count(), 11)
+		tez = OrgPozisaun.objects.get(naran='Tezoreira')
+		self.assertEqual(len(tez.tarefas()), 5)
+		self.assertIn('loron 10', tez.obs)
+		self.assertFalse(OrgResponsavel.objects.exists())  # nama orang diisi lewat sistem
+
+	def test_chart_and_table_render_with_responsible_people(self):
+		tez = OrgPozisaun.objects.get(naran='Tezoreira')
+		m = self.make('OG00001', nome='Joaninha Ataide', aprovasaun='Aprovadu')
+		OrgResponsavel.objects.create(pozisaun=tez, membro=m, naran=m.nome, urutan=1)
+		OrgResponsavel.objects.create(pozisaun=tez, naran='Mn. Justina, Sub-Insp. Edukasaun', urutan=2)
+		resp = self.page('presidente')
+		for needle in ('org-tree', 'Tezoreira', 'Joaninha Ataide', 'Mn. Justina', 'Seidauk iha responsavel', 'Tarefa (5)',
+				'Deskrisaun Tarefas', 'Imprime', 'window.print()'):
+			self.assertContains(resp, needle)
+		self.assertContains(resp, reverse('membro-detail', args=[m.hashed]))  # membru terdaftar bertaut
+		self.assertEqual((resp.context['n_pozisaun'], resp.context['n_responsavel'], resp.context['n_kosong']), (12, 2, 11))
+		self.assertEqual(len(resp.context['roots']), 1)
+		self.assertEqual(len(resp.context['roots'][0]['children']), 11)
+		self.assertNotContains(resp, 'https://')
+
+	def test_view_roles_and_manage_buttons(self):
+		for u in ('presidente', 'koordpostu', 'koordsuku', 'sekrsuku', 'sekraldeia', 'koordorg', 'sekrorg'):
+			self.assertEqual(self.page(u).status_code, 200, u)
+		for u in ('sekrpostu', 'admin'):
+			self.login(u)
+			self.assertEqual(self.client.get(reverse('organigrama')).status_code, 403, u)
+		self.assertContains(self.page('presidente'), reverse('org-pozisaun-add'))
+		self.assertNotContains(self.page('koordpostu'), reverse('org-pozisaun-add'))
+
+	def test_menu_has_organigrama_under_struktura_and_dash_button(self):
+		resp = self.page('presidente')
+		html = resp.content.decode()
+		self.assertIn('Organigrama</a>', html)
+		self.login('presidente')
+		self.assertContains(self.client.get(reverse('alokasaun-dash')), reverse('organigrama'))
+
+	def test_only_presidente_manages_positions_and_responsible(self):
+		pos = OrgPozisaun.objects.get(naran='Seksaun Konsumu')
+		urls = [reverse('org-pozisaun-add'), reverse('org-pozisaun-update', args=[pos.pk]), reverse('org-responsavel-add', args=[pos.pk])]
+		self.login('koordpostu')
+		for u in urls:
+			self.assertEqual(self.client.get(u).status_code, 403, u)
+		self.login('presidente')
+		for u in urls:
+			self.assertEqual(self.client.get(u).status_code, 200, u)
+
+	def test_add_responsible_from_member_or_free_name(self):
+		self.login('presidente')
+		pos = OrgPozisaun.objects.get(naran='Seksaun Konsumu')
+		m = self.make('OG00002', nome='Ansa OMD', aprovasaun='Aprovadu')
+		self.client.post(reverse('org-responsavel-add', args=[pos.pk]), {'membro': m.pk, 'naran': '', 'kargu': '', 'urutan': 1})
+		self.client.post(reverse('org-responsavel-add', args=[pos.pk]), {'membro': '', 'naran': 'Mn. Sinta Comoro', 'kargu': 'Vice-Coord.', 'urutan': 2})
+		self.assertEqual([(r.naran, r.membro_id, r.kargu) for r in pos.responsavel.all()], [('Ansa OMD', m.pk, ''), ('Mn. Sinta Comoro', None, 'Vice-Coord.')])
+		bad = self.client.post(reverse('org-responsavel-add', args=[pos.pk]), {'membro': '', 'naran': '', 'urutan': 3})
+		self.assertEqual(bad.status_code, 200)
+		self.assertContains(bad, 'Hili membru ka isi naran')
+		self.assertEqual(pos.responsavel.count(), 2)
+		self.assertEqual(Historia.objects.filter(aksaun='Organigrama').count(), 2)
+
+	def test_edit_and_delete_responsible_and_position(self):
+		self.login('presidente')
+		pos = OrgPozisaun.objects.get(naran='Seksaun Animasaun')
+		r = OrgResponsavel.objects.create(pozisaun=pos, naran='Anay', urutan=1)
+		self.client.post(reverse('org-responsavel-update', args=[r.pk]), {'membro': '', 'naran': 'Anay Fatuhada', 'kargu': '', 'urutan': 1})
+		r.refresh_from_db()
+		self.assertEqual(r.naran, 'Anay Fatuhada')
+		self.assertEqual(self.client.get(reverse('org-responsavel-del', args=[r.pk])).status_code, 405)
+		self.client.post(reverse('org-responsavel-del', args=[r.pk]))
+		self.assertFalse(OrgResponsavel.objects.filter(pk=r.pk).exists())
+		self.client.post(reverse('org-pozisaun-del', args=[pos.pk]))
+		self.assertFalse(OrgPozisaun.objects.filter(pk=pos.pk).exists())
+
+	def test_position_with_children_cannot_be_deleted_and_no_cycles(self):
+		self.login('presidente')
+		self.client.post(reverse('org-pozisaun-del', args=[self.root.pk]))
+		self.assertTrue(OrgPozisaun.objects.filter(pk=self.root.pk).exists())
+		form = self.client.get(reverse('org-pozisaun-update', args=[self.root.pk])).context['form']
+		self.assertEqual(form.fields['parent'].queryset.count(), 0)  # semua turunan, tidak boleh jadi induk
+		sec = OrgPozisaun.objects.get(naran='Seksaun Konsumu')
+		self.assertNotIn(self.root.pk, [p.pk for p in self.client.get(reverse('org-pozisaun-update', args=[sec.pk])).context['form'].fields['parent'].queryset if p.pk == sec.pk])
+
+	def test_new_position_appears_in_chart(self):
+		self.login('presidente')
+		resp = self.client.post(reverse('org-pozisaun-add'), {'naran': 'Seksaun Seguransa', 'parent': self.root.pk, 'urutan': 13,
+			'deskrisaun': 'Garante seguransa\nKontrola entrada', 'obs': '', 'ativu': 'on'})
+		self.assertRedirects(resp, reverse('organigrama'))
+		page = self.client.get(reverse('organigrama'))
+		self.assertContains(page, 'Seksaun Seguransa')
+		self.assertContains(page, 'Tarefa (2)')
 

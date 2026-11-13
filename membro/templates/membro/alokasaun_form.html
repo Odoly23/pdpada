@@ -5,8 +5,8 @@
 	function toggleUnit() {
 		var n = ($('#id_nivel').val() || '').toLowerCase();
 		$('.unit-suku, .unit-aldeia, .unit-organizasaun').hide();
-		if (n === 'suku') { $('.unit-suku').show(); }
-		if (n === 'aldeia') { $('.unit-aldeia').show(); }
+		if (n === 'suku') { $('.unit-suku, .unit-organizasaun').show(); }  // organizasaun = sayap (opsional)
+		if (n === 'aldeia') { $('.unit-aldeia, .unit-organizasaun').show(); }
 		if (n === 'organizasaun') { $('.unit-organizasaun').show(); }
 	}
 	$('#id_nivel').on('change', toggleUnit);

@@ -38,3 +38,4 @@ VIEW_ROLES = POSTU_ROLES + SUKU_ROLES + ALDEIA_ROLES + ORG_ROLES  # lihat rekapi
 # Sekretariu Postu hanya melihat rekapitulasi dan grafik; data per orang (lista, detalhe, pesquiza, struktura) tidak dibuka.
 LISTA_ROLES = [r for r in VIEW_ROLES if r != SEKR_POSTU]
 STRUKTURA_ROLES = LISTA_ROLES
+DELEGADU_ROLES = [PRESIDENTE, KOORD_POSTU] + SUKU_ROLES  # Lista Delegadu (nama, Nu. Eleitoral, HP) per suku; suku hanya sukunya

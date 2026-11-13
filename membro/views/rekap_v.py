@@ -107,7 +107,7 @@ def VarandaRekap(request):
 			suku_cards.append({'obj': x, 'n': n, 'mane': row.get('mane', 0), 'feto': row.get('feto', 0), 'url': reverse('membro-suku', args=[x.pk])})
 		objects2 = []
 		# Struktura suku lengkap = Coordenador dan Sekretariu suku sama-sama sudah dialokasikan
-		lengkap = Alokasaun.objects.filter(ativu='Sim', nivel='Suku', village__isnull=False).values('village_id').annotate(
+		lengkap = Alokasaun.objects.filter(ativu='Sim', nivel='Suku', village__isnull=False, organizasaun__isnull=True).values('village_id').annotate(
 			k=Count('pozisaun', distinct=True)).filter(k__gte=2).count()
 		info = {'mane': agg['mane'], 'feto': agg['feto'], 'baru': agg['baru'], 'lengkap': lengkap, 'suku': len(suku_cards)}
 
@@ -226,11 +226,14 @@ def SukuRekap(request, pk):
 	holders = Alokasaun.objects.filter(ativu='Sim').filter(Q(village=village) | Q(aldeia__village=village) | Q(organizasaun__isnull=False, membro__village=village))
 	for a in holders.select_related('aldeia', 'organizasaun').order_by('nivel', 'pozisaun'):
 		pos = POZISAUN_LABEL.get(a.pozisaun, a.pozisaun)
-		if a.nivel == 'Suku':
+		if a.nivel == 'Suku' and not a.organizasaun_id:
 			label[a.membro_id], rank[a.membro_id] = f'{pos} Suku', (0 if a.pozisaun == 'Coordenador' else 0.5)
 			leaders[a.pozisaun] = a.membro_id
+		elif a.nivel == 'Suku':  # sayap organisasi tingkat suku
+			label.setdefault(a.membro_id, f'{pos} {a.organizasaun.code} Suku')
+			rank.setdefault(a.membro_id, 0.7)
 		elif a.nivel == 'Aldeia':
-			label.setdefault(a.membro_id, f'{pos} Aldeia {a.aldeia.name}')
+			label.setdefault(a.membro_id, f'{pos} {a.organizasaun.code if a.organizasaun_id else "Aldeia"} {a.aldeia.name}'.replace('  ', ' '))
 			rank.setdefault(a.membro_id, 1)
 		elif a.nivel == 'Organizasaun':
 			label.setdefault(a.membro_id, f'{pos} {a.organizasaun.code}')
@@ -244,6 +247,7 @@ def SukuRekap(request, pk):
 		pemimpin.append({'label': name, 'nome': m.nome if m else None, 'idade': m.age() if m else None})
 	context = {
 		'group': group, 'village': village, 'tot': tot, 'rows': rows, 'pemimpin': pemimpin,
+		'can_delegadu': group in roles.DELEGADU_ROLES,
 		'title': f'Suku {village.name}', 'legend': f'Suku {village.name}',
 		'meta_description': f'Lista membru suku {village.name}, Partido Democratico, Postu Dom Aleixo.',
 	}

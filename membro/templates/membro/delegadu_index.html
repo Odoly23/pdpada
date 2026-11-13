@@ -1,0 +1,18 @@
+{% extends "main/layout.html" %}
+{% block content %}
+	<ol class="breadcrumb mb-2 mt-1">
+		<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+		<li class="breadcrumb-item active" aria-current="page">LISTA DELEGADU</li>
+	</ol>
+	<div class="card shadow-lg pt-0 rounded">
+		<div class="card-header">Lista Delegadu · Hili Suku</div>
+		<div class="card-body">
+			<p class="text-muted">Hili suku atu hare lista delegadu aldeia (naran, pozisaun, Nu. Kartaun Eleitoral, Nu. HP) no download PDF.</p>
+			{% for v in villages %}
+			<a class="btn btn-sm btn-info mb-2" href="{% url 'membro-delegadu' v.pk %}">{{ v.name }} <i class="fa fa-address-book"></i></a>
+			{% empty %}
+			<p class="text-muted">Seidauk iha suku.</p>
+			{% endfor %}
+		</div>
+	</div>
+{% endblock %}

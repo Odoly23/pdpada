@@ -29,6 +29,7 @@ Deploy ke PythonAnywhere: lihat [`docs/DEPLOY_PYTHONANYWHERE.md`](docs/DEPLOY_PY
 ## Fitur utama
 
 - **Varanda** (beranda): hero dengan bendera utuh, pencarian cepat, dan kartu pintasan sesuai peran. **Painel** (`/membro/painel/`): banner peran, tabel matriks bertaut, dan grafik.
+- **Lista Delegadu** (menu Membru): daftar pemimpin suku dan delegadu tiap aldeia (Koord/Sekretario + sayap organisasi seperti Koord OJD Aldeia) dengan Nu. Kartaun Eleitoral dan Nu. HP, tampil seperti dokumen resmi, bisa dicetak dan diunduh sebagai PDF (`reportlab`). Kop surat dapat diubah lewat environment `PD_NAMA_SEKRETARIADO`, `PD_POSTU`, `PD_ALAMAT`, `PD_KONTAKTU`. Akses: Presidente, Coordenador Postu, dan peran suku (hanya sukunya).
 - **Pesquiza**: cari membru berdasarkan nama, Nu. Eleitoral, atau telepon, dengan saran otomatis; hanya dalam wilayah user.
 - **Ekspor CSV penuh** (peran Postu): sesuai filter dan wilayah, aman dari formula injection, tercatat di Historia.
 - **Dupla Potensial** (Presidente/Coordenador Postu): nama + tanggal lahir sama, atau nomor telepon sama.

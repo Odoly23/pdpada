@@ -13,7 +13,7 @@ LIMITE = 3000
 AKSAUN_STYLE = {
 	'Kria': ('fa-plus-circle', 'info'), 'Edita': ('fa-pencil', 'warn'), 'Aprova': ('fa-check-circle', 'ok'),
 	'Rejeita': ('fa-times-circle', 'bad'), 'Aloka': ('fa-sitemap', 'info'), 'Edita Pozisaun': ('fa-pencil', 'warn'),
-	'Hamoos': ('fa-trash', 'bad'), 'Hamoos Pozisaun': ('fa-trash', 'bad'), 'Ekspor': ('fa-download', 'dark'),
+	'Termina Pozisaun': ('fa-stop-circle', 'warn'), 'Organigrama': ('fa-sitemap', 'info'), 'Hamoos': ('fa-trash', 'bad'), 'Hamoos Pozisaun': ('fa-trash', 'bad'), 'Ekspor': ('fa-download', 'dark'),
 	'Hare Dokumentu': ('fa-file-pdf-o', 'dark'),
 }
 

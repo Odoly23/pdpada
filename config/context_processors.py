@@ -46,6 +46,9 @@ def _menu(request, group):
 			_item(request, 'Lista Membru', 'fa-list', 'membro-list', names=('membro-list', 'membro-detail', 'membro-update')),
 			_item(request, 'Pesquiza', 'fa-search', 'membro-cari'),
 		]
+		if group in roles.DELEGADU_ROLES:
+			membru.append(_item(request, 'Lista Delegadu', 'fa-address-book', 'membro-delegadu-index',
+				names=('membro-delegadu-index', 'membro-delegadu')))
 		if group in roles.INPUT_ROLES:
 			membru.append(_item(request, 'Aumenta Membru', 'fa-user-plus', 'membro-add'))
 		if group in roles.APROVA_ROLES:
@@ -56,8 +59,11 @@ def _menu(request, group):
 		items.append(_dropdown('Relatoriu', 'fa-list', [
 			_item(request, 'Tabular', 'fa-table', 'report-dash'),
 			_item(request, 'Grafiku', 'fa-bar-chart', 'report-chart')]))
-		items.append(_item(request, 'Struktura', 'fa-sitemap', 'alokasaun-dash',
-			names=('alokasaun-dash', 'alokasaun-list', 'alokasaun-add', 'alokasaun-update')))
+		items.append(_dropdown('Struktura', 'fa-sitemap', [
+			_item(request, 'Struktura PD', 'fa-sitemap', 'alokasaun-dash',
+				names=('alokasaun-dash', 'alokasaun-list', 'alokasaun-add', 'alokasaun-update')),
+			_item(request, 'Organigrama', 'fa-share-alt', 'organigrama',
+				names=('organigrama', 'org-pozisaun-add', 'org-pozisaun-update', 'org-responsavel-add', 'org-responsavel-update'))]))
 		if group in roles.HISTORIA_ROLES:
 			items.append(_item(request, 'Historia', 'fa-history', 'historia-list'))
 	return items
