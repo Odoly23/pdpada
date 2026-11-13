@@ -62,8 +62,12 @@ def _tiles(group, counts):
 		add('Tinan Ativu', 'Troka tinan ne\'ebé uza ba relatoriu', 'fa-calendar', reverse('master-list', args=['ano']))
 		add('Historia', 'Rekorda mudansa dadus tomak', 'fa-history', reverse('historia-list'))
 		return tiles
+	if group == roles.FISKAIS:
+		add('Input Rezultadu', 'Submete votu PD husi tempat votasaun (dala ida de\'it)', 'fa-pencil-square-o', reverse('eleisaun-input'))
+		return tiles
 	if group not in roles.VIEW_ROLES:
 		return tiles
+	add('Live Dashboard Eleisaun', 'Votu PD live iha ekran boot', 'fa-television', reverse('eleisaun-live'))
 	add('Painel Membru', 'Total, sexu no aprovasaun tuir suku', 'fa-tachometer', reverse('membro-painel'))
 	if group in roles.LISTA_ROLES:
 		add('Lista Membru', 'Hare, filtra no hili dadus membru', 'fa-list', reverse('membro-list'))

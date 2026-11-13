@@ -391,12 +391,12 @@ class LayoutAndReportTests(BaseCase):
 		return [i['label'] for i in resp.context['nav_items']]
 
 	def test_menu_per_role(self):
-		self.assertEqual(self.menu('admin'), ['Varanda', 'Painel', 'Uzuáriu', 'Data Master', 'Historia'])
+		self.assertEqual(self.menu('admin'), ['Varanda', 'Painel', 'Uzuáriu', 'Data Master', 'Eleisaun', 'Historia'])
 		self.assertEqual(self.menu('presidente'),
-			['Varanda', 'Painel', 'Membru', 'Relatoriu', 'Struktura', 'Historia'])
-		self.assertEqual(self.menu('sekrsuku'), ['Varanda', 'Painel', 'Membru', 'Relatoriu', 'Struktura'])
-		self.assertEqual(self.menu('sekrorg'), ['Varanda', 'Painel', 'Membru', 'Relatoriu', 'Struktura'])
-		self.assertEqual(self.menu('koordsuku'), ['Varanda', 'Painel', 'Membru', 'Relatoriu', 'Struktura'])
+			['Varanda', 'Painel', 'Eleisaun', 'Membru', 'Relatoriu', 'Struktura', 'Historia'])
+		self.assertEqual(self.menu('sekrsuku'), ['Varanda', 'Painel', 'Eleisaun', 'Membru', 'Relatoriu', 'Struktura'])
+		self.assertEqual(self.menu('sekrorg'), ['Varanda', 'Painel', 'Eleisaun', 'Membru', 'Relatoriu', 'Struktura'])
+		self.assertEqual(self.menu('koordsuku'), ['Varanda', 'Painel', 'Eleisaun', 'Membru', 'Relatoriu', 'Struktura'])
 
 	def test_active_menu_item(self):
 		self.login('presidente')

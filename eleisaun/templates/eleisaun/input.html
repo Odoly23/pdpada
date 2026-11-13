@@ -1,0 +1,44 @@
+{% extends "main/layout.html" %}
+{% load crispy_forms_tags %}
+{% block content %}
+	<ol class="breadcrumb mb-2 mt-1">
+		<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+		<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
+	</ol>
+	<div class="row">
+		<div class="col-sm-12 mb-2">
+			<div class="card"><div class="card-header bg-primary text-white text-center">
+				INPUT REZULTADU VOTU PD <br/>{% if fk %}{{ fk.tempat.naran|upper }} · SUKU {{ fk.tempat.village.name|upper }}{% endif %}{% if el %} · {{ el.naran|upper }} {{ el.tinan }}{% endif %}
+			</div></div>
+		</div>
+	</div>
+	{% if not fk %}
+		<div class="alert alert-warning">Konta ida ne'e seidauk hetan tempat votasaun. Kontaktu Admin.</div>
+	{% elif not fk.tempat.ativu %}
+		<div class="alert alert-warning">Tempat votasaun ne'e la ativu. Kontaktu Admin.</div>
+	{% elif not el %}
+		<div class="alert alert-warning">Laiha eleisaun ativu. Hein Admin aktiva eleisaun molok input rezultadu.</div>
+	{% elif locked %}
+		<div class="card shadow-lg pt-0 rounded">
+			<div class="card-header">Rezultadu submete ona <span class="badge badge-primary">TAKA</span></div>
+			<div class="card-body">
+				<div class="row text-center mb-3">
+					<div class="col-6"><span class="stat-label">Total Votu PD</span><span class="stat-number d-block">{{ res.votos_partidu }}</span></div>
+					<div class="col-6"><span class="stat-label">Total Votu iha Tempat</span><span class="stat-number d-block">{{ res.votos_total|default_if_none:"–" }}</span></div>
+				</div>
+				<p class="text-muted">Submete iha {{ res.submetidu_em|date:"d/m/Y H:i" }}. Dadus la bele troka. Se presiza koriji, husu Admin atu loke fali.</p>
+				{% if res.obs %}<p><strong>Observasaun:</strong> {{ res.obs }}</p>{% endif %}
+				<a class="btn btn-sm btn-info" target="_blank" rel="noopener" href="{% url 'eleisaun-file' res.pk 'foto' %}">Hare Foto Rezultadu <i class="fa fa-picture-o"></i></a>
+				<a class="btn btn-sm btn-info" target="_blank" rel="noopener" href="{% url 'eleisaun-file' res.pk 'formulariu' %}">Hare Formulariu PDF <i class="fa fa-file-pdf-o"></i></a>
+			</div>
+		</div>
+	{% else %}
+		<div class="card shadow-lg pt-0 rounded">
+			<div class="card-header">Submete rezultadu {{ fk.tempat.naran }}</div>
+			<div class="card-body">
+				<div class="alert alert-info">Submete <strong>dala ida de'it</strong>. Depois submete, formulariu taka no bele loke fali de'it husi Admin. Foto (JPEG/PNG, maks. 2 MB) no formulariu (PDF, maks. 5 MB) obrigatóriu.</div>
+				{% crispy form %}
+			</div>
+		</div>
+	{% endif %}
+{% endblock %}
