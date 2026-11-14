@@ -11,7 +11,9 @@
 			<div class="card-header">{{ legend|upper }}</div>
 			<div class="card-body">
 				<div class="mb-2 no-print">
-					{% if can_edit %}<a class="btn btn-sm btn-success" href="{% url 'membro-update' hashid %}"><i class="fa fa-edit"></i> Edita</a>{% endif %}
+					{% if can_edit %}<a class="btn btn-sm btn-success" href="{% url 'membro-update' hashid %}"><i class="fa fa-edit"></i> Edita</a>
+					<a class="btn btn-sm btn-info" href="{% url 'membro-kontaktu' hashid %}">Kontaktu <i class="fa fa-phone"></i></a>
+					<a class="btn btn-sm btn-info" href="{% url 'membro-servisu' hashid %}">Servisu <i class="fa fa-briefcase"></i></a>{% endif %}
 					{% if can_aprova %}
 					<form class="d-inline" method="post" action="{% url 'aprovasaun-aprova' hashid %}">{% csrf_token %}
 						<input type="hidden" name="next" value="detail">
@@ -59,7 +61,7 @@
 					<tr><td>Atividade agora</td><td colspan="2">{{ servisu.get_atividade_display|default:"-" }}{% if servisu.detalle %} · {{ servisu.detalle }}{% endif %}</td></tr>
 					{% endif %}
 					{% else %}
-					<tr><td colspan="3" class="text-muted">Seidauk iha dadus servisu.</td></tr>
+					<tr><td colspan="3" class="text-muted">Seidauk iha dadus servisu.{% if can_edit %} <a href="{% url 'membro-servisu' hashid %}">Hatama agora</a>{% endif %}</td></tr>
 					{% endif %}
 					<tr><th colspan="3" bgcolor="#eceefa">APROVASAUN</th></tr>
 					<tr><td>Estatutu</td><td colspan="2"><span class="badge badge-{{ obj.aprovasaun|lower }}">{{ obj.aprovasaun }}</span>

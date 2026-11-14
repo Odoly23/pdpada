@@ -17,6 +17,7 @@ SEX_COUNTS = {'mane': Count('id', filter=Q(sex='Mane')), 'feto': Count('id', fil
 BAR_ROWS = 12  # lebih dari ini grafik dibuat mendatar agar 50+ aldeia tetap terbaca
 
 
+# determina nivel (postu/suku/aldeia) tuir permisaun
 def _level(group):
 	"""Tingkat tampilan peran: postu (semua suku/aldeia), suku, aldeia atau org."""
 	if group in roles.POSTU_ROLES:
@@ -28,6 +29,7 @@ def _level(group):
 	return 'org'
 
 
+# tekstu kabesalla rekap
 def _banner(group, e):
 	"""Dua baris judul: peran dan wilayahnya."""
 	name = ROLE_NAME.get(group, '').upper()
@@ -42,6 +44,7 @@ def _banner(group, e):
 	return name, 'SGDM-PDPADA'
 
 
+# liga ba lista membru ho filtru
 def _list_url(group, **params):
 	"""Tautan ke lista membru terfilter; kosong untuk peran yang hanya boleh melihat rekapitulasi."""
 	if group not in roles.LISTA_ROLES:
@@ -50,11 +53,13 @@ def _list_url(group, **params):
 	return reverse('membro-list') + ('?' + query if query else '')
 
 
+# sura membru tuir kategoria no sexu
 def _counts(qs, field):
 	"""{id: {n, mane, feto}} jumlah membru per `field` (satu query)."""
 	return {r[field]: r for r in qs.order_by().values(field).annotate(n=Count('id'), **SEX_COUNTS)}
 
 
+# lista unidade ba rekap
 def _units(level, e, aldeia_rows, suku_rows):
 	"""Suku dan aldeia yang tampil sesuai wilayah peran. Postu: semua; suku: sukunya; aldeia: aldeianya;
 	organisasi: hanya yang punya anggota organisasinya."""
@@ -69,6 +74,7 @@ def _units(level, e, aldeia_rows, suku_rows):
 	return villages, aldeias
 
 
+# dadus ba gráfiku rekap
 def _chart(labels, values, title, mane=None, feto=None, horizontal=None):
 	"""Data grafik; `mane`/`feto` (jika ada) membuat grafik berkelompok perbandingan Mane dan Feto per label."""
 	horizontal = len(labels) > BAR_ROWS if horizontal is None else horizontal
@@ -77,6 +83,7 @@ def _chart(labels, values, title, mane=None, feto=None, horizontal=None):
 		'height': 90 + 26 * per * len(labels) if horizontal else 360}
 
 
+# rekap varanda (sumáriu jerál)
 @login_required
 @allowed_users(allowed_roles=roles.VIEW_ROLES)
 def VarandaRekap(request):
@@ -141,6 +148,7 @@ def VarandaRekap(request):
 	return render(request, 'home/varanda_rekap.html', context)
 
 
+# painel rekap tuir nivel
 @login_required
 @allowed_users(allowed_roles=roles.VIEW_ROLES)
 def PainelRekap(request):
@@ -212,6 +220,7 @@ def PainelRekap(request):
 POZISAUN_LABEL = {'Presidente': 'Presidente', 'Coordenador': 'Cordenador', 'Sekretariu': 'Sekjer'}
 
 
+# rekap tuir suku
 @login_required
 @allowed_users(allowed_roles=roles.POSTU_ROLES)
 def SukuRekap(request, pk):
@@ -260,6 +269,7 @@ def SukuRekap(request, pk):
 	return render(request, 'membro/suku_rekap.html', context)
 
 
+# sumáriu membru (Militante, Simpatizante, Struktura Penting)
 @login_required
 @allowed_users(allowed_roles=roles.LISTA_ROLES)
 def MembroSum(request):

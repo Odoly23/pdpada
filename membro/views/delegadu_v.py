@@ -19,6 +19,7 @@ TITLE_HOTU = 'LISTA DELEGADO/A IHA SUKU {n_suku} NO ALDEIA {n_aldeia}, TUIR KONF
 SUBTITLE = 'POSTU ADMINISTRATIVU {postu}'
 
 
+# foti suku, 404 se la iha ka la tuir permisaun
 def _village_or_404(request, pk):
 	"""Peran suku hanya boleh membuka sukunya sendiri."""
 	village = get_object_or_404(Village, pk=pk)
@@ -30,10 +31,12 @@ def _village_or_404(request, pk):
 	return village
 
 
+# titulu lista delegadu suku
 def _title(data):
 	return TITLE.format(n=data['n_aldeia'], suku=data['village'].name.upper()), SUBTITLE.format(postu=settings.PD_POSTU.upper())
 
 
+# dadus delegadu suku hotu ba pájina no PDF
 def _all_data():
 	"""Data delegadu semua suku + total, untuk halaman dan PDF 'Suku Hotu'."""
 	datas = [delegadu_data(v) for v in Village.objects.all()]
@@ -41,14 +44,17 @@ def _all_data():
 	return datas, totais
 
 
+# titulu lista delegadu suku hotu
 def _title_hotu(totais):
 	return (TITLE_HOTU.format(n_suku=totais['suku'], n_aldeia=totais['aldeia']), SUBTITLE.format(postu=settings.PD_POSTU.upper()))
 
 
+# kabesalla dokumentu PDF
 def _letterhead():
 	return {'nama': settings.PD_NAMA_SEKRETARIADO, 'postu': settings.PD_POSTU, 'alamat': settings.PD_ALAMAT, 'kontaktu': settings.PD_KONTAKTU}
 
 
+# lista suku ba hili delegadu
 @login_required
 @allowed_users(allowed_roles=roles.DELEGADU_ROLES)
 def DelegaduIndex(request):
@@ -64,6 +70,7 @@ def DelegaduIndex(request):
 	return render(request, 'membro/delegadu_index.html', context)
 
 
+# lista delegadu ba suku ida
 @login_required
 @allowed_users(allowed_roles=roles.DELEGADU_ROLES)
 def DelegaduSuku(request, pk):
@@ -80,6 +87,7 @@ def DelegaduSuku(request, pk):
 	return render(request, 'membro/delegadu.html', context)
 
 
+# lista delegadu suku hotu (Postu)
 @login_required
 @allowed_users(allowed_roles=roles.DELEGADU_HOTU_ROLES)
 def DelegaduHotu(request):
@@ -94,6 +102,7 @@ def DelegaduHotu(request):
 	return render(request, 'membro/delegadu_hotu.html', context)
 
 
+# halo PDF lista delegadu ho foto dokumentu
 def build_pdf(datas, totais=None):
 	"""PDF A4 mirip dokumen resmi: kop surat, judul, tabel Naran | Pozisaun | Aldeia | Nu. Kartaun Eleitoral | Nu. HP WA.
 	Satu suku: `datas` berisi satu data. Semua suku: `totais` diisi dan tiap suku mulai di halaman baru."""
@@ -186,6 +195,7 @@ def build_pdf(datas, totais=None):
 	return buf.getvalue()
 
 
+# fó PDF nu'udar downloads
 def _pdf_response(pdf, nome_file):
 	response = HttpResponse(pdf, content_type='application/pdf')
 	response['Content-Disposition'] = f'inline; filename="{nome_file}-{datetime.date.today():%Y%m%d}.pdf"'
@@ -194,6 +204,7 @@ def _pdf_response(pdf, nome_file):
 	return response
 
 
+# ekspórta PDF delegadu suku ida
 @login_required
 @allowed_users(allowed_roles=roles.DELEGADU_ROLES)
 def DelegaduPdf(request, pk):
@@ -203,6 +214,7 @@ def DelegaduPdf(request, pk):
 	return _pdf_response(pdf, f'delegadu-suku-{village.pk}')
 
 
+# ekspórta PDF delegadu suku hotu
 @login_required
 @allowed_users(allowed_roles=roles.DELEGADU_HOTU_ROLES)
 def DelegaduHotuPdf(request):

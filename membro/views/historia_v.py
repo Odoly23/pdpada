@@ -13,7 +13,7 @@ LIMITE = 3000
 AKSAUN_STYLE = {
 	'Kria': ('fa-plus-circle', 'info'), 'Edita': ('fa-pencil', 'warn'), 'Aprova': ('fa-check-circle', 'ok'),
 	'Rejeita': ('fa-times-circle', 'bad'), 'Aloka': ('fa-sitemap', 'info'), 'Edita Pozisaun': ('fa-pencil', 'warn'),
-	'Termina Pozisaun': ('fa-stop-circle', 'warn'), 'Organigrama': ('fa-sitemap', 'info'),
+	'Termina Pozisaun': ('fa-stop-circle', 'warn'), 'Organigrama': ('fa-sitemap', 'info'), 'Edita Servisu': ('fa-briefcase', 'warn'), 'Edita Kontaktu': ('fa-phone', 'warn'),
 	'Resultado Submete': ('fa-check-square-o', 'ok'), 'Loke Resultado': ('fa-unlock', 'warn'), 'Hare Resultado': ('fa-eye', 'dark'),
 	'Eleisaun Foun': ('fa-flag', 'info'), 'Eleisaun Live': ('fa-television', 'info'), 'Tempat Foun': ('fa-map-marker', 'info'),
 	'Fiskais Foun': ('fa-user-plus', 'info'), 'Hamoos Fiskais': ('fa-trash', 'bad'), 'Hamoos': ('fa-trash', 'bad'), 'Hamoos Pozisaun': ('fa-trash', 'bad'), 'Ekspor': ('fa-download', 'dark'),
@@ -21,6 +21,7 @@ AKSAUN_STYLE = {
 }
 
 
+# filtru ba lista istória
 def historia_filters(current):
 	"""Tombol filter jenis aksi: 'Hotu' + satu tombol per jenis aksi yang ada, dengan hitungan dan status aktif."""
 	counts = dict(Historia.objects.order_by().values_list('aksaun').annotate(n=Count('id')))
@@ -35,6 +36,7 @@ def historia_filters(current):
 	return filters
 
 
+# lista istória mudansa dadus (audit)
 @login_required
 @allowed_users(allowed_roles=roles.HISTORIA_ROLES)
 def HistoriaList(request):
@@ -51,6 +53,7 @@ def HistoriaList(request):
 	return render(request, 'membro/historia_list.html', context)
 
 
+# detalle istória ida
 @login_required
 @allowed_users(allowed_roles=roles.HISTORIA_ROLES)
 def HistoriaDetail(request, pk):

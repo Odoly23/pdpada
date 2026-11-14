@@ -11,6 +11,7 @@ from membro.models import Membro
 from membro.utils import log_historia
 
 
+# muda estadu aprovasaun membru no rai istória
 def _aprova(user, obj):
 	obj.aprovasaun = 'Aprovadu'
 	obj.aprovadu_husi = user
@@ -20,6 +21,7 @@ def _aprova(user, obj):
 	log_historia(user, obj, 'Aprova', f'Aprovadu husi {user.get_username()}')
 
 
+# lista membru hein aprovasaun
 @login_required
 @allowed_users(allowed_roles=roles.APROVA_ROLES)
 def AprovasaunList(request):
@@ -32,6 +34,7 @@ def AprovasaunList(request):
 	return render(request, 'membro/aprovasaun_list.html', context)
 
 
+# aprova membru ida
 @login_required
 @allowed_users(allowed_roles=roles.APROVA_ROLES)
 @require_POST
@@ -47,6 +50,7 @@ def AprovasaunAprova(request, hashid):
 	return redirect('aprovasaun-list')
 
 
+# aprova membru barak ho dala ida
 @login_required
 @allowed_users(allowed_roles=roles.APROVA_ROLES)
 @require_POST
@@ -64,6 +68,7 @@ def AprovasaunBulk(request):
 	return redirect('aprovasaun-list')
 
 
+# rejeita membru ho motivu
 @login_required
 @allowed_users(allowed_roles=roles.APROVA_ROLES)
 def AprovasaunRejeita(request, hashid):

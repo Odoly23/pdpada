@@ -12,10 +12,12 @@ from membro.views.rekap_v import _banner
 from users.utils import c_user_emp
 
 
+# liga ba lista ho filtru
 def _url(**params):
 	return reverse('membro-list') + '?' + urlencode(params)
 
 
+# sura liña ba tabela relatóriu
 def _count_rows(qs, field, key, label=None, none_label='Laiha', none_value=None, skip_none=False):
 	"""Baris {name, total, url}: jumlah membru per nilai `field`, tautan ke daftar terfilter."""
 	rows = []
@@ -30,6 +32,7 @@ def _count_rows(qs, field, key, label=None, none_label='Laiha', none_value=None,
 	return rows
 
 
+# liña ho naran ba tabela relatóriu
 def _named_rows(qs, id_field, name_field, key, none_label='Laiha organizasaun'):
 	"""Baris {name, total, mane, feto, url} per suku/aldeia/organizasaun (satu query)."""
 	rows = qs.order_by().values(id_field, name_field).annotate(
@@ -38,6 +41,7 @@ def _named_rows(qs, id_field, name_field, key, none_label='Laiha organizasaun'):
 		'url': _url(**{key: r[id_field] or 0})} for r in rows]
 
 
+# liña grupu idade
 def _age_rows(qs):
 	today = datetime.date.today()
 	counts = {label: 0 for _, _, label in AGE_BINS}
@@ -50,6 +54,7 @@ def _age_rows(qs):
 	return [{'name': label, 'total': counts[label], 'url': _url(umur=label)} for _, _, label in AGE_BINS if counts[label]]
 
 
+# dashboard relatóriu
 @login_required
 @allowed_users(allowed_roles=roles.VIEW_ROLES)
 def Dash(request):
@@ -91,6 +96,7 @@ def Dash(request):
 	return render(request, 'report/dash.html', context)
 
 
+# dashboard gráfiku
 @login_required
 @allowed_users(allowed_roles=roles.VIEW_ROLES)
 def ChartDash(request):

@@ -32,25 +32,10 @@ def normalize_eleitoral(value):
 class MembroForm(forms.ModelForm):
 	date_of_birth = forms.DateField(label="Data Moris", widget=DateInput(), required=True)
 	data_hakbit = forms.DateField(label="Data Hakbit (Tama PD)", widget=DateInput(), required=False)
-	# Servisu agora (disimpan iha model Servisu): form servisu tuir status
-	_PILIH = [('', '--- Hili ---')]
-	sv_status = forms.ChoiceField(label="Servisu agora", choices=_PILIH + Servisu.STATUS)
-	sv_setor = forms.ChoiceField(label="Tipu Instituisaun", choices=_PILIH + Servisu.SETOR, required=False)
-	sv_tipu = forms.ChoiceField(label="Tipu Servisu", choices=_PILIH + Servisu.TIPU_LAOS, required=False)
-	sv_instituisaun = forms.CharField(label="Instituisaun / Kompañia", max_length=150, required=False)
-	sv_diresaun = forms.CharField(label="Diresaun / Departamentu", max_length=120, required=False)
-	sv_pozisaun = forms.CharField(label="Pozisaun / Kargu", max_length=100, required=False)
-	sv_kategoria = forms.CharField(label="Kategoria", max_length=50, required=False)
-	sv_grau = forms.CharField(label="Grau", max_length=20, required=False)
-	sv_data_hahu = forms.DateField(label="Data Hahu Servisu", widget=DateInput(), required=False)
-	sv_municipality = forms.ModelChoiceField(label="Municipiu Servisu", queryset=Municipality.objects.all(), required=False)
-	sv_atividade = forms.ChoiceField(label="Ita halo saida agora?", choices=_PILIH + Servisu.ATIVIDADE, required=False)
-	sv_detalle = forms.CharField(label="Detalle (ezemplu: eskola, fatin, atividade)", max_length=200, required=False)
-
 	class Meta:
 		model = Membro
 		fields = ['kategoria', 'nome', 'sex', 'place_of_birth', 'date_of_birth', 'marital', 'nu_eleitoral',
-			'telefone', 'image', 'file_eleitoral', 'village', 'aldeia', 'address', 'organizasaun', 'data_hakbit', 'status']
+			'image', 'file_eleitoral', 'village', 'aldeia', 'organizasaun', 'data_hakbit', 'status']
 
 	def __init__(self, *args, user=None, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -61,11 +46,6 @@ class MembroForm(forms.ModelForm):
 		self.fields['kategoria'].initial = 'Militante'
 		self.fields['kategoria'].help_text = 'Militante: membru ho Nu. Eleitoral. Simpatizante: dadus simples (Nu. Eleitoral opsionál).'
 		self.fields['nu_eleitoral'].help_text = 'Obrigatóriu ba Militante; Simpatizante bele husik mamuk.'
-		sv = Servisu.objects.filter(membro=self.instance).first() if self.instance.pk else None
-		if sv:
-			self.initial.update({'sv_status': sv.status, 'sv_setor': sv.setor or '', 'sv_tipu': sv.tipu_laos or '', 'sv_instituisaun': sv.instituisaun,
-				'sv_diresaun': sv.diresaun, 'sv_pozisaun': sv.pozisaun, 'sv_kategoria': sv.kategoria, 'sv_grau': sv.grau, 'sv_data_hahu': sv.data_hahu,
-				'sv_municipality': sv.municipality_id, 'sv_atividade': sv.atividade or '', 'sv_detalle': sv.detalle})
 		# upload: FileInput biasa (tanpa tautan/URL publik); isi file diperiksa di server
 		self.fields['image'].widget = forms.FileInput(attrs={'accept': 'image/jpeg,image/png'})
 		self.fields['file_eleitoral'].widget = forms.FileInput(attrs={'accept': 'application/pdf'})
@@ -116,47 +96,20 @@ class MembroForm(forms.ModelForm):
 				css_class='form-row'
 			),
 			Row(
-				Column('marital', css_class='form-group col-md-3 mb-0'),
-				Column('telefone', css_class='form-group col-md-3 mb-0'),
-				Column('image', css_class='form-group col-md-3 mb-0'),
-				Column('file_eleitoral', css_class='form-group col-md-3 mb-0'),
+				Column('marital', css_class='form-group col-md-4 mb-0'),
+				Column('image', css_class='form-group col-md-4 mb-0'),
+				Column('file_eleitoral', css_class='form-group col-md-4 mb-0'),
 				css_class='form-row'
 			),
 			Row(
-				Column('village', css_class='form-group col-md-4 mb-0'),
-				Column('aldeia', css_class='form-group col-md-4 mb-0'),
-				Column('address', css_class='form-group col-md-4 mb-0'),
+				Column('village', css_class='form-group col-md-6 mb-0'),
+				Column('aldeia', css_class='form-group col-md-6 mb-0'),
 				css_class='form-row'
 			),
 			Row(
 				Column('organizasaun', css_class='form-group col-md-4 mb-0'),
 				Column('data_hakbit', css_class='form-group col-md-4 mb-0'),
 				Column('status', css_class='form-group col-md-4 mb-0'),
-				css_class='form-row'
-			),
-			HTML('<hr><h6 class="text-primary">SERVISU</h6>'),
-			Row(
-				Column('sv_status', css_class='form-group col-md-4 mb-0'),
-				Column('sv_setor', css_class='form-group col-md-4 mb-0 sv-kerja'),
-				Column('sv_tipu', css_class='form-group col-md-4 mb-0 sv-laos'),
-				css_class='form-row'
-			),
-			Row(
-				Column('sv_instituisaun', css_class='form-group col-md-5 mb-0 sv-kerja'),
-				Column('sv_diresaun', css_class='form-group col-md-4 mb-0 sv-governu'),
-				Column('sv_pozisaun', css_class='form-group col-md-3 mb-0 sv-kerja'),
-				css_class='form-row'
-			),
-			Row(
-				Column('sv_kategoria', css_class='form-group col-md-3 mb-0 sv-governu'),
-				Column('sv_grau', css_class='form-group col-md-3 mb-0 sv-governu'),
-				Column('sv_data_hahu', css_class='form-group col-md-3 mb-0 sv-kerja'),
-				Column('sv_municipality', css_class='form-group col-md-3 mb-0 sv-kerja'),
-				css_class='form-row'
-			),
-			Row(
-				Column('sv_atividade', css_class='form-group col-md-4 mb-0 sv-seidauk'),
-				Column('sv_detalle', css_class='form-group col-md-8 mb-0 sv-seidauk'),
 				css_class='form-row'
 			),
 			HTML(BTN_CANCEL),
@@ -203,35 +156,7 @@ class MembroForm(forms.ModelForm):
 			self.add_error('aldeia', 'Aldeia ne\'e la pertense ba suku ne\'ebé hili.')
 		if cleaned.get('kategoria') == 'Militante' and not cleaned.get('nu_eleitoral'):
 			self.add_error('nu_eleitoral', 'Nu. Eleitoral obrigatóriu ba Militante.')
-		status = cleaned.get('sv_status')
-		if status == 'Servisu':
-			for campo, msg in [('sv_setor', 'Hili instituisaun governu ka laos governu.'), ('sv_instituisaun', 'Hatama naran instituisaun ka kompañia.'),
-					('sv_pozisaun', 'Hatama pozisaun ka kargu.')]:
-				if not cleaned.get(campo):
-					self.add_error(campo, msg)
-			if cleaned.get('sv_setor') == 'Laos Governu' and not cleaned.get('sv_tipu'):
-				self.add_error('sv_tipu', 'Hili tipu servisu.')
-			if cleaned.get('sv_data_hahu') and cleaned['sv_data_hahu'] > datetime.date.today():
-				self.add_error('sv_data_hahu', 'Data hahu servisu la bele iha futuru.')
-		elif status == 'Seidauk' and not cleaned.get('sv_atividade'):
-			self.add_error('sv_atividade', 'Hili ita halo saida agora.')
 		return cleaned
-
-	def save_servisu(self, membro):
-		"""Rai servisu agora: se iha servisu rai dadus servisu; se seidauk rai atividade (campu seluk hamoos)."""
-		cd = self.cleaned_data
-		kerja = cd['sv_status'] == 'Servisu'
-		governu = kerja and cd.get('sv_setor') == 'Governu'
-		defaults = {
-			'status': cd['sv_status'], 'setor': cd.get('sv_setor') if kerja else None,
-			'tipu_laos': cd.get('sv_tipu') if kerja and not governu else None,
-			'instituisaun': cd.get('sv_instituisaun', '') if kerja else '', 'diresaun': cd.get('sv_diresaun', '') if governu else '',
-			'pozisaun': cd.get('sv_pozisaun', '') if kerja else '', 'kategoria': cd.get('sv_kategoria', '') if governu else '',
-			'grau': cd.get('sv_grau', '') if governu else '', 'data_hahu': cd.get('sv_data_hahu') if kerja else None,
-			'municipality': cd.get('sv_municipality') if kerja else None,
-			'atividade': cd.get('sv_atividade') if not kerja else None, 'detalle': cd.get('sv_detalle', '') if not kerja else '',
-		}
-		Servisu.objects.update_or_create(membro=membro, defaults=defaults)
 
 
 class RejeitaForm(forms.Form):
@@ -413,5 +338,92 @@ class OrgResponsavelForm(forms.ModelForm):
 		if not naran:
 			self.add_error('naran', 'Hili membru ka isi naran.')
 		cleaned['naran'] = naran
+		return cleaned
+
+
+# form kontaktu membru (telefone no hela fatin): data hasai husi form prinsipál, rai iha pájina rasik
+class KontaktuForm(forms.ModelForm):
+	class Meta:
+		model = Membro
+		fields = ['telefone', 'address']
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.helper = FormHelper()
+		self.helper.form_method = 'post'
+		self.helper.layout = Layout(
+			Row(Column('telefone', css_class='form-group col-md-4 mb-0'), Column('address', css_class='form-group col-md-8 mb-0'), css_class='form-row'),
+			HTML(BTN_CANCEL), HTML(BTN_SAVE))
+
+
+# form servisu membru: iha servisu (governu ka laos governu) ka seidauk servisu (atividade agora)
+class ServisuForm(forms.ModelForm):
+	class Meta:
+		model = Servisu
+		fields = ['status', 'setor', 'tipu_laos', 'instituisaun', 'diresaun', 'pozisaun', 'kategoria', 'grau', 'data_hahu', 'municipality', 'atividade', 'detalle']
+		widgets = {'data_hahu': DateInput()}
+		labels = {'atividade': 'Ita halo saida agora?', 'tipu_laos': 'Tipu Servisu (laos governu)'}
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.fields['detalle'].help_text = 'Ezemplu: naran eskola, fatin servisu, atividade.'
+		self.helper = FormHelper()
+		self.helper.form_method = 'post'
+		self.helper.form_id = 'servisuForm'
+		self.helper.layout = Layout(
+			Row(
+				Column('status', css_class='form-group col-md-4 mb-0'),
+				Column('setor', css_class='form-group col-md-4 mb-0 sv-kerja'),
+				Column('tipu_laos', css_class='form-group col-md-4 mb-0 sv-laos'),
+				css_class='form-row'
+			),
+			Row(
+				Column('instituisaun', css_class='form-group col-md-5 mb-0 sv-kerja'),
+				Column('diresaun', css_class='form-group col-md-4 mb-0 sv-governu'),
+				Column('pozisaun', css_class='form-group col-md-3 mb-0 sv-kerja'),
+				css_class='form-row'
+			),
+			Row(
+				Column('kategoria', css_class='form-group col-md-3 mb-0 sv-governu'),
+				Column('grau', css_class='form-group col-md-3 mb-0 sv-governu'),
+				Column('data_hahu', css_class='form-group col-md-3 mb-0 sv-kerja'),
+				Column('municipality', css_class='form-group col-md-3 mb-0 sv-kerja'),
+				css_class='form-row'
+			),
+			Row(
+				Column('atividade', css_class='form-group col-md-4 mb-0 sv-seidauk'),
+				Column('detalle', css_class='form-group col-md-8 mb-0 sv-seidauk'),
+				css_class='form-row'
+			),
+			HTML(BTN_CANCEL), HTML(BTN_SAVE))
+
+	def clean(self):
+		cleaned = super().clean()
+		status = cleaned.get('status')
+		kerja = status == 'Servisu'
+		governu = kerja and cleaned.get('setor') == 'Governu'
+		if kerja:
+			for campo, msg in [('setor', 'Hili instituisaun governu ka laos governu.'), ('instituisaun', 'Hatama naran instituisaun ka kompañia.'),
+					('pozisaun', 'Hatama pozisaun ka kargu.')]:
+				if not cleaned.get(campo):
+					self.add_error(campo, msg)
+			if cleaned.get('setor') == 'Laos Governu' and not cleaned.get('tipu_laos'):
+				self.add_error('tipu_laos', 'Hili tipu servisu.')
+			if cleaned.get('data_hahu') and cleaned['data_hahu'] > datetime.date.today():
+				self.add_error('data_hahu', 'Data hahu servisu la bele iha futuru.')
+		elif status == 'Seidauk' and not cleaned.get('atividade'):
+			self.add_error('atividade', 'Hili ita halo saida agora.')
+		# campu ne'ebé la relevante hamoos, atu dadus la sai kusar
+		if kerja:
+			cleaned['atividade'], cleaned['detalle'] = None, ''
+			if not governu:
+				cleaned['diresaun'], cleaned['kategoria'], cleaned['grau'] = '', '', ''
+			if cleaned.get('setor') != 'Laos Governu':
+				cleaned['tipu_laos'] = None
+		elif status == 'Seidauk':
+			for campo in ('setor', 'tipu_laos', 'data_hahu', 'municipality'):
+				cleaned[campo] = None
+			for campo in ('instituisaun', 'diresaun', 'pozisaun', 'kategoria', 'grau'):
+				cleaned[campo] = ''
 		return cleaned
 

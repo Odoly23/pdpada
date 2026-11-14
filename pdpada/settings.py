@@ -49,8 +49,13 @@ MIDDLEWARE = [
 	'django.middleware.csrf.CsrfViewMiddleware',
 	'django.contrib.auth.middleware.AuthenticationMiddleware',
 	'django.contrib.messages.middleware.MessageMiddleware',
+	'pdpada.middleware.OneTimeFormMiddleware',
 	'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# formuláriu uza dala ida de'it (hasai double-save no "Back"); tetes la uza
+ONE_TIME_FORMS = True
+TEST_RUNNER = 'pdpada.test_runner.TestRunner'
 
 ROOT_URLCONF = 'pdpada.urls'
 

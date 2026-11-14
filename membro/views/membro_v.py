@@ -8,11 +8,12 @@ from config import roles
 from config.decorators import allowed_users
 from config.user_utils import c_user_group, membro_scope
 from custom.models import Year, Village, Aldeia, Organizasaun
-from membro.forms import MembroForm
+from membro.forms import MembroForm, KontaktuForm, ServisuForm
 from membro.models import Membro, Alokasaun, Servisu
 from membro.utils import snapshot, diff_snapshot, log_historia, membro_listing, aprovasaun_filters, kategoria_filters, SERVISU_BUTTONS
 
 
+# lista membru (filtru kategoria, servisu, suku, aldeia)
 @login_required
 @allowed_users(allowed_roles=roles.LISTA_ROLES)
 def MembroList(request):
@@ -30,6 +31,7 @@ def MembroList(request):
 	return render(request, 'membro/list.html', context)
 
 
+# detalle membru (dadus, kontaktu, servisu)
 @login_required
 @allowed_users(allowed_roles=roles.LISTA_ROLES)
 def MembroDetail(request, hashid):
@@ -48,6 +50,7 @@ def MembroDetail(request, hashid):
 	return render(request, 'membro/detail.html', context)
 
 
+# adisiona dadus membru
 @login_required
 @allowed_users(allowed_roles=roles.INPUT_ROLES)
 def MembroAdd(request):
@@ -65,9 +68,8 @@ def MembroAdd(request):
 			instance.datetime = timezone.now()
 			instance.user = request.user
 			instance.save()
-			form.save_servisu(instance)
 			log_historia(request.user, instance, 'Kria', f'Membru foun ({instance.kategoria}): {instance}')
-			messages.success(request, 'Membru foun aumenta ona. Hein aprovasaun.')
+			messages.success(request, 'Membru foun aumenta ona. Hein aprovasaun. Lanjuta: hatama kontaktu no servisu iha pájina detalle.')
 			duplikadu = Membro.objects.filter(nome__iexact=instance.nome, date_of_birth=instance.date_of_birth).exclude(pk=instance.pk)
 			if duplikadu.exists():
 				messages.warning(request, f'Atensaun: iha membru seluk ho naran no data moris hanesan ({duplikadu.first()}). Verifika!')
@@ -82,6 +84,7 @@ def MembroAdd(request):
 	return render(request, 'membro/form.html', context)
 
 
+# hadia/edita dadus membru
 @login_required
 @allowed_users(allowed_roles=roles.INPUT_ROLES)
 def MembroUpdate(request, hashid):
@@ -103,7 +106,6 @@ def MembroUpdate(request, hashid):
 			instance.datetime = timezone.now()
 			instance.user = request.user
 			instance.save()
-			form.save_servisu(instance)
 			for name, old_name in old_files.items():  # file lama yang diganti dihapus dari penyimpanan
 				if old_name and old_name != getattr(instance, name).name:
 					Membro._meta.get_field(name).storage.delete(old_name)
@@ -120,6 +122,7 @@ def MembroUpdate(request, hashid):
 	return render(request, 'membro/form.html', context)
 
 
+# hamoos membru
 @login_required
 @allowed_users(allowed_roles=roles.APROVA_ROLES)
 @require_POST
@@ -136,6 +139,7 @@ def MembroDel(request, hashid):
 	return redirect('membro-list')
 
 
+# hatudu foto/PDF membru (privadu)
 @login_required
 @allowed_users(allowed_roles=roles.LISTA_ROLES)
 def MembroFile(request, hashid, kind):
@@ -160,3 +164,55 @@ def MembroFile(request, hashid, kind):
 	response['X-Content-Type-Options'] = 'nosniff'
 	response['Cache-Control'] = 'private, no-store'
 	return response
+
+
+# hadia/edita kontaktu membru (telefone no hela fatin)
+@login_required
+@allowed_users(allowed_roles=roles.INPUT_ROLES)
+def KontaktuUpdate(request, hashid):
+	group = c_user_group(request.user)
+	emp = get_object_or_404(membro_scope(request.user), hashed=hashid)
+	old = f'{emp.telefone or "-"} / {emp.address or "-"}'
+	if request.method == 'POST':
+		form = KontaktuForm(request.POST, instance=emp)
+		if form.is_valid():
+			instance = form.save()
+			log_historia(request.user, instance, 'Edita Kontaktu', f'Kontaktu: {old} -> {instance.telefone or "-"} / {instance.address or "-"}')
+			messages.success(request, 'Informasaun kontaktu altera ona.')
+			return redirect('membro-detail', hashid=hashid)
+	else:
+		form = KontaktuForm(instance=emp)
+	context = {
+		'form': form, 'group': group, 'hashid': hashid, 'emp': emp, 'cancel_url': f'/membro/{hashid}/',
+		'back_url': 'membro-detail', 'back_args': [hashid], 'back_label': 'Detalha Membru',
+		'title': 'Altera Kontaktu', 'legend': f'Kontaktu · {emp.nome}'
+	}
+	return render(request, 'main/form.html', context)
+
+
+# adisiona ka hadia dadus servisu membru (iha servisu governu/laos governu ka seidauk servisu)
+@login_required
+@allowed_users(allowed_roles=roles.INPUT_ROLES)
+def ServisuUpdate(request, hashid):
+	group = c_user_group(request.user)
+	emp = get_object_or_404(membro_scope(request.user), hashed=hashid)
+	objects = Servisu.objects.filter(membro=emp).first()
+	old = objects.resumu() if objects else '-'
+	if request.method == 'POST':
+		form = ServisuForm(request.POST, instance=objects)
+		if form.is_valid():
+			instance = form.save(commit=False)
+			instance.membro = emp
+			instance.save()
+			log_historia(request.user, emp, 'Edita Servisu', f'Servisu: {old} -> {instance.resumu()}')
+			messages.success(request, 'Dadus servisu rai ona.')
+			return redirect('membro-detail', hashid=hashid)
+	else:
+		form = ServisuForm(instance=objects)
+	context = {
+		'form': form, 'group': group, 'hashid': hashid, 'emp': emp, 'cancel_url': f'/membro/{hashid}/',
+		'back_url': 'membro-detail', 'back_args': [hashid], 'back_label': 'Detalha Membru',
+		'title': 'Servisu Membru', 'legend': f'Servisu · {emp.nome}'
+	}
+	return render(request, 'membro/servisu_form.html', context)
+

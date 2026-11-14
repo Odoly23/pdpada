@@ -11,12 +11,14 @@ from membro.utils import membro_listing, log_historia, CSV_HEADER, csv_row
 logger = logging.getLogger('pdpada')
 
 
+# objetu ba CSV streaming (fó fila de'it)
 class Echo:
 	"""Pseudo-buffer: csv.writer menulis ke sini dan hasilnya langsung di-stream (hemat memori)."""
 	def write(self, value):
 		return value
 
 
+# ekspórta lista membru ba CSV
 @login_required
 @allowed_users(allowed_roles=roles.EXPORT_ROLES)
 def MembroExport(request):

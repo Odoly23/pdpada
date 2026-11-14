@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.urls import reverse
 from config import roles
 from custom.models import Municipality, AdministrativePost, Village, Aldeia, Organizasaun, Year
-from membro.models import Membro, Alokasaun, Historia, OrgPozisaun, OrgResponsavel
+from membro.models import Membro, Alokasaun, Historia, OrgPozisaun, OrgResponsavel, Servisu
 from users.models import UserScope
 
 
@@ -54,7 +54,7 @@ class BaseCase(TestCase):
 
 	def form_data(self, nu='ABC1234', **kw):
 		data = {'nome': 'Joao  Silva', 'sex': 'Mane', 'date_of_birth': '1990-05-04', 'nu_eleitoral': nu, 'kategoria': 'Militante',
-			'sv_status': 'Seidauk', 'sv_atividade': 'Estudante', 'aldeia': self.a1.pk, 'status': 'Ativu'}
+			'aldeia': self.a1.pk, 'status': 'Ativu'}
 		data.update(kw)
 		return data
 
@@ -2752,57 +2752,111 @@ class KategoriaServisuTests(BaseCase):
 		resp = self.post_add(nu='SIM00001', kategoria='Militante', nome='Lain')
 		self.assertContains(resp, 'DUPLIKADU')
 
-	def test_servisu_government_form_is_saved_and_shown(self):
-		resp = self.post_add(nu='SV000001', sv_status='Servisu', sv_setor='Governu', sv_instituisaun='Ministeriu Saude', sv_diresaun='Diresaun Jeral',
-			sv_pozisaun='Enfermeiru', sv_kategoria='B', sv_grau='3', sv_data_hahu='2020-01-01', sv_atividade='')
-		self.assertEqual(resp.status_code, 302)
-		sv = Membro.objects.get(nu_eleitoral='SV000001').servisu
+	def novo(self, **kw):
+		"""Buat membru lewat form prinsipál (sekjer suku), lalu kembalikan objeknya."""
+		self.post_add(**kw)
+		return Membro.objects.get(nu_eleitoral=kw.get('nu', 'ABC1234'))
+
+	def post_servisu(self, m, **data):
+		self.login('sekrsuku')
+		return self.client.post(reverse('membro-servisu', args=[m.hashed]), data)
+
+	def test_main_form_no_longer_has_servisu_or_contact_fields(self):
+		self.login('sekrsuku')
+		fields = set(self.client.get(reverse('membro-add')).context['form'].fields)
+		self.assertFalse({f for f in fields if f.startswith('sv_')})
+		self.assertFalse({'telefone', 'address'} & fields)
+
+	def test_add_redirects_to_detail_with_hint_to_continue(self):
+		resp = self.post_add(nu='RD000001')
+		m = Membro.objects.get(nu_eleitoral='RD000001')
+		self.assertRedirects(resp, reverse('membro-detail', args=[m.hashed]))
+		page = self.client.get(resp['Location'])
+		self.assertContains(page, reverse('membro-servisu', args=[m.hashed]))
+		self.assertContains(page, reverse('membro-kontaktu', args=[m.hashed]))
+		self.assertContains(page, 'Seidauk iha dadus servisu')
+
+	def test_servisu_government_is_saved_shown_and_redirects_to_detail(self):
+		m = self.novo(nu='SV000001')
+		resp = self.post_servisu(m, status='Servisu', setor='Governu', instituisaun='Ministeriu Saude', diresaun='Diresaun Jeral',
+			pozisaun='Enfermeiru', kategoria='B', grau='3', data_hahu='2020-01-01')
+		self.assertRedirects(resp, reverse('membro-detail', args=[m.hashed]))
+		sv = m.servisu
 		self.assertEqual((sv.status, sv.setor, sv.instituisaun, sv.pozisaun, sv.kategoria, sv.grau), ('Servisu', 'Governu', 'Ministeriu Saude', 'Enfermeiru', 'B', '3'))
 		self.assertIsNone(sv.atividade)
 		page = self.client.get(resp['Location'])
 		for needle in ('Iha servisu', 'Instituisaun Governu', 'Ministeriu Saude', 'Enfermeiru'):
 			self.assertContains(page, needle)
+		self.assertTrue(Historia.objects.filter(aksaun='Edita Servisu', membro=m).exists())
 
 	def test_servisu_non_government_needs_tipu_and_clears_government_fields(self):
-		bad = self.post_add(nu='SV000002', sv_status='Servisu', sv_setor='Laos Governu', sv_instituisaun='Kompañia X', sv_pozisaun='Motorista')
+		m = self.novo(nu='SV000002')
+		bad = self.post_servisu(m, status='Servisu', setor='Laos Governu', instituisaun='Kompañia X', pozisaun='Motorista')
 		self.assertContains(bad, 'Hili tipu servisu')
-		ok = self.post_add(nu='SV000002', sv_status='Servisu', sv_setor='Laos Governu', sv_tipu='Privadu', sv_instituisaun='Kompañia X',
-			sv_pozisaun='Motorista', sv_diresaun='tidak dipakai', sv_kategoria='X', sv_grau='9')
+		self.assertFalse(Servisu.objects.filter(membro=m).exists())
+		ok = self.post_servisu(m, status='Servisu', setor='Laos Governu', tipu_laos='Privadu', instituisaun='Kompañia X',
+			pozisaun='Motorista', diresaun='tidak dipakai', kategoria='X', grau='9')
 		self.assertEqual(ok.status_code, 302)
-		sv = Membro.objects.get(nu_eleitoral='SV000002').servisu
+		sv = Servisu.objects.get(membro=m)
 		self.assertEqual((sv.setor, sv.tipu_laos, sv.diresaun, sv.kategoria, sv.grau), ('Laos Governu', 'Privadu', '', '', ''))
 
 	def test_servisu_required_fields_when_working(self):
-		resp = self.post_add(nu='SV000003', sv_status='Servisu')
+		m = self.novo(nu='SV000003')
+		resp = self.post_servisu(m, status='Servisu')
 		for msg in ('Hili instituisaun governu ka laos governu', 'Hatama naran instituisaun ka kompañia', 'Hatama pozisaun ka kargu'):
 			self.assertContains(resp, msg)
-		self.assertEqual(Membro.objects.count(), 0)
+		self.assertFalse(Servisu.objects.filter(membro=m).exists())
 
 	def test_not_working_requires_activity_and_stores_it(self):
-		bad = self.post_add(nu='SV000004', sv_atividade='')
-		self.assertContains(bad, 'Hili ita halo saida agora')
-		ok = self.post_add(nu='SV000004', sv_atividade='Estudante', sv_detalle='UNTL', sv_instituisaun='tidak dipakai')
+		m = self.novo(nu='SV000004')
+		self.assertContains(self.post_servisu(m, status='Seidauk'), 'Hili ita halo saida agora')
+		ok = self.post_servisu(m, status='Seidauk', atividade='Estudante', detalle='UNTL', instituisaun='tidak dipakai')
 		self.assertEqual(ok.status_code, 302)
-		sv = Membro.objects.get(nu_eleitoral='SV000004').servisu
+		sv = Servisu.objects.get(membro=m)
 		self.assertEqual((sv.status, sv.atividade, sv.detalle, sv.instituisaun, sv.setor), ('Seidauk', 'Estudante', 'UNTL', '', None))
 		self.assertEqual(sv.resumu(), 'Seidauk servisu: Estudante (UNTL)')
 
 	def test_servisu_status_is_required(self):
-		resp = self.post_add(nu='SV000005', sv_status='')
-		self.assertEqual(resp.status_code, 200)
-		self.assertEqual(Membro.objects.count(), 0)
+		m = self.novo(nu='SV000005')
+		self.assertEqual(self.post_servisu(m, status='').status_code, 200)
+		self.assertFalse(Servisu.objects.filter(membro=m).exists())
 
-	def test_edit_prefills_and_changes_servisu_and_history_records_it(self):
-		self.post_add(nu='SV000006')
-		m = Membro.objects.get(nu_eleitoral='SV000006')
+	def test_editing_servisu_prefills_and_replaces_without_duplicate(self):
+		m = self.novo(nu='SV000006')
+		self.post_servisu(m, status='Seidauk', atividade='Estudante')
 		self.login('sekrsuku')
-		form = self.client.get(reverse('membro-update', args=[m.hashed])).context['form']
-		self.assertEqual((form.initial['sv_status'], form.initial['sv_atividade']), ('Seidauk', 'Estudante'))
-		self.client.post(reverse('membro-update', args=[m.hashed]), self.form_data(nu='SV000006', sv_status='Servisu', sv_setor='Governu',
-			sv_instituisaun='Ministeriu Edukasaun', sv_pozisaun='Mestre', sv_atividade=''))
+		form = self.client.get(reverse('membro-servisu', args=[m.hashed])).context['form']
+		self.assertEqual((form.instance.status, form.instance.atividade), ('Seidauk', 'Estudante'))
+		self.post_servisu(m, status='Servisu', setor='Governu', instituisaun='Ministeriu Edukasaun', pozisaun='Mestre')
+		self.assertEqual(Servisu.objects.filter(membro=m).count(), 1)
+		sv = Servisu.objects.get(membro=m)
+		self.assertEqual((sv.setor, sv.atividade, sv.status), ('Governu', None, 'Servisu'))
+		self.assertIn('->', Historia.objects.filter(aksaun='Edita Servisu').latest('id').detalhe)
+
+	def test_servisu_and_kontaktu_do_not_reset_aprovasaun(self):
+		m = self.make('AP000001', aprovasaun='Aprovadu')
+		self.post_servisu(m, status='Seidauk', atividade='Estudante')
+		self.client.post(reverse('membro-kontaktu', args=[m.hashed]), {'telefone': '77123456', 'address': 'Bairo Pite'})
 		m.refresh_from_db()
-		self.assertEqual(m.servisu.setor, 'Governu')
-		self.assertIn('Servisu', Historia.objects.filter(aksaun='Edita').latest('id').detalhe)
+		self.assertEqual((m.aprovasaun, m.telefone, m.address), ('Aprovadu', '77123456', 'Bairo Pite'))
+
+	def test_kontaktu_view_saves_validates_and_redirects(self):
+		m = self.novo(nu='KT000001')
+		self.login('sekrsuku')
+		bad = self.client.post(reverse('membro-kontaktu', args=[m.hashed]), {'telefone': 'abc', 'address': ''})
+		self.assertEqual(bad.status_code, 200)
+		ok = self.client.post(reverse('membro-kontaktu', args=[m.hashed]), {'telefone': '+670 7712 3456', 'address': 'Rua A'})
+		self.assertRedirects(ok, reverse('membro-detail', args=[m.hashed]))
+		m.refresh_from_db()
+		self.assertEqual((m.telefone, m.address), ('+670 7712 3456', 'Rua A'))
+		self.assertTrue(Historia.objects.filter(aksaun='Edita Kontaktu', membro=m).exists())
+
+	def test_servisu_and_kontaktu_only_input_roles_within_scope(self):
+		m = self.novo(nu='SC000001')
+		for name in ('membro-servisu', 'membro-kontaktu'):
+			for u, code in [('sekrsuku', 200), ('koordsuku', 403), ('presidente', 403), ('sekrpostu', 403), ('admin', 403), ('sekrsukub', 404)]:
+				self.login(u)
+				self.assertEqual(self.client.get(reverse(name, args=[m.hashed])).status_code, code, (name, u))
 
 	def test_jenis_separates_struktura_militante_simpatizante(self):
 		a = self.make('JN00001', kategoria='Militante')

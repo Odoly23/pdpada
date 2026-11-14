@@ -39,5 +39,7 @@ urlpatterns = [
 	path('<str:hashid>/', views.MembroDetail, name='membro-detail'),
 	path('<str:hashid>/file/<str:kind>/', views.MembroFile, name='membro-file'),
 	path('<str:hashid>/edit/', views.MembroUpdate, name='membro-update'),
+	path('<str:hashid>/kontaktu/', views.KontaktuUpdate, name='membro-kontaktu'),
+	path('<str:hashid>/servisu/', views.ServisuUpdate, name='membro-servisu'),
 	path('<str:hashid>/del/', views.MembroDel, name='membro-del'),
 ]
