@@ -9,8 +9,8 @@ from config.decorators import allowed_users
 from config.user_utils import c_user_group, membro_scope
 from custom.models import Year, Village, Aldeia, Organizasaun
 from membro.forms import MembroForm
-from membro.models import Membro, Alokasaun
-from membro.utils import snapshot, diff_snapshot, log_historia, membro_listing, aprovasaun_filters
+from membro.models import Membro, Alokasaun, Servisu
+from membro.utils import snapshot, diff_snapshot, log_historia, membro_listing, aprovasaun_filters, kategoria_filters, SERVISU_BUTTONS
 
 
 @login_required
@@ -23,6 +23,8 @@ def MembroList(request):
 		'can_add': group in roles.INPUT_ROLES, 'can_aprova': group in roles.APROVA_ROLES,
 		'can_export': group in roles.EXPORT_ROLES,
 		'filters': aprovasaun_filters(request.user, request.GET),
+		'jenis_filters': kategoria_filters(request.user, request.GET),
+		'servisu_filters': kategoria_filters(request.user, request.GET, 'servisu', SERVISU_BUTTONS),
 		'title': 'Lista Membru', 'legend': 'Lista Membru'
 	}
 	return render(request, 'membro/list.html', context)
@@ -37,6 +39,7 @@ def MembroDetail(request, hashid):
 	historias = obj.historia.select_related('user')[:50] if group in roles.HISTORIA_ROLES else None
 	context = {
 		'group': group, 'obj': obj, 'hashid': hashid, 'alokasauns': alokasauns, 'historias': historias,
+		'servisu': Servisu.objects.filter(membro=obj).select_related('municipality').first(),
 		'can_edit': group in roles.INPUT_ROLES,
 		'can_aprova': group in roles.APROVA_ROLES and obj.aprovasaun == 'Pendente',
 		'can_del': group in roles.APROVA_ROLES,
@@ -62,7 +65,8 @@ def MembroAdd(request):
 			instance.datetime = timezone.now()
 			instance.user = request.user
 			instance.save()
-			log_historia(request.user, instance, 'Kria', f'Membru foun: {instance}')
+			form.save_servisu(instance)
+			log_historia(request.user, instance, 'Kria', f'Membru foun ({instance.kategoria}): {instance}')
 			messages.success(request, 'Membru foun aumenta ona. Hein aprovasaun.')
 			duplikadu = Membro.objects.filter(nome__iexact=instance.nome, date_of_birth=instance.date_of_birth).exclude(pk=instance.pk)
 			if duplikadu.exists():
@@ -99,6 +103,7 @@ def MembroUpdate(request, hashid):
 			instance.datetime = timezone.now()
 			instance.user = request.user
 			instance.save()
+			form.save_servisu(instance)
 			for name, old_name in old_files.items():  # file lama yang diganti dihapus dari penyimpanan
 				if old_name and old_name != getattr(instance, name).name:
 					Membro._meta.get_field(name).storage.delete(old_name)

@@ -19,7 +19,7 @@
 					<tbody>
 						{% for m in grp %}
 						<tr>
-							<td><a href="{% url 'membro-detail' m.hashed %}">{{ m.nu_eleitoral }}</a></td>
+							<td><a href="{% url 'membro-detail' m.hashed %}">{{ m.nu_eleitoral|default_if_none:"-" }}</a></td>
 							<td>{{ m.village }} / {{ m.aldeia }}</td>
 							<td>{{ m.organizasaun|default_if_none:"-" }}</td>
 							<td>{{ m.telefone|default:"-" }}</td>
@@ -44,7 +44,7 @@
 						{% for m in grp %}
 						<tr>
 							<td><a href="{% url 'membro-detail' m.hashed %}">{{ m.nome }}</a></td>
-							<td>{{ m.nu_eleitoral }}</td>
+							<td>{{ m.nu_eleitoral|default_if_none:"-" }}</td>
 							<td>{{ m.village }} / {{ m.aldeia }}</td>
 							<td>{{ m.status }}</td>
 							<td><span class="badge badge-{{ m.aprovasaun|lower }}">{{ m.aprovasaun }}</span></td>

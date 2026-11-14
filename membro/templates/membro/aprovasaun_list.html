@@ -23,7 +23,7 @@
 								{% for obj in objects %}
 								<tr>
 									<td><input type="checkbox" name="hashid" value="{{ obj.hashed }}"></td>
-									<td data-title="Nu. Eleitoral">{{ obj.nu_eleitoral }}</td>
+									<td data-title="Nu. Eleitoral">{{ obj.nu_eleitoral|default_if_none:"-" }}</td>
 									<td data-title="Naran"><a href="{% url 'membro-detail' obj.hashed %}">{{ obj.nome }}</a></td>
 									<td data-title="Sexu">{{ obj.sex }}</td>
 									<td data-title="Suku">{{ obj.village }}</td>

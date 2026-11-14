@@ -9,6 +9,8 @@ from config.upload_utils import upload_foto, upload_eleitoral, validate_image_si
 from custom.models import Village, Aldeia, Organizasaun, Year
 
 SEXU = [('Mane', 'Mane'), ('Feto', 'Feto')]
+KATEGORIA = [('Militante', 'Militante'), ('Simpatizante', 'Simpatizante')]
+JENIS_LIST = ['Struktura', 'Militante', 'Simpatizante']  # Struktura = iha pozisaun ativu (is_colocado)
 MARITAL = [('Solteiro/a', 'Solteiro/a'), ('Casado/a', 'Casado/a'), ('Divorciado/a', 'Divorciado/a'), ('Viuvo/a', 'Viuvo/a')]
 STATUS = [('Ativu', 'Ativu'), ('Inativu', 'Inativu'), ('Falesidu', 'Falesidu')]
 APROVASAUN = [('Pendente', 'Pendente'), ('Aprovadu', 'Aprovadu'), ('Rejeitadu', 'Rejeitadu')]
@@ -29,7 +31,8 @@ class Membro(HashedModel):
 	place_of_birth = models.CharField(max_length=100, blank=True, null=True, verbose_name="Fatin Moris")
 	date_of_birth = models.DateField(verbose_name="Data Moris")
 	marital = models.CharField(choices=MARITAL, max_length=15, null=True, blank=True, verbose_name="Estado Civil")
-	nu_eleitoral = models.CharField(max_length=30, unique=True, verbose_name="Nu. Eleitoral",
+	kategoria = models.CharField(choices=KATEGORIA, max_length=12, default='Militante', db_index=True, verbose_name="Kategoria")
+	nu_eleitoral = models.CharField(max_length=30, unique=True, null=True, blank=True, verbose_name="Nu. Eleitoral",
 			validators=[RegexValidator(r'^[A-Za-z0-9\-/]{4,30}$', 'Deit letra, numeru, "-" no "/" (4 to 30 karakter).')])
 	telefone = models.CharField(max_length=20, null=True, blank=True, verbose_name="Nu. Telemovel",
 			validators=[RegexValidator(r'^[0-9+\- ]{7,20}$', 'Nu. telemovel la loos.')])
@@ -70,11 +73,15 @@ class Membro(HashedModel):
 			models.CheckConstraint(condition=models.Q(sex__in=[c[0] for c in SEXU]), name='membro_sex_valid'),
 			models.CheckConstraint(condition=models.Q(aprovasaun__in=[c[0] for c in APROVASAUN]), name='membro_aprovasaun_valid'),
 			models.CheckConstraint(condition=models.Q(status__in=[c[0] for c in STATUS]), name='membro_status_valid'),
+			models.CheckConstraint(condition=models.Q(kategoria__in=[c[0] for c in KATEGORIA]), name='membro_kategoria_valid'),
 		]
 
 	def __str__(self):
-		template = '{0.nome} ({0.nu_eleitoral})'
-		return template.format(self)
+		return f'{self.nome} ({self.nu_eleitoral})' if self.nu_eleitoral else self.nome
+
+	def jenis(self):
+		"""Struktura (iha pozisaun ativu) ka kategoria Militante/Simpatizante; data tolu ne'e separadu iha lista no relatóriu."""
+		return 'Struktura' if self.is_colocado else self.kategoria
 
 	def age(self):
 		if not self.date_of_birth:
@@ -191,4 +198,47 @@ class OrgResponsavel(models.Model):
 
 	def __str__(self):
 		return f'{self.naran} - {self.pozisaun}'
+
+
+class Servisu(models.Model):
+	"""Servisu agora: iha servisu ka seidauk. Se iha servisu: governu ka laos governu, instituisaun, pozisaun; se seidauk: atividade agora."""
+	STATUS = [('Servisu', 'Iha servisu'), ('Seidauk', 'Seidauk iha servisu')]
+	SETOR = [('Governu', 'Instituisaun Governu'), ('Laos Governu', 'Laos Governu')]
+	TIPU_LAOS = [('Privadu', 'Kompañia / setór privadu'), ('ONG', 'ONG / sosiedade sivíl'), ('Negosiu', 'Negósiu rasik'),
+		('Agrikultura', 'Agrikultura / peska'), ('Seluk', 'Seluk')]
+	ATIVIDADE = [('Estudante', 'Estudante'), ('Hela uma', 'Hela uma / kuidadu família'), ('Agrikultura', 'Agrikultór / peska'),
+		('Negosiu', "Negósiu ki'ik"), ('Dezempregadu', 'Hein servisu'), ('Aposentadu', 'Aposentadu'), ('Seluk', 'Seluk')]
+
+	membro = models.OneToOneField(Membro, on_delete=models.CASCADE, related_name='servisu')
+	status = models.CharField(choices=STATUS, max_length=10, db_index=True, verbose_name="Servisu agora")
+	setor = models.CharField(choices=SETOR, max_length=15, null=True, blank=True, db_index=True, verbose_name="Tipu Instituisaun")
+	tipu_laos = models.CharField(choices=TIPU_LAOS, max_length=15, null=True, blank=True, verbose_name="Tipu Servisu (laos governu)")
+	instituisaun = models.CharField(max_length=150, blank=True, verbose_name="Instituisaun / Kompañia")
+	diresaun = models.CharField(max_length=120, blank=True, verbose_name="Diresaun / Departamentu")
+	pozisaun = models.CharField(max_length=100, blank=True, verbose_name="Pozisaun / Kargu")
+	kategoria = models.CharField(max_length=50, blank=True, verbose_name="Kategoria")
+	grau = models.CharField(max_length=20, blank=True, verbose_name="Grau")
+	data_hahu = models.DateField(null=True, blank=True, verbose_name="Data Hahu Servisu")
+	municipality = models.ForeignKey('custom.Municipality', on_delete=models.PROTECT, null=True, blank=True, verbose_name="Municipiu Servisu")
+	atividade = models.CharField(choices=ATIVIDADE, max_length=15, null=True, blank=True, db_index=True, verbose_name="Atividade agora")
+	detalle = models.CharField(max_length=200, blank=True, verbose_name="Detalle")
+
+	class Meta:
+		constraints = [models.CheckConstraint(condition=models.Q(status__in=['Servisu', 'Seidauk']), name='servisu_status_valid')]
+
+	def badak(self):
+		"""Versaun badak ba kolua lista."""
+		if self.status == 'Servisu':
+			return f'{"Governu" if self.setor == "Governu" else "Laos Governu"} · {self.pozisaun}'
+		return f'Seidauk · {self.get_atividade_display() or "-"}'
+
+	def resumu(self):
+		"""Teks badak ba lista, historia no CSV."""
+		if self.status == 'Servisu':
+			nome = self.get_setor_display() if self.setor == 'Governu' else (self.get_tipu_laos_display() or 'Laos Governu')
+			return f'{nome}: {self.instituisaun}, {self.pozisaun}'.strip(', ')
+		return f'Seidauk servisu: {self.get_atividade_display() or "-"}' + (f' ({self.detalle})' if self.detalle else '')
+
+	def __str__(self):
+		return self.resumu()
 

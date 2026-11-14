@@ -6,9 +6,9 @@ from django.db.models import Count, Q
 from urllib.parse import urlencode
 from config.user_utils import membro_scope
 from custom.models import Year
-from membro.models import Membro, Historia, Alokasaun, POZISAUN_POR_NIVEL
+from membro.models import Membro, Historia, Alokasaun, Servisu, POZISAUN_POR_NIVEL
 
-SNAPSHOT_FIELDS = ['nome', 'sex', 'place_of_birth', 'date_of_birth', 'marital', 'nu_eleitoral',
+SNAPSHOT_FIELDS = ['kategoria', 'nome', 'sex', 'place_of_birth', 'date_of_birth', 'marital', 'nu_eleitoral',
 	'telefone', 'image', 'file_eleitoral', 'village', 'aldeia', 'address', 'organizasaun', 'data_hakbit', 'status']
 
 AGE_BINS = [(0, 17, '< 18'), (18, 25, '18-25'), (26, 35, '26-35'), (36, 45, '36-45'),
@@ -30,6 +30,18 @@ FILTER_CHOICES = {
 	'sex': ['Mane', 'Feto'],
 }
 FILTER_IDS = ['village', 'aldeia', 'organizasaun']
+JENIS_BUTTONS = [('Struktura', 'Struktura Penting', 'fa-sitemap', 'all'), ('Militante', 'Militante', 'fa-user', 'ok'),
+	('Simpatizante', 'Simpatizante', 'fa-heart', 'info')]  # (nilai filter, label, ikon, warna)
+SERVISU_BUTTONS = [('Servisu', 'Iha Servisu', 'fa-briefcase', 'ok'), ('Seidauk', 'Seidauk Servisu', 'fa-hourglass-half', 'warn')]
+
+
+def filter_jenis(qs, jenis):
+	"""Struktura = iha pozisaun ativu; Militante/Simpatizante = kategoria (tanpa sira ne'ebé iha struktura), supaya data tolu ne'e la sobu."""
+	if jenis == 'Struktura':
+		return qs.filter(is_colocado=True)
+	if jenis in ('Militante', 'Simpatizante'):
+		return qs.filter(kategoria=jenis, is_colocado=False)
+	return qs
 
 
 def snapshot(membro):
@@ -41,6 +53,8 @@ def snapshot(membro):
 		if name in ('image', 'file_eleitoral'):
 			val = ('iha …' + val.name.rsplit('/', 1)[-1][:8]) if val else None  # nama file = hash, tampilkan ringkas
 		data[str(field.verbose_name)] = '-' if val in (None, '') else str(val)
+	sv = Servisu.objects.filter(membro=membro).first() if membro.pk else None
+	data['Servisu'] = sv.resumu() if sv else '-'
 	return data
 
 
@@ -70,6 +84,13 @@ def apply_filters(qs, params):
 				qs = qs.filter(**{f'{key}_id': int(val)})
 	if params.get('marital') == 'laiha':
 		qs = qs.filter(Q(marital__isnull=True) | Q(marital=''))
+	qs = filter_jenis(qs, params.get('jenis'))
+	if params.get('servisu') in ('Servisu', 'Seidauk'):
+		qs = qs.filter(servisu__status=params['servisu'])
+	elif params.get('servisu') == 'laiha':
+		qs = qs.filter(servisu__isnull=True)
+	if params.get('setor') in ('Governu', 'Laos Governu'):
+		qs = qs.filter(servisu__setor=params['setor'])
 	umur = params.get('umur')
 	if umur in AGE_RANGE:
 		lo, hi = AGE_RANGE[umur]
@@ -102,7 +123,7 @@ def apply_alokasaun_filters(qs, params):
 def membro_listing(user, params):
 	"""Queryset daftar membru untuk user: wilayah + tinan ativu (kecuali ano=hotu) + filter GET.
 	Dipakai bersama oleh daftar dan ekspor CSV agar keduanya selalu sama."""
-	qs = membro_scope(user).select_related('village', 'aldeia', 'organizasaun')
+	qs = membro_scope(user).select_related('village', 'aldeia', 'organizasaun', 'servisu')
 	ano = Year.objects.filter(is_active=True).first()
 	semua_ano = params.get('ano') == 'hotu'
 	if ano and not semua_ano:
@@ -129,7 +150,7 @@ def search_membro(user, q, limit=50):
 
 
 CSV_HEADER = ['Nu. Eleitoral', 'Naran', 'Sexu', 'Data Moris', 'Idade', 'Estado Civil', 'Nu. Telemovel', 'Suku', 'Aldeia',
-	'Hela Fatin', 'Organizasaun', 'Data Hakbit', 'Status', 'Aprovasaun', 'Tinan']
+	'Hela Fatin', 'Organizasaun', 'Data Hakbit', 'Status', 'Aprovasaun', 'Tinan', 'Kategoria', 'Servisu']
 
 
 def csv_safe(value):
@@ -138,10 +159,15 @@ def csv_safe(value):
 	return "'" + text if text[:1] in ('=', '+', '-', '@', '\t', '\r') else text
 
 
+def servisu_text(m):
+	sv = getattr(m, 'servisu', None) if hasattr(m, 'servisu') else None
+	return sv.resumu() if sv else ''
+
+
 def csv_row(m):
 	return [csv_safe(v) for v in (
 		m.nu_eleitoral, m.nome, m.sex, m.date_of_birth, m.age(), m.marital or '', m.telefone or '', m.village, m.aldeia,
-		m.address or '', m.organizasaun or '', m.data_hakbit or '', m.status, m.aprovasaun, m.year or '')]
+		m.address or '', m.organizasaun or '', m.data_hakbit or '', m.status, m.aprovasaun, m.year or '', m.jenis(), servisu_text(m))]
 
 
 APROVASAUN_BUTTONS = [  # (nilai filter, label, ikon, warna)
@@ -172,3 +198,30 @@ def aprovasaun_filters(user, get):
 	for value, label, icon, kind in APROVASAUN_BUTTONS:
 		filters.append({'label': label, 'url': url(value), 'icon': icon, 'kind': kind, 'count': counts.get(value, 0), 'active': current == value})
 	return filters
+
+
+def kategoria_filters(user, get, param='jenis', buttons=None):
+	"""Tombol filter jenis (Struktura/Militante/Simpatizante) ba lista membru: hitungan tuir filtru seluk, status aktif, filtru seluk mantein."""
+	buttons = buttons or JENIS_BUTTONS
+	params = get.copy()
+	params.pop(param, None)
+	base, _ = membro_listing(user, params)
+	if param == 'jenis':
+		counts = {v: filter_jenis(base, v).count() for v, *_ in buttons}
+	else:  # servisu: Servisu / Seidauk
+		counts = dict(base.order_by().values_list('servisu__status').annotate(n=Count('id')))
+	current = get.get(param, '')
+	known = {b[0] for b in buttons}
+
+	def url(value=None):
+		q = params.copy()
+		if value:
+			q[param] = value
+		return '?' + q.urlencode() if q else '?'
+
+	total = base.count()
+	filters = [{'label': 'Hotu', 'url': url(), 'icon': 'fa-th-list', 'kind': 'all', 'count': total, 'active': current not in known}]
+	for value, label, icon, kind in buttons:
+		filters.append({'label': label, 'url': url(value), 'icon': icon, 'kind': kind, 'count': counts.get(value, 0), 'active': current == value})
+	return filters
+

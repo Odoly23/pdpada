@@ -9,6 +9,7 @@ from config.decorators import allowed_users
 from config.user_utils import c_user_group, membro_scope
 from custom.models import Year, Village, Aldeia, Organizasaun
 from membro.models import Membro, Alokasaun
+from membro.utils import filter_jenis
 from users.utils import c_user_emp
 
 ROLE_NAME = dict(roles.ROLE_LABELS)
@@ -86,8 +87,13 @@ def VarandaRekap(request):
 	ano = Year.objects.filter(is_active=True).first()
 	qs = membro_scope(request.user).filter(year=ano) if ano else membro_scope(request.user)
 	agg = qs.aggregate(total=Count('id'), mane=Count('id', filter=Q(sex='Mane')), feto=Count('id', filter=Q(sex='Feto')),
-		baru=Count('id', filter=Q(datetime__gte=timezone.now() - datetime.timedelta(days=30))))
+		baru=Count('id', filter=Q(datetime__gte=timezone.now() - datetime.timedelta(days=30))),
+		struktura=Count('id', filter=Q(is_colocado=True)), militante=Count('id', filter=Q(kategoria='Militante', is_colocado=False)),
+		simpatizante=Count('id', filter=Q(kategoria='Simpatizante', is_colocado=False)))
 	total = agg['total']
+	jenis_stats = [{'label': lbl, 'n': agg[key], 'kind': kind, 'url': _list_url(group, jenis=val)}
+		for val, lbl, key, kind in (('Struktura', 'Struktura Penting', 'struktura', 'struktura'), ('Militante', 'Militante', 'militante', 'militante'),
+			('Simpatizante', 'Simpatizante', 'simpatizante', 'simpatizante'))]
 	suku_rows, aldeia_rows = _counts(qs, 'village_id'), _counts(qs, 'aldeia_id')
 	villages, aldeias = _units(level, e, aldeia_rows, suku_rows)
 
@@ -126,7 +132,7 @@ def VarandaRekap(request):
 
 	context = {
 		'group': group, 'role_label': ROLE_NAME.get(group, ''), 'e': e, 'level': level, 'banner': _banner(group, e),
-		'total': total, 'total_url': _list_url(group), 'objects1': objects1, 'objects2': objects2, 'suku_cards': suku_cards, 'info': info, 'chart': chart,
+		'total': total, 'total_url': _list_url(group), 'objects1': objects1, 'objects2': objects2, 'suku_cards': suku_cards, 'info': info, 'chart': chart, 'jenis_stats': jenis_stats,
 		'can_list': group in roles.LISTA_ROLES, 'can_add': group in roles.INPUT_ROLES,
 		'can_struktura': group in roles.STRUKTURA_ROLES, 'group_cards': False,
 		'title': 'Varanda', 'legend': 'Varanda',
@@ -263,6 +269,11 @@ def MembroSum(request):
 	level = _level(group)
 	ano = Year.objects.filter(is_active=True).first()
 	qs = membro_scope(request.user).filter(year=ano) if ano else membro_scope(request.user)
+	jenis = request.GET.get('jenis') if request.GET.get('jenis') in ('Struktura', 'Militante', 'Simpatizante') else ''
+	jenis_buttons = [{'label': 'Hotu', 'url': '?', 'icon': 'fa-th-list', 'kind': 'all', 'count': qs.count(), 'active': not jenis}]
+	for val, lbl, icon, kind in (('Struktura', 'Struktura Penting', 'fa-sitemap', 'bad'), ('Militante', 'Militante', 'fa-user', 'all'), ('Simpatizante', 'Simpatizante', 'fa-heart', 'info')):
+		jenis_buttons.append({'label': lbl, 'url': f'?jenis={val}', 'icon': icon, 'kind': kind, 'count': filter_jenis(qs, val).count(), 'active': jenis == val})
+	qs = filter_jenis(qs, jenis)
 
 	if level == 'suku':
 		row_title, row_field, key = 'Aldeia', 'aldeia_id', 'aldeia'
@@ -287,9 +298,10 @@ def MembroSum(request):
 
 	rows = []
 	for u in units:
-		cells = [(cell.get((u.pk, cid), 0), url(**{key: u.pk, 'organizasaun': cid})) for cid, _ in cols]
+		extra = {'jenis': jenis} if jenis else {}
+		cells = [(cell.get((u.pk, cid), 0), url(**{key: u.pk, 'organizasaun': cid}, **extra)) for cid, _ in cols]
 		total = sum(c for c, _ in cells) if level != 'org' else sum(v for (rid, _), v in cell.items() if rid == u.pk)
-		rows.append({'obj': u, 'total': total, 'url': url(**{key: u.pk}), 'cells': cells})
+		rows.append({'obj': u, 'total': total, 'url': url(**{key: u.pk}, **extra), 'cells': cells})
 	if level == 'org':  # organisasi hanya baris yang punya anggotanya
 		rows = [r for r in rows if r['total']]
 	col_totals = [(sum(r['cells'][i][0] for r in rows), url(organizasaun=cid)) for i, (cid, _) in enumerate(cols)]
@@ -300,7 +312,8 @@ def MembroSum(request):
 		'series': [{'name': cols[i][1], 'data': [r['cells'][i][0] for r in rows]} for i in used]}
 	context = {
 		'group': group, 'banner': _banner(group, e), 'ano': ano, 'row_title': row_title, 'cols': [c[1] for c in cols],
-		'rows': rows, 'col_totals': col_totals, 'grand': grand, 'grand_url': url(), 'chart': chart,
+		'rows': rows, 'col_totals': col_totals, 'grand': grand, 'grand_url': url(**({'jenis': jenis} if jenis else {})), 'chart': chart,
+		'jenis_buttons': jenis_buttons, 'jenis': jenis,
 		'can_add': group in roles.INPUT_ROLES,
 		'title': 'Sumariu Membru', 'legend': 'Sumariu Membru',
 		'meta_description': 'Sumariu membru Partido Democratico, Postu Dom Aleixo, tuir suku, aldeia no organizasaun.',

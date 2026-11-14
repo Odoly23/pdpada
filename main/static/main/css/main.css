@@ -559,3 +559,19 @@ div.dataTables_wrapper div.dataTables_length label { font-weight: 400; color: #6
 	.doc-suku { color: #000; border-bottom: 1px solid #000; font-size: 12pt; }
 	.doc-suku small { color: #000; }
 }
+
+/* lencana jenis membru: Struktura, Militante, Simpatizante */
+.badge-jenis-struktura { background-color: var(--red); color: #fff; }
+.badge-jenis-militante { background-color: var(--navy); color: #fff; }
+.badge-jenis-simpatizante { background-color: #fff; color: var(--navy); border: 1px solid var(--navy); }
+
+/* hitungan jenis membru di Varanda */
+.jenis-strip { margin: .25rem 0 .75rem; }
+.jenis-box { display: block; padding: .4rem .5rem; border: 2px solid var(--navy); color: var(--navy); text-decoration: none; background: #fff; }
+.jenis-box:hover { text-decoration: none; color: var(--navy); background: var(--light, #eef1ff); }
+.jenis-box span { display: block; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.jenis-box strong { font-size: 1.6rem; line-height: 1.1; }
+.jenis-struktura { border-color: var(--red); color: var(--red); }
+.jenis-simpatizante { border-style: dashed; }
+
+.filter-title { align-self: center; min-width: 6.5rem; font-weight: 700; color: var(--navy); text-transform: uppercase; font-size: .8rem; letter-spacing: .05em; }

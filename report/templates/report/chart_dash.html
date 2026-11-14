@@ -21,6 +21,20 @@
 			</div>
 		</div>
 	</div>
+	<div class="row mb-3">
+		<div class="col-md-6">
+			<div class="card">
+				<div class="card-header">Struktura Penting, Militante no Simpatizante</div>
+				<div class="card-body"><figure class="highcharts-figure"><div id="chart_jenis"></div></figure></div>
+			</div>
+		</div>
+		<div class="col-md-6">
+			<div class="card">
+				<div class="card-header">Membru Tuir Servisu</div>
+				<div class="card-body"><figure class="highcharts-figure"><div id="chart_servisu"></div></figure></div>
+			</div>
+		</div>
+	</div>
 	<div class="row">
 		<div class="col-md-6">
 			<div class="card">
@@ -96,6 +110,8 @@
 <script>
 	{% include 'chart/chart_base.js' %}
 	{% include 'chart/chart_sexo.js' %}
+	{% include 'chart/chart_jenis.js' %}
+	{% include 'chart/chart_servisu.js' %}
 	{% include 'chart/chart_aprovasaun.js' %}
 	{% include 'chart/chart_suku.js' %}
 	{% include 'chart/chart_suku_sexu.js' %}

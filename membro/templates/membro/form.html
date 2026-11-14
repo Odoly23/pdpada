@@ -1,1 +1,15 @@
 {% extends "main/form.html" %}
+{% block form_scripts %}
+<script type="text/javascript">
+	// form servisu tuir status: iha servisu -> form servisu (governu ka laos governu); seidauk -> ita halo saida agora
+	function toggleServisu() {
+		var st = $('#id_sv_status').val(), setor = $('#id_sv_setor').val();
+		$('.sv-kerja').toggle(st === 'Servisu');
+		$('.sv-governu').toggle(st === 'Servisu' && setor === 'Governu');
+		$('.sv-laos').toggle(st === 'Servisu' && setor === 'Laos Governu');
+		$('.sv-seidauk').toggle(st === 'Seidauk');
+	}
+	$('#id_sv_status, #id_sv_setor').on('change', toggleServisu);
+	toggleServisu();
+</script>
+{% endblock %}

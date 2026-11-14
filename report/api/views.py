@@ -105,3 +105,22 @@ class APISukuSexu(BaseAPI):
 		rows = membro_ativu(request.user).order_by().values('village__name').annotate(
 			mane=Count('id', filter=Q(sex='Mane')), feto=Count('id', filter=Q(sex='Feto'))).order_by('village__name')
 		return Response({'label': [r['village__name'] for r in rows], 'mane': [r['mane'] for r in rows], 'feto': [r['feto'] for r in rows]})
+
+
+class APIJenis(BaseAPI):
+	"""Struktura penting, Militante dan Simpatizante (tiga data separadu)."""
+	def get(self, request, format=None):
+		from membro.utils import filter_jenis
+		qs = membro_ativu(request.user)
+		labels = [('Struktura', 'Struktura Penting'), ('Militante', 'Militante'), ('Simpatizante', 'Simpatizante')]
+		return Response({'label': [l for _, l in labels], 'obj': [filter_jenis(qs, v).count() for v, _ in labels]})
+
+
+class APIServisu(BaseAPI):
+	def get(self, request, format=None):
+		qs = membro_ativu(request.user)
+		rows = [('Servisu Governu', qs.filter(servisu__status='Servisu', servisu__setor='Governu')),
+			('Servisu Laos Governu', qs.filter(servisu__status='Servisu', servisu__setor='Laos Governu')),
+			('Seidauk Servisu', qs.filter(servisu__status='Seidauk')), ('Seidauk iha dadus', qs.filter(servisu__isnull=True))]
+		return Response({'label': [l for l, _ in rows], 'obj': [q.count() for _, q in rows]})
+

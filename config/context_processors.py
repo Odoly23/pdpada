@@ -7,13 +7,17 @@ from notification.utils import notif_counts, notif_items
 ROLE_NAME = dict(roles.ROLE_LABELS)
 
 
-def _item(request, label, icon, name, args=(), names=(), match_kwargs=None):
+def _item(request, label, icon, name, args=(), names=(), match_kwargs=None, query='', match_get=None, match_absent=()):
 	"""Satu entri menu. Aktif jika url_name saat ini termasuk `names` (dan kwargs cocok)."""
-	url = reverse(name, args=args)
+	url = reverse(name, args=args) + query
 	match = request.resolver_match
 	active = bool(match) and (match.url_name in (names or (name,)))
 	if active and match_kwargs:
 		active = all(str(match.kwargs.get(k)) == str(v) for k, v in match_kwargs.items())
+	if active and match_get:  # item dengan filter (?jenis=...) aktif hanya jika filter itu yang dipilih
+		active = all(request.GET.get(k) == v for k, v in match_get.items())
+	if active and any(k in request.GET for k in match_absent):
+		active = False
 	return {'label': label, 'icon': icon, 'url': url, 'active': active, 'children': []}
 
 
@@ -51,7 +55,10 @@ def _menu(request, group):
 			return items
 		membru = [
 			_item(request, 'Sumariu Membru', 'fa-th-large', 'membro-sumariu'),
-			_item(request, 'Lista Membru', 'fa-list', 'membro-list', names=('membro-list', 'membro-detail', 'membro-update')),
+			_item(request, 'Struktura Penting', 'fa-sitemap', 'membro-list', query='?jenis=Struktura', names=('membro-list',), match_get={'jenis': 'Struktura'}),
+			_item(request, 'Militante', 'fa-user', 'membro-list', query='?jenis=Militante', names=('membro-list',), match_get={'jenis': 'Militante'}),
+			_item(request, 'Simpatizante', 'fa-heart', 'membro-list', query='?jenis=Simpatizante', names=('membro-list',), match_get={'jenis': 'Simpatizante'}),
+			_item(request, 'Lista Membru', 'fa-list', 'membro-list', names=('membro-list', 'membro-detail', 'membro-update'), match_absent=('jenis',)),
 			_item(request, 'Pesquiza', 'fa-search', 'membro-cari'),
 		]
 		if group in roles.DELEGADU_ROLES:

@@ -7,7 +7,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from config import roles
 from custom.models import AdministrativePost, Village, Aldeia, Organizasaun, Year
-from membro.models import Membro, Alokasaun, Historia
+from membro.models import Membro, Alokasaun, Historia, Servisu
 from membro.utils import log_historia
 from users.models import UserScope
 
@@ -49,7 +49,7 @@ class Command(BaseCommand):
 			raise CommandError('Password lemah: ' + ' '.join(e.messages))
 		if not Group.objects.filter(name=roles.PRESIDENTE).exists() or not Year.objects.filter(is_active=True).exists():
 			raise CommandError('Jalankan `python manage.py seed_inisial` dulu.')
-		if Membro.objects.filter(nu_eleitoral__startswith=PREFIX).exists():
+		if Membro.objects.filter(aldeia__name__startswith='Aldeia Demo').exists():
 			raise CommandError('Data demo sudah ada. Pakai --hapus dulu jika ingin membuat ulang.')
 
 		rnd = random.Random(2026)
@@ -83,20 +83,31 @@ class Command(BaseCommand):
 			a = rnd.choice(aldeias)
 			sex = rnd.choice(['Mane', 'Feto'])
 			apr = rnd.choice(pesos)
+			simpa = rnd.random() < 0.3  # sebagian simpatizante: dadus simples, Nu. Eleitoral opsionál
 			m = Membro.objects.create(
+				kategoria='Simpatizante' if simpa else 'Militante',
 				nome=f'{rnd.choice(NAMA)} {rnd.choice(APELIDU)}', sex=sex,
 				date_of_birth=datetime.date(rnd.randint(1960, 2006), rnd.randint(1, 12), rnd.randint(1, 28)),
 				marital=rnd.choice(['Solteiro/a', 'Casado/a', 'Casado/a', 'Viuvo/a']),
-				nu_eleitoral=f'{PREFIX}{n:05d}', village=a.village, aldeia=a,
+				nu_eleitoral=None if simpa and rnd.random() < 0.6 else f'{PREFIX}{n:05d}', village=a.village, aldeia=a,
 				organizasaun=rnd.choice(orgs + [None, None]) if orgs else None,
 				data_hakbit=datetime.date(rnd.randint(2010, 2025), 1, 1),
 				status=rnd.choice(['Ativu'] * 8 + ['Inativu']), aprovasaun=apr, year=year,
 				razaun_rejeita='Dokumentu la kompletu' if apr == 'Rejeitadu' else None,
 				datetime=timezone.now(), user=creator)
 			log_historia(creator, m, 'Kria', f'Data demo: {m}')
+			sorte = rnd.random()
+			if sorte < 0.25:
+				Servisu.objects.create(membro=m, status='Servisu', setor='Governu', instituisaun=rnd.choice(['Ministeriu Saude', 'Ministeriu Edukasaun', 'Munisipiu Dili']),
+					diresaun='Diresaun Jeral', pozisaun=rnd.choice(['Funsionáriu', 'Mestre', 'Enfermeiru']), kategoria='B', grau='3', data_hahu=datetime.date(rnd.randint(2008, 2023), 1, 1))
+			elif sorte < 0.5:
+				Servisu.objects.create(membro=m, status='Servisu', setor='Laos Governu', tipu_laos=rnd.choice(['Privadu', 'ONG', 'Negosiu']),
+					instituisaun=rnd.choice(['Kompañia Dili', 'Loja Rasik', 'ONG Lokál']), pozisaun=rnd.choice(['Motorista', 'Vendedór', 'Staff']), data_hahu=datetime.date(rnd.randint(2008, 2023), 1, 1))
+			else:
+				Servisu.objects.create(membro=m, status='Seidauk', atividade=rnd.choice(['Estudante', 'Hela uma', 'Agrikultura', 'Dezempregadu']))
 
 		hoje = datetime.date.today()
-		aprovadus = list(Membro.objects.filter(nu_eleitoral__startswith=PREFIX, aprovasaun='Aprovadu', status='Ativu'))
+		aprovadus = list(Membro.objects.filter(aldeia__name__startswith='Aldeia Demo', aprovasaun='Aprovadu', status='Ativu'))
 		for poz, nivel in [('Presidente', 'Postu'), ('Coordenador', 'Postu'), ('Sekretariu', 'Postu')]:
 			Alokasaun.objects.create(membro=rnd.choice(aprovadus), nivel=nivel, pozisaun=poz, data_hahu=hoje, user=creator)
 		for v in villages:
@@ -108,8 +119,10 @@ class Command(BaseCommand):
 		self.stdout.write('Hapus semua: python manage.py seed_demo --hapus')
 
 	def hapus(self):
+		demo = Membro.objects.filter(aldeia__name__startswith='Aldeia Demo')  # Simpatizante demo bisa tanpa Nu. Eleitoral
+		Historia.objects.filter(membro__in=demo).delete()
 		Historia.objects.filter(membro_nome__contains=PREFIX).delete()
-		n = Membro.objects.filter(nu_eleitoral__startswith=PREFIX).delete()[0]
+		n = demo.delete()[0]
 		User.objects.filter(username__startswith='demo_').delete()
 		Aldeia.objects.filter(name__startswith='Aldeia Demo', membro__isnull=True).delete()
 		Village.objects.filter(name__startswith='Suku Demo', aldeia__isnull=True, membro__isnull=True).delete()

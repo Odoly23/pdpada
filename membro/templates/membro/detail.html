@@ -31,11 +31,12 @@
 				<table class="table table-sm">
 					<tr>
 						<td width="25%">Naran</td><td>{{ obj.nome }}</td>
-						<td rowspan="12" align="right" style="text-align: center; vertical-align: middle;">
+						<td rowspan="13" align="right" style="text-align: center; vertical-align: middle;">
 						{% if obj.image %}<img class="foto-membro" src="{% url 'membro-file' hashid 'foto' %}" alt="{{ obj.nome }}">{% else %}<div class="text-muted"><i class="fa fa-user-circle fa-5x"></i><br><small>Seidauk upload fotu</small></div>{% endif %}
 						</td>
 					</tr>
-					<tr><td>Nu. Eleitoral</td><td>{{ obj.nu_eleitoral }}</td></tr>
+					<tr><td>Jenis / Kategoria</td><td><span class="badge badge-jenis-{{ obj.jenis|lower }}">{{ obj.jenis }}</span>{% if obj.jenis == 'Struktura' %} <small class="text-muted">({{ obj.kategoria }})</small>{% endif %}</td></tr>
+					<tr><td>Nu. Eleitoral</td><td>{{ obj.nu_eleitoral|default_if_none:"-" }}</td></tr>
 					<tr><td>Sexu</td><td>{{ obj.sex }}</td></tr>
 					<tr><td>Fatin/Data Moris</td><td>{{ obj.place_of_birth|default:"-" }} / {{ obj.date_of_birth|date:"d/m/Y" }} ({{ obj.age }} tinan)</td></tr>
 					<tr><td>Estado Civil</td><td>{{ obj.marital|default:"-" }}</td></tr>
@@ -46,6 +47,20 @@
 					<tr><td>Organizasaun</td><td>{{ obj.organizasaun|default:"-" }}</td></tr>
 					<tr><td>Data Hakbit</td><td>{{ obj.data_hakbit|date:"d/m/Y"|default:"-" }}</td></tr>
 					<tr><td>Status</td><td>{{ obj.status }}</td></tr>
+					<tr><th colspan="3" bgcolor="#eceefa">SERVISU</th></tr>
+					{% if servisu %}
+					<tr><td>Servisu agora</td><td colspan="2">{{ servisu.get_status_display }}</td></tr>
+					{% if servisu.status == 'Servisu' %}
+					<tr><td>Tipu Instituisaun</td><td colspan="2">{{ servisu.get_setor_display|default:"-" }}{% if servisu.tipu_laos %} · {{ servisu.get_tipu_laos_display }}{% endif %}</td></tr>
+					<tr><td>Instituisaun / Pozisaun</td><td colspan="2">{{ servisu.instituisaun }} · {{ servisu.pozisaun }}</td></tr>
+					{% if servisu.setor == 'Governu' %}<tr><td>Diresaun · Kategoria · Grau</td><td colspan="2">{{ servisu.diresaun|default:"-" }} · {{ servisu.kategoria|default:"-" }} · {{ servisu.grau|default:"-" }}</td></tr>{% endif %}
+					<tr><td>Hahu / Fatin</td><td colspan="2">{{ servisu.data_hahu|date:"d/m/Y"|default:"-" }} / {{ servisu.municipality|default:"-" }}</td></tr>
+					{% else %}
+					<tr><td>Atividade agora</td><td colspan="2">{{ servisu.get_atividade_display|default:"-" }}{% if servisu.detalle %} · {{ servisu.detalle }}{% endif %}</td></tr>
+					{% endif %}
+					{% else %}
+					<tr><td colspan="3" class="text-muted">Seidauk iha dadus servisu.</td></tr>
+					{% endif %}
 					<tr><th colspan="3" bgcolor="#eceefa">APROVASAUN</th></tr>
 					<tr><td>Estatutu</td><td colspan="2"><span class="badge badge-{{ obj.aprovasaun|lower }}">{{ obj.aprovasaun }}</span>
 						{% if obj.aprovadu_husi %} husi {{ obj.aprovadu_husi.get_username }} ({{ obj.data_aprovasaun|date:"d/m/Y H:i" }}){% endif %}</td></tr>

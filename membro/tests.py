@@ -53,8 +53,8 @@ class BaseCase(TestCase):
 		return Membro.objects.create(**data)
 
 	def form_data(self, nu='ABC1234', **kw):
-		data = {'nome': 'Joao  Silva', 'sex': 'Mane', 'date_of_birth': '1990-05-04', 'nu_eleitoral': nu,
-			'aldeia': self.a1.pk, 'status': 'Ativu'}
+		data = {'nome': 'Joao  Silva', 'sex': 'Mane', 'date_of_birth': '1990-05-04', 'nu_eleitoral': nu, 'kategoria': 'Militante',
+			'sv_status': 'Seidauk', 'sv_atividade': 'Estudante', 'aldeia': self.a1.pk, 'status': 'Ativu'}
 		data.update(kw)
 		return data
 
@@ -1310,7 +1310,7 @@ class TabularTests(BaseCase):
 
 	def test_layout_follows_sample(self):
 		resp = self.page('presidente')
-		self.assertEqual([t['head'] for t in resp.context['tables']], ['Suku', 'Aldeia', 'Organizasaun', 'Tinan', 'Idade', 'Estado Civil'])
+		self.assertEqual([t['head'] for t in resp.context['tables']], ['Jenis', 'Servisu', 'Suku', 'Aldeia', 'Organizasaun', 'Tinan', 'Idade', 'Estado Civil'])
 		self.assertContains(resp, 'card-header bg-warning')
 		self.assertContains(resp, 'th-navy')
 		self.assertContains(resp, 'PRESIDENTE POSTU')
@@ -2724,4 +2724,171 @@ class DelegaduHotuTests(DelegaduTests):
 		self.assertEqual(self.client.get(reverse('membro-list')).status_code, 403)  # data membru lain tetap tertutup
 		self.login('koordsuku')
 		self.assertRedirects(self.client.get(reverse('membro-delegadu-index')), reverse('membro-delegadu', args=[self.va.pk]))
+
+
+class KategoriaServisuTests(BaseCase):
+	"""Struktura penting, Militante dan Simpatizante dipisah; servisu agora bersyarat."""
+	def post_add(self, **kw):
+		self.login('sekrsuku')
+		return self.client.post(reverse('membro-add'), self.form_data(**kw))
+
+	def test_militante_requires_nu_eleitoral(self):
+		resp = self.post_add(nu='')
+		self.assertEqual(resp.status_code, 200)
+		self.assertContains(resp, 'obrigatóriu ba Militante')
+		self.assertEqual(Membro.objects.count(), 0)
+
+	def test_simpatizante_can_skip_nu_eleitoral_and_stores_null(self):
+		for nome in ('Simpa Satu', 'Simpa Dua'):  # dua simpatizante tanpa nomor tidak bentrok pada kolom unik
+			resp = self.post_add(nu='', kategoria='Simpatizante', nome=nome)
+			self.assertEqual(resp.status_code, 302, nome)
+		qs = Membro.objects.filter(kategoria='Simpatizante')
+		self.assertEqual(qs.count(), 2)
+		self.assertTrue(all(m.nu_eleitoral is None for m in qs))
+		self.assertEqual(str(qs.first()), qs.first().nome)  # tanpa tanda kurung kosong
+
+	def test_simpatizante_with_nu_eleitoral_is_still_checked_for_duplicates(self):
+		self.post_add(nu='SIM00001', kategoria='Simpatizante')
+		resp = self.post_add(nu='SIM00001', kategoria='Militante', nome='Lain')
+		self.assertContains(resp, 'DUPLIKADU')
+
+	def test_servisu_government_form_is_saved_and_shown(self):
+		resp = self.post_add(nu='SV000001', sv_status='Servisu', sv_setor='Governu', sv_instituisaun='Ministeriu Saude', sv_diresaun='Diresaun Jeral',
+			sv_pozisaun='Enfermeiru', sv_kategoria='B', sv_grau='3', sv_data_hahu='2020-01-01', sv_atividade='')
+		self.assertEqual(resp.status_code, 302)
+		sv = Membro.objects.get(nu_eleitoral='SV000001').servisu
+		self.assertEqual((sv.status, sv.setor, sv.instituisaun, sv.pozisaun, sv.kategoria, sv.grau), ('Servisu', 'Governu', 'Ministeriu Saude', 'Enfermeiru', 'B', '3'))
+		self.assertIsNone(sv.atividade)
+		page = self.client.get(resp['Location'])
+		for needle in ('Iha servisu', 'Instituisaun Governu', 'Ministeriu Saude', 'Enfermeiru'):
+			self.assertContains(page, needle)
+
+	def test_servisu_non_government_needs_tipu_and_clears_government_fields(self):
+		bad = self.post_add(nu='SV000002', sv_status='Servisu', sv_setor='Laos Governu', sv_instituisaun='Kompañia X', sv_pozisaun='Motorista')
+		self.assertContains(bad, 'Hili tipu servisu')
+		ok = self.post_add(nu='SV000002', sv_status='Servisu', sv_setor='Laos Governu', sv_tipu='Privadu', sv_instituisaun='Kompañia X',
+			sv_pozisaun='Motorista', sv_diresaun='tidak dipakai', sv_kategoria='X', sv_grau='9')
+		self.assertEqual(ok.status_code, 302)
+		sv = Membro.objects.get(nu_eleitoral='SV000002').servisu
+		self.assertEqual((sv.setor, sv.tipu_laos, sv.diresaun, sv.kategoria, sv.grau), ('Laos Governu', 'Privadu', '', '', ''))
+
+	def test_servisu_required_fields_when_working(self):
+		resp = self.post_add(nu='SV000003', sv_status='Servisu')
+		for msg in ('Hili instituisaun governu ka laos governu', 'Hatama naran instituisaun ka kompañia', 'Hatama pozisaun ka kargu'):
+			self.assertContains(resp, msg)
+		self.assertEqual(Membro.objects.count(), 0)
+
+	def test_not_working_requires_activity_and_stores_it(self):
+		bad = self.post_add(nu='SV000004', sv_atividade='')
+		self.assertContains(bad, 'Hili ita halo saida agora')
+		ok = self.post_add(nu='SV000004', sv_atividade='Estudante', sv_detalle='UNTL', sv_instituisaun='tidak dipakai')
+		self.assertEqual(ok.status_code, 302)
+		sv = Membro.objects.get(nu_eleitoral='SV000004').servisu
+		self.assertEqual((sv.status, sv.atividade, sv.detalle, sv.instituisaun, sv.setor), ('Seidauk', 'Estudante', 'UNTL', '', None))
+		self.assertEqual(sv.resumu(), 'Seidauk servisu: Estudante (UNTL)')
+
+	def test_servisu_status_is_required(self):
+		resp = self.post_add(nu='SV000005', sv_status='')
+		self.assertEqual(resp.status_code, 200)
+		self.assertEqual(Membro.objects.count(), 0)
+
+	def test_edit_prefills_and_changes_servisu_and_history_records_it(self):
+		self.post_add(nu='SV000006')
+		m = Membro.objects.get(nu_eleitoral='SV000006')
+		self.login('sekrsuku')
+		form = self.client.get(reverse('membro-update', args=[m.hashed])).context['form']
+		self.assertEqual((form.initial['sv_status'], form.initial['sv_atividade']), ('Seidauk', 'Estudante'))
+		self.client.post(reverse('membro-update', args=[m.hashed]), self.form_data(nu='SV000006', sv_status='Servisu', sv_setor='Governu',
+			sv_instituisaun='Ministeriu Edukasaun', sv_pozisaun='Mestre', sv_atividade=''))
+		m.refresh_from_db()
+		self.assertEqual(m.servisu.setor, 'Governu')
+		self.assertIn('Servisu', Historia.objects.filter(aksaun='Edita').latest('id').detalhe)
+
+	def test_jenis_separates_struktura_militante_simpatizante(self):
+		a = self.make('JN00001', kategoria='Militante')
+		b = self.make('JN00002', kategoria='Militante')
+		c = self.make('JN00003', kategoria='Simpatizante')
+		Membro.objects.filter(pk=b.pk).update(is_colocado=True)  # pemegang pozisaun
+		self.assertEqual([m.jenis() for m in Membro.objects.order_by('nu_eleitoral')], ['Militante', 'Struktura', 'Simpatizante'])
+		self.login('presidente')
+		for jenis, esperado in (('Struktura', {'JN00002'}), ('Militante', {'JN00001'}), ('Simpatizante', {'JN00003'})):
+			objs = self.client.get(reverse('membro-list'), {'jenis': jenis}).context['objects']
+			self.assertEqual({o.nu_eleitoral for o in objs}, esperado, jenis)
+		self.assertEqual(len(self.client.get(reverse('membro-list'), {'jenis': 'ngawur'}).context['objects']), 3)  # nilai asing diabaikan
+
+	def test_list_has_separate_filter_rows_with_counts(self):
+		self.make('JN00004', kategoria='Militante'); self.make('JN00005', kategoria='Simpatizante')
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-list'))
+		f = {x['label']: x for x in resp.context['jenis_filters']}
+		self.assertEqual((f['Hotu']['count'], f['Militante']['count'], f['Simpatizante']['count'], f['Struktura Penting']['count']), (2, 1, 1, 0))
+		self.assertContains(resp, 'Struktura Penting')
+		self.assertContains(resp, 'JENIS')
+		for judul in ('>Jenis<', '>Aprovasaun<', '>Servisu<'):
+			self.assertContains(resp, 'filter-title', msg_prefix=judul)
+		self.assertContains(resp, 'Struktura Penting')
+		self.assertTrue(f['Hotu']['active'])
+
+	def test_servisu_filters(self):
+		from membro.models import Servisu
+		a, b, c = self.make('SF00001'), self.make('SF00002'), self.make('SF00003')
+		Servisu.objects.create(membro=a, status='Servisu', setor='Governu', instituisaun='Ministeriu', pozisaun='Staff')
+		Servisu.objects.create(membro=b, status='Servisu', setor='Laos Governu', tipu_laos='Privadu', instituisaun='X', pozisaun='Y')
+		self.login('presidente')
+		def nu(**p):
+			return {o.nu_eleitoral for o in self.client.get(reverse('membro-list'), p).context['objects']}
+		self.assertEqual(nu(servisu='Servisu'), {'SF00001', 'SF00002'})
+		self.assertEqual(nu(servisu='Servisu', setor='Governu'), {'SF00001'})
+		self.assertEqual(nu(servisu='laiha'), {'SF00003'})
+
+	def test_varanda_shows_three_separate_counts(self):
+		a = self.make('VJ00001'); b = self.make('VJ00002'); self.make('VJ00003', kategoria='Simpatizante')
+		Membro.objects.filter(pk=b.pk).update(is_colocado=True)
+		self.login('presidente')
+		resp = self.client.get('/')
+		self.assertEqual({j['label']: j['n'] for j in resp.context['jenis_stats']}, {'Struktura Penting': 1, 'Militante': 1, 'Simpatizante': 1})
+		self.assertContains(resp, 'jenis-strip')
+		self.login('sekrpostu')
+		stats = self.client.get('/').context['jenis_stats']
+		self.assertEqual({j['url'] for j in stats}, {''})  # Sekretariu Postu tanpa tautan ke lista membru
+
+	def test_sumariu_filter_by_jenis(self):
+		self.make('SM90001'); self.make('SM90002', kategoria='Simpatizante')
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-sumariu'), {'jenis': 'Simpatizante'})
+		self.assertEqual(resp.context['grand'], 1)
+		self.assertContains(resp, 'jenis=Simpatizante')
+		self.assertEqual(self.client.get(reverse('membro-sumariu')).context['grand'], 2)
+
+	def test_report_tables_and_apis_for_jenis_and_servisu(self):
+		from membro.models import Servisu
+		a = self.make('RP00001'); self.make('RP00002', kategoria='Simpatizante')
+		Servisu.objects.create(membro=a, status='Servisu', setor='Governu', instituisaun='M', pozisaun='P')
+		self.login('presidente')
+		tables = {t['head']: t for t in self.client.get(reverse('report-dash')).context['tables']}
+		self.assertEqual([(r['name'], r['total']) for r in tables['Jenis']['rows']], [('Struktura Penting', 0), ('Militante', 1), ('Simpatizante', 1)])
+		self.assertEqual({r['name']: r['total'] for r in tables['Servisu']['rows']}['Servisu Governu'], 1)
+		self.assertEqual(self.client.get(reverse('api-jenis')).json(), {'label': ['Struktura Penting', 'Militante', 'Simpatizante'], 'obj': [0, 1, 1]})
+		self.assertEqual(self.client.get(reverse('api-servisu')).json()['obj'], [1, 0, 0, 1])
+		chart = self.client.get(reverse('report-chart'))
+		self.assertContains(chart, 'id="chart_jenis"')
+		self.assertContains(chart, 'id="chart_servisu"')
+
+	def test_csv_has_kategoria_and_servisu_columns_and_handles_missing_nu(self):
+		from membro.models import Servisu
+		m = self.make('CS00001', nu_eleitoral=None, kategoria='Simpatizante')
+		Servisu.objects.create(membro=m, status='Seidauk', atividade='Estudante')
+		self.login('presidente')
+		raw = b''.join(self.client.get(reverse('membro-export')).streaming_content).decode('utf-8')
+		self.assertIn('Kategoria', raw.splitlines()[0])
+		self.assertIn('Simpatizante', raw)
+		self.assertIn('Seidauk servisu: Estudante', raw)
+
+	def test_menu_has_separate_entries(self):
+		self.login('presidente')
+		html = self.client.get('/').content.decode()
+		for jenis in ('Struktura', 'Militante', 'Simpatizante'):
+			self.assertIn(f'?jenis={jenis}', html)
+		self.login('sekrpostu')
+		self.assertNotIn('?jenis=', self.client.get('/').content.decode().split('class="main-navbar"')[-1].split('</nav>')[0])
 
