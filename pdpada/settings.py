@@ -37,6 +37,7 @@ INSTALLED_APPS = [
 	'config.apps.ConfigConfig',
 	'users.apps.UsersConfig',
 	'membro.apps.MembroConfig',
+	'eleisaun.apps.EleisaunConfig',
 	'report.apps.ReportConfig',
 	'notification.apps.NotificationConfig',
 ]

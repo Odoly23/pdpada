@@ -32,14 +32,22 @@ def _menu(request, group):
 			for tipu, label, icon in [('suku', 'Suku', 'fa-map-marker'), ('aldeia', 'Aldeia', 'fa-map-o'),
 				('organizasaun', 'Organizasaun', 'fa-flag'), ('ano', 'Tinan Ativu', 'fa-calendar')]]
 		items.append(_dropdown('Data Master', 'fa-database', master))
+		items.append(_dropdown('Eleisaun', 'fa-flag', [_item(request, 'Eleisaun no Tempat', 'fa-cogs', 'eleisaun-admin',
+			names=('eleisaun-admin', 'eleisaun-add', 'tempat-add', 'fiskais-add'))]))
 		items.append(_item(request, 'Historia', 'fa-history', 'historia-list'))
 		return items
 	if group in roles.VIEW_ROLES:
 		items.append(_item(request, 'Painel', 'fa-tachometer', 'membro-painel'))
+		eleisaun = [_item(request, 'Live Dashboard', 'fa-television', 'eleisaun-live')]
+		if group in roles.POSTU_ROLES:
+			eleisaun.append(_item(request, 'Komparasaun Membru no Votu', 'fa-balance-scale', 'eleisaun-komparasaun'))
+		items.append(_dropdown('Eleisaun', 'fa-flag', eleisaun))
 		if group not in roles.LISTA_ROLES:  # Sekretariu Postu: rekapitulasi dan grafik saja
 			items.append(_dropdown('Relatoriu', 'fa-list', [
 				_item(request, 'Tabular', 'fa-table', 'report-dash'),
 				_item(request, 'Grafiku', 'fa-bar-chart', 'report-chart')]))
+			items.append(_item(request, 'Lista Delegadu', 'fa-address-book', 'membro-delegadu-index',
+				names=('membro-delegadu-index', 'membro-delegadu', 'membro-delegadu-hotu')))
 			return items
 		membru = [
 			_item(request, 'Sumariu Membru', 'fa-th-large', 'membro-sumariu'),
@@ -48,7 +56,7 @@ def _menu(request, group):
 		]
 		if group in roles.DELEGADU_ROLES:
 			membru.append(_item(request, 'Lista Delegadu', 'fa-address-book', 'membro-delegadu-index',
-				names=('membro-delegadu-index', 'membro-delegadu')))
+				names=('membro-delegadu-index', 'membro-delegadu', 'membro-delegadu-hotu')))
 		if group in roles.INPUT_ROLES:
 			membru.append(_item(request, 'Aumenta Membru', 'fa-user-plus', 'membro-add'))
 		if group in roles.APROVA_ROLES:
@@ -66,6 +74,8 @@ def _menu(request, group):
 				names=('organigrama', 'org-pozisaun-add', 'org-pozisaun-update', 'org-responsavel-add', 'org-responsavel-update'))]))
 		if group in roles.HISTORIA_ROLES:
 			items.append(_item(request, 'Historia', 'fa-history', 'historia-list'))
+	if group == roles.FISKAIS:
+		items.append(_item(request, 'Input Rezultadu', 'fa-pencil-square-o', 'eleisaun-input'))
 	return items
 
 

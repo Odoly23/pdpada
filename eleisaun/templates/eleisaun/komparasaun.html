@@ -1,0 +1,64 @@
+{% extends "main/layout.html" %}
+{% block content %}
+	<ol class="breadcrumb mb-2 mt-1">
+		<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+		<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
+	</ol>
+	<div class="row">
+		<div class="col-sm-12 mb-2">
+			<div class="card"><div class="card-header bg-primary text-white text-center">
+				KOMPARASAUN MEMBRU NO VOTU PD <br/>{% if el %}{{ el.naran|upper }} {{ el.tinan }}{% else %}LAIHA ELEISAUN ATIVU{% endif %}
+			</div></div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-sm-12">
+			<div class="card shadow-lg pt-0 rounded">
+				<div class="card-header">
+					<a class="btn btn-sm btn-info mb-2" href="{% url 'eleisaun-live' %}" target="_blank" rel="noopener">Live Dashboard <i class="fa fa-television"></i></a>
+					<a class="btn btn-sm btn-secondary mb-2" href="{% url 'report-dash' %}">Relatoriu Tabular <i class="fa fa-table"></i></a>
+				</div>
+				<div class="card-body">
+					<div class="row text-center">
+						<div class="col-6 col-md-3 mb-2"><span class="stat-label">Total Membru</span><span class="stat-number d-block">{{ totals.membru }}</span></div>
+						<div class="col-6 col-md-3 mb-2"><span class="stat-label">Total Votu PD</span><span class="stat-number d-block">{{ totals.votos }}</span></div>
+						<div class="col-6 col-md-3 mb-2"><span class="stat-label">Votu / Membru</span><span class="stat-number d-block">{{ totals.persentajen }}%</span></div>
+						<div class="col-6 col-md-3 mb-2"><span class="stat-label">Tempat Submetidu</span><span class="stat-number d-block">{{ totals.submetidu }}/{{ totals.tempat }}</span></div>
+					</div>
+					<p class="text-center mb-3">
+						<span class="kb kb-{{ totals.kompara.kode }}">{{ totals.kompara.label }}</span>
+						<span class="text-muted ml-2">Diferensa votu no membru: <strong>{% if totals.diferensa > 0 %}+{% endif %}{{ totals.diferensa }}</strong></span>
+					</p>
+					<figure class="highcharts-figure"><div id="chart_kompara"></div></figure>
+					<div class="table-responsive mt-3">
+						<table class="table table-sm table-bordered text-center">
+							<thead><tr class="th-navy"><th>Suku</th><th>Total Membru</th><th>Total Votu PD</th><th>Votu / Membru</th><th>Komparasaun</th><th>Tempat Submetidu</th></tr></thead>
+							<tbody>
+								{% for r in rows %}
+								<tr><td class="text-left">{{ r.suku }}</td><td>{{ r.membru }}</td><td>{{ r.votos }}</td><td>{{ r.persentajen }}%</td><td><span class="kb kb-{{ r.kompara.kode }}">{{ r.kompara.label }}</span> <small class="text-muted">({% if r.kompara.diferensa > 0 %}+{% endif %}{{ r.kompara.diferensa }})</small></td><td>{{ r.submetidu }}/{{ r.tempat }}</td></tr>
+								{% empty %}<tr><td colspan="6" class="text-muted">Laiha suku.</td></tr>{% endfor %}
+							</tbody>
+							{% if rows %}<tfoot><tr class="font-weight-bold"><td class="text-left">TOTAL</td><td>{{ totals.membru }}</td><td>{{ totals.votos }}</td><td>{{ totals.persentajen }}%</td><td><span class="kb kb-{{ totals.kompara.kode }}">{{ totals.kompara.label }}</span></td><td>{{ totals.submetidu }}/{{ totals.tempat }}</td></tr></tfoot>{% endif %}
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	{{ chart|json_script:"chart-data" }}
+{% endblock %}
+{% block scripts %}
+	{% include 'main/highcharts_scripts.html' %}
+	<script>
+	(function () {
+		var d = JSON.parse(document.getElementById('chart-data').textContent);
+		Highcharts.setOptions({ lang: { noData: 'Laiha data' }, credits: { enabled: false }, exporting: { enabled: false } });
+		Highcharts.chart('chart_kompara', {
+			chart: { type: 'column' }, title: { text: '' }, legend: { enabled: true },
+			xAxis: { categories: d.label }, yAxis: { title: { text: 'Total' }, allowDecimals: false },
+			plotOptions: { column: { borderRadius: 3 } },
+			series: [{ name: 'Membru', color: '#0b1e8a', data: d.membru }, { name: 'Votu PD', color: '#c8102e', data: d.votos }]
+		});
+	})();
+	</script>
+{% endblock %}

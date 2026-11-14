@@ -44,4 +44,5 @@ def delegadu_data(village):
 		rows = sorted(per_aldeia.get(ald.pk, []), key=lambda r: r['sort'])
 		hp = next((r['hp'] for r in rows if r['utama'] and r['hp']), '') or next((r['hp'] for r in rows if r['hp']), '')
 		blocks.append({'aldeia': ald.name, 'rows': rows, 'hp': hp})
-	return {'village': village, 'n_aldeia': len(aldeias), 'suku_rows': suku_rows, 'blocks': blocks}
+	n_delegadu = len(suku_rows) + sum(len(b['rows']) for b in blocks)
+	return {'village': village, 'n_aldeia': len(aldeias), 'n_delegadu': n_delegadu, 'suku_rows': suku_rows, 'blocks': blocks}

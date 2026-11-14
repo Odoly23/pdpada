@@ -1,0 +1,200 @@
+{% load static %}<!doctype html>
+<html lang="tet" dir="ltr">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<title>SGDM-PDPADA - Live Dashboard Eleisaun</title>
+	<meta name="description" content="Live dashboard eleisaun Partido Democratico, Postu Dom Aleixo: total votu PD, tempat votasaun no persentajen kompara ho membru.">
+	<meta name="keywords" content="Partido Democratico, PD, Dom Aleixo, eleisaun, live dashboard, votu, SGDM-PDPADA">
+	<meta name="author" content="Partido Democratico - Postu Dom Aleixo">
+	<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+	<meta name="referrer" content="same-origin">
+	<meta name="color-scheme" content="dark">
+	<meta name="theme-color" content="#050d3d">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta property="og:type" content="website">
+	<meta property="og:site_name" content="SGDM-PDPADA">
+	<meta property="og:title" content="SGDM-PDPADA - Live Dashboard Eleisaun">
+	<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'main/images/bandeira_pd.png' %}">
+	<link rel="icon" type="image/png" href="{% static 'main/images/favicon.png' %}">
+	<link rel="apple-touch-icon" href="{% static 'main/images/apple-touch-icon.png' %}">
+	<link rel="stylesheet" href="{% static 'main/css/live.css' %}">
+</head>
+<body class="live" data-url="{{ data_url }}">
+<main class="live-wrap">
+	<header class="live-top">
+		<div class="live-brand">
+			<img src="{% static 'main/images/bandeira_pd.png' %}" alt="Bendera Partido Democratico" width="99" height="56">
+			<div>
+				<span class="live-kicker">PARTIDO DEMOCRATICO &middot; POSTU DOM ALEIXO</span>
+				<h1 id="eleTitle">Live Dashboard Eleisaun</h1>
+			</div>
+		</div>
+		<div class="live-status" role="status"><span class="live-dot off" id="liveDot"></span><span id="liveLabel">HEIN</span><span class="live-upd" id="upd">&mdash;</span></div>
+		<div class="live-clock">
+			<svg id="clock" viewBox="0 0 200 200" role="img" aria-label="Jam dinding"></svg>
+			<div class="live-digital"><span id="dClock">--:--:--</span><small id="dDate"></small></div>
+		</div>
+		<div class="live-actions">
+			<button type="button" id="btnFull">Full Screen</button>
+			<a href="{% url 'home' %}">Fila ba Varanda</a>
+		</div>
+	</header>
+
+	<div class="live-closed" id="closed" hidden>
+		<h2>Dashboard live taka</h2>
+		<p>Laiha eleisaun ativu agora. Admin sei aktiva dashboard ne&rsquo;e iha tempu eleisaun.</p>
+	</div>
+
+	<section class="live-kpis" id="kpis" hidden>
+		<article class="kpi kpi-main"><span>Total Votu PD</span><strong data-k="votos">0</strong></article>
+		<article class="kpi"><span>Votu kompara ho Membru</span><strong data-k="persentajen" data-dec="1">0</strong><em>%</em><div class="bar"><i id="barPersen"></i></div><span class="kb kb-hanesan" id="komparaLabel">&mdash;</span></article>
+		<article class="kpi"><span>Tempat Submetidu</span><strong><b data-k="submetidu">0</b><em>/</em><b data-k="tempat">0</b></strong><div class="bar"><i id="barTempat"></i></div></article>
+		<article class="kpi"><span>Total Membru</span><strong data-k="membru">0</strong><small id="eleSub"></small></article>
+	</section>
+
+	<section class="live-grid" id="grid" hidden>
+		<div class="panel"><h2>Votu PD tuir Tempat Votasaun</h2><div id="chart"></div></div>
+		<div class="panel"><h2>Estadu Tempat</h2>
+			<div class="tbl-wrap"><table class="table-sm">
+				<thead><tr><th>Tempat</th><th>Suku</th><th style="text-align:right">Votu PD</th><th>Estadu</th><th>Oras</th></tr></thead>
+				<tbody id="rows"></tbody>
+			</table></div>
+		</div>
+	</section>
+
+	<footer class="live-foot"><span id="wake">Ekran: hein aktiva...</span><span>Dadus atualiza automatiku kada 10 segundu</span></footer>
+</main>
+<script src="{% static 'main/js_custom/highcharts.js' %}"></script>
+<script>
+(function () {
+	'use strict';
+	var url = document.body.getAttribute('data-url');
+	var $ = function (s) { return document.querySelector(s); };
+	var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+
+	// ---- jam dinding bulat (animasi mulus, jarum detik bergerak halus) ----
+	var NS = 'http://www.w3.org/2000/svg', svg = $('#clock');
+	function el(tag, attrs) { var e = document.createElementNS(NS, tag); for (var k in attrs) { e.setAttribute(k, attrs[k]); } return e; }
+	svg.appendChild(el('circle', { cx: 100, cy: 100, r: 96, 'class': 'clk-face' }));
+	svg.appendChild(el('circle', { cx: 100, cy: 100, r: 91, 'class': 'clk-ring' }));
+	for (var i = 0; i < 60; i++) {
+		var a = i * Math.PI / 30, major = i % 5 === 0, r1 = major ? 76 : 83, r2 = 87;
+		svg.appendChild(el('line', { x1: 100 + r1 * Math.sin(a), y1: 100 - r1 * Math.cos(a), x2: 100 + r2 * Math.sin(a), y2: 100 - r2 * Math.cos(a), 'class': major ? 'clk-major' : 'clk-minor' }));
+	}
+	for (var n = 1; n <= 12; n++) {
+		var an = n * Math.PI / 6, t = el('text', { x: 100 + 63 * Math.sin(an), y: 100 - 63 * Math.cos(an) + 5, 'text-anchor': 'middle', 'class': 'clk-num' });
+		t.textContent = n; svg.appendChild(t);
+	}
+	var hH = el('line', { x1: 100, y1: 112, x2: 100, y2: 56, 'class': 'clk-h' }), hM = el('line', { x1: 100, y1: 116, x2: 100, y2: 36, 'class': 'clk-m' }),
+		hS = el('line', { x1: 100, y1: 126, x2: 100, y2: 26, 'class': 'clk-s' });
+	[hH, hM, hS, el('circle', { cx: 100, cy: 100, r: 5, 'class': 'clk-cap' })].forEach(function (e) { svg.appendChild(e); });
+	var lastSec = -1;
+	function tick() {
+		var d = new Date(), s = d.getSeconds() + d.getMilliseconds() / 1000, m = d.getMinutes() + s / 60, h = (d.getHours() % 12) + m / 60;
+		hS.setAttribute('transform', 'rotate(' + (s * 6) + ' 100 100)');
+		hM.setAttribute('transform', 'rotate(' + (m * 6) + ' 100 100)');
+		hH.setAttribute('transform', 'rotate(' + (h * 30) + ' 100 100)');
+		if (d.getSeconds() !== lastSec) {
+			lastSec = d.getSeconds();
+			$('#dClock').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+			$('#dDate').textContent = d.toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+		}
+		requestAnimationFrame(tick);
+	}
+	requestAnimationFrame(tick);
+
+	// ---- full screen ----
+	var btn = $('#btnFull');
+	btn.addEventListener('click', function () {
+		if (!document.fullscreenElement) {
+			var r = document.documentElement.requestFullscreen;
+			if (r) { r.call(document.documentElement).catch(function () {}); }
+		} else { document.exitFullscreen(); }
+	});
+	document.addEventListener('fullscreenchange', function () { btn.textContent = document.fullscreenElement ? 'Sai Full Screen' : 'Full Screen'; });
+
+	// ---- layar tetap menyala (Screen Wake Lock) ----
+	var wake = $('#wake');
+	function keepAwake() {
+		if (!('wakeLock' in navigator)) { wake.textContent = 'Ekran: browser la suporta Wake Lock, atur ekran telefone/monitor ba la mate'; return; }
+		navigator.wakeLock.request('screen').then(function (lock) {
+			wake.textContent = 'Ekran: la mate (Wake Lock aktiva)';
+			lock.addEventListener('release', function () { wake.textContent = 'Ekran: Wake Lock lakon, hein fila fali'; });
+		}).catch(function () { wake.textContent = 'Ekran: la konsege aktiva Wake Lock'; });
+	}
+	keepAwake();
+	document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { keepAwake(); } });
+	document.addEventListener('click', function once() { keepAwake(); document.removeEventListener('click', once); });
+
+	// ---- angka naik halus ----
+	function countTo(node, to) {
+		var dec = parseInt(node.getAttribute('data-dec') || '0', 10), from = parseFloat(node.getAttribute('data-v') || '0');
+		node.setAttribute('data-v', to);
+		if (from === to) { node.textContent = dec ? to.toFixed(dec) : String(to); return; }
+		var start = null;
+		(function step(ts) {
+			if (start === null) { start = ts; }
+			var p = Math.min((ts - start) / 900, 1), v = from + (to - from) * (1 - Math.pow(1 - p, 3));
+			node.textContent = dec ? v.toFixed(dec) : String(Math.round(v));
+			if (p < 1) { requestAnimationFrame(step); }
+		})(performance.now());
+	}
+
+	// ---- grafik ----
+	var chart = Highcharts.chart('chart', {
+		chart: { type: 'column', backgroundColor: 'transparent', animation: { duration: 800 } },
+		title: { text: null }, credits: { enabled: false }, exporting: { enabled: false }, legend: { enabled: false },
+		xAxis: { categories: [], labels: { style: { color: '#e9edff' } }, lineColor: 'rgba(255,255,255,.3)' },
+		yAxis: { title: { text: 'Votu PD', style: { color: '#9fb0ee' } }, labels: { style: { color: '#e9edff' } }, gridLineColor: 'rgba(255,255,255,.14)', allowDecimals: false, min: 0 },
+		plotOptions: { column: { borderRadius: 3, borderWidth: 0, color: '#e63946', dataLabels: { enabled: true, style: { color: '#fff', textOutline: 'none', fontSize: '12px' } } } },
+		tooltip: { backgroundColor: '#fff', style: { color: '#0b1e8a' }, valueSuffix: ' votu' },
+		series: [{ name: 'Votu PD', data: [] }]
+	});
+
+	var previous = {}, fails = 0;
+	function setLive(on, label) {
+		$('#liveDot').className = 'live-dot' + (on ? '' : ' off');
+		$('#liveLabel').textContent = label;
+	}
+	function text(tag, value, cls, align) { var e = document.createElement(tag); e.textContent = value; if (cls) { e.className = cls; } if (align) { e.style.textAlign = align; } return e; }
+	function render(j) {
+		if (!j.ativu) {
+			setLive(false, 'TAKA'); $('#closed').hidden = false; $('#kpis').hidden = true; $('#grid').hidden = true;
+			$('#eleTitle').textContent = 'Live Dashboard Eleisaun'; return;
+		}
+		$('#closed').hidden = true; $('#kpis').hidden = false; $('#grid').hidden = false;
+		setLive(true, 'LIVE'); $('#upd').textContent = 'Atualiza ' + j.atualizadu;
+		$('#eleTitle').textContent = j.eleisaun + ' · ' + j.tinan; $('#eleSub').textContent = 'Eleisaun ' + j.tinan;
+		['votos', 'persentajen', 'submetidu', 'tempat', 'membru'].forEach(function (k) {
+			document.querySelectorAll('[data-k="' + k + '"]').forEach(function (n) { countTo(n, j.kpi[k]); });
+		});
+		$('#barPersen').style.width = Math.min(j.kpi.persentajen, 100) + '%';
+		var kb = $('#komparaLabel'); kb.textContent = j.kpi.kompara.label; kb.className = 'kb kb-' + j.kpi.kompara.kode;
+		$('#barTempat').style.width = (j.kpi.tempat ? j.kpi.submetidu * 100 / j.kpi.tempat : 0) + '%';
+		chart.xAxis[0].setCategories(j.tempat.map(function (t) { return t.tempat; }), false);
+		chart.series[0].setData(j.tempat.map(function (t) { return t.votos; }), true);
+		var body = $('#rows'); body.textContent = '';
+		j.tempat.forEach(function (t) {
+			var tr = document.createElement('tr');
+			if (t.submetidu && previous[t.tempat] === false) { tr.className = 'flash'; }
+			previous[t.tempat] = t.submetidu;
+			tr.appendChild(text('td', t.tempat)); tr.appendChild(text('td', t.suku)); tr.appendChild(text('td', t.submetidu ? String(t.votos) : '–', 'num'));
+			var td = document.createElement('td'); td.appendChild(text('span', t.submetidu ? 'SUBMETIDU' : 'HEIN', 'st ' + (t.submetidu ? 'st-ok' : 'st-wait'))); tr.appendChild(td);
+			tr.appendChild(text('td', t.oras || '')); body.appendChild(tr);
+		});
+	}
+	function load() {
+		fetch(url, { credentials: 'same-origin', cache: 'no-store' }).then(function (r) {
+			if (!r.ok || r.redirected) { throw new Error('auth'); }
+			return r.json();
+		}).then(function (j) { fails = 0; render(j); }).catch(function () { fails++; setLive(false, fails > 1 ? 'OFFLINE' : 'HEIN'); });
+	}
+	load();
+	setInterval(load, 10000);
+})();
+</script>
+</body>
+</html>

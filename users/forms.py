@@ -14,7 +14,7 @@ BTN_SAVE = """ <button class="btn btn-primary" type="submit" title="Rai"> Rai <i
 
 
 class UserForm(forms.ModelForm):
-	group = forms.ChoiceField(label="Peran", choices=roles.ROLE_LABELS)
+	group = forms.ChoiceField(label="Permisaun", choices=roles.ROLE_LABELS)
 	village = forms.ModelChoiceField(label="Suku", queryset=Village.objects.all(), required=False)
 	aldeia = forms.ModelChoiceField(label="Aldeia", queryset=Aldeia.objects.select_related('village'), required=False)
 	organizasaun = forms.ModelChoiceField(label="Organizasaun", queryset=Organizasaun.objects.filter(is_active=True), required=False)
@@ -72,17 +72,17 @@ class UserForm(forms.ModelForm):
 		village, aldeia, org = cleaned.get('village'), cleaned.get('aldeia'), cleaned.get('organizasaun')
 		if group in roles.SUKU_ROLES:
 			if not village:
-				self.add_error('village', 'Suku tenke hili ba peran ida ne\'e.')
+				self.add_error('village', 'Suku tenke hili ba permisaun ida ne\'e.')
 			aldeia = org = None
 		elif group in roles.ALDEIA_ROLES:
 			if not aldeia:
-				self.add_error('aldeia', 'Aldeia tenke hili ba peran ida ne\'e.')
+				self.add_error('aldeia', 'Aldeia tenke hili ba permisaun ida ne\'e.')
 			else:
 				village = aldeia.village
 			org = None
 		elif group in roles.ORG_ROLES:
 			if not org:
-				self.add_error('organizasaun', 'Organizasaun tenke hili ba peran ida ne\'e.')
+				self.add_error('organizasaun', 'Organizasaun tenke hili ba permisaun ida ne\'e.')
 			village = aldeia = None
 		else:
 			village = aldeia = org = None

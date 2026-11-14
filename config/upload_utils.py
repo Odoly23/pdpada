@@ -23,3 +23,8 @@ def upload_eleitoral(instance, filename):
 def validate_image_size(image):
 	if image.size > MAX_IMAGE_MB * 1024 * 1024:
 		raise ValidationError(f'Fotu boot liu {MAX_IMAGE_MB} MB.')
+
+
+def upload_resultado_foto(instance, filename):
+	return _secure_name('resultado', 'jpg')  # foto hasil selalu dikonversi ke JPEG
+

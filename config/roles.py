@@ -1,4 +1,5 @@
 ADMIN = 'admin'
+FISKAIS = 'fiskais'  # input hasil votu partidu per tempat votasaun (sekali submit)
 PRESIDENTE = 'presidente'
 KOORD_POSTU = 'koord_postu'
 SEKR_POSTU = 'sekr_postu'
@@ -19,6 +20,7 @@ ROLE_LABELS = [
 	(SEKR_ALDEIA, 'Sekjer Aldeia'),
 	(KOORD_ORG, 'Coordenador Organizasaun'),
 	(SEKR_ORG, 'Sekretariu Organizasaun'),
+	(FISKAIS, 'Fiskais Partidu'),
 	(ADMIN, 'Admin'),
 ]
 
@@ -38,4 +40,8 @@ VIEW_ROLES = POSTU_ROLES + SUKU_ROLES + ALDEIA_ROLES + ORG_ROLES  # lihat rekapi
 # Sekretariu Postu hanya melihat rekapitulasi dan grafik; data per orang (lista, detalhe, pesquiza, struktura) tidak dibuka.
 LISTA_ROLES = [r for r in VIEW_ROLES if r != SEKR_POSTU]
 STRUKTURA_ROLES = LISTA_ROLES
-DELEGADU_ROLES = [PRESIDENTE, KOORD_POSTU] + SUKU_ROLES  # Lista Delegadu (nama, Nu. Eleitoral, HP) per suku; suku hanya sukunya
+DELEGADU_HOTU_ROLES = POSTU_ROLES  # Postu (termasuk Sekretariu) lihat dan cetak delegadu semua suku sekaligus
+DELEGADU_ROLES = POSTU_ROLES + SUKU_ROLES  # Lista Delegadu (nama, Nu. Eleitoral, HP) per suku; suku hanya sukunya
+# Eleisaun: fiskais hanya input hasil di tempatnya; admin mengatur tempat, fiskais, dan live dashboard
+FISKAIS_ROLES = [FISKAIS]
+ELEISAUN_ADMIN_ROLES = [ADMIN]

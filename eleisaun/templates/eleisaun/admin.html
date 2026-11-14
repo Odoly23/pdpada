@@ -1,0 +1,85 @@
+{% extends "main/layout.html" %}
+{% block content %}
+	<ol class="breadcrumb mb-2 mt-1">
+		<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+		<li class="breadcrumb-item active" aria-current="page">{{ legend|upper }}</li>
+	</ol>
+	<div class="row">
+		<div class="col-sm-12 mb-2">
+			<div class="card"><div class="card-header bg-primary text-white text-center">ELEISAUN, TEMPAT VOTASAUN NO FISKAIS <br/>{% if el %}LIVE ATIVU: {{ el.naran|upper }} {{ el.tinan }}{% else %}DASHBOARD LIVE TAKA{% endif %}</div></div>
+		</div>
+	</div>
+
+	<div class="card shadow-lg pt-0 rounded mb-3">
+		<div class="card-header">Eleisaun <a class="btn btn-sm btn-primary ml-2" href="{% url 'eleisaun-add' %}">Aumenta Eleisaun <i class="fa fa-plus"></i></a></div>
+		<div class="card-body">
+			<table class="table table-sm table-bordered">
+				<thead><tr class="th-navy"><th>Naran</th><th>Tinan</th><th>Dashboard Live</th><th>#</th></tr></thead>
+				<tbody>
+					{% for e in eleisaun_list %}
+					<tr>
+						<td>{{ e.naran }}</td><td>{{ e.tinan }}</td>
+						<td>{% if e.ativu %}<span class="badge badge-primary">LIVE ATIVU</span>{% else %}<span class="badge badge-secondary">TAKA</span>{% endif %}</td>
+						<td><form class="d-inline" method="post" action="{% url 'eleisaun-toggle' e.pk %}">{% csrf_token %}
+							<button class="btn btn-sm btn-info" type="submit">{% if e.ativu %}Taka Live <i class="fa fa-stop"></i>{% else %}Aktiva Live <i class="fa fa-play"></i>{% endif %}</button></form></td>
+					</tr>
+					{% empty %}<tr><td colspan="4" class="text-muted">Seidauk iha eleisaun. Aumenta uluk.</td></tr>{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+	<div class="card shadow-lg pt-0 rounded mb-3">
+		<div class="card-header">Tempat Votasaun <a class="btn btn-sm btn-primary ml-2" href="{% url 'tempat-add' %}">Aumenta Tempat <i class="fa fa-plus"></i></a></div>
+		<div class="card-body">
+			<table class="table table-sm table-bordered">
+				<thead><tr class="th-navy"><th>Tempat</th><th>Suku</th><th>Aldeia</th><th>Fiskais</th><th>Ativu</th></tr></thead>
+				<tbody>
+					{% for t in tempat_list %}
+					<tr><td>{{ t.naran }}</td><td>{{ t.village }}</td><td>{{ t.aldeia|default:"–" }}</td>
+						<td>{% for f in t.fiskais.all %}{{ f.user.get_username }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-muted">seidauk iha</span>{% endfor %}</td>
+						<td>{{ t.ativu|yesno:"Sim,Lae" }}</td></tr>
+					{% empty %}<tr><td colspan="5" class="text-muted">Seidauk iha tempat votasaun.</td></tr>{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+	<div class="card shadow-lg pt-0 rounded mb-3">
+		<div class="card-header">Fiskais
+			<a class="btn btn-sm btn-primary ml-2" href="{% url 'fiskais-add' %}">Aloka Fiskais <i class="fa fa-plus"></i></a>
+			<a class="btn btn-sm btn-secondary ml-1" href="{% url 'user-add' %}">Kria Konta Fiskais <i class="fa fa-user-plus"></i></a>
+		</div>
+		<div class="card-body">
+			<p class="text-muted"><small>Kria konta ho permisaun <strong>Fiskais Partidu</strong> uluk, hafoin aloka ba tempat.</small></p>
+			<table class="table table-sm table-bordered">
+				<thead><tr class="th-navy"><th>Fiskais</th><th>Tempat</th><th>#</th></tr></thead>
+				<tbody>
+					{% for f in fiskais_list %}
+					<tr><td>{{ f.user.get_full_name|default:f.user.get_username }} ({{ f.user.get_username }})</td><td>{{ f.tempat }}</td>
+						<td><form class="d-inline" method="post" action="{% url 'fiskais-del' f.pk %}" data-confirm="Ita boot hakarak hasai fiskais ne'e husi tempat? Aksaun ida ne'e la bele fila fali." data-confirm-ok="Hamoos">{% csrf_token %}
+							<button class="btn btn-sm btn-danger" type="submit" title="Hamoos"><i class="fa fa-times"></i></button></form></td></tr>
+					{% empty %}<tr><td colspan="3" class="text-muted">Seidauk iha fiskais ne'ebé aloka.</td></tr>{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+	<div class="card shadow-lg pt-0 rounded mb-3">
+		<div class="card-header">Estadu Rezultadu{% if el %} · {{ el.naran }} {{ el.tinan }}{% endif %}</div>
+		<div class="card-body">
+			<table class="table table-sm table-bordered">
+				<thead><tr class="th-navy"><th>Tempat</th><th>Votu PD</th><th>Estadu</th><th>Husi</th><th>Oras</th><th>#</th></tr></thead>
+				<tbody>
+					{% for r in resultados %}
+					<tr><td>{{ r.tempat }}</td><td>{{ r.votos_partidu }}</td>
+						<td>{% if r.submetidu %}<span class="badge badge-primary">TAKA (submetidu)</span>{% else %}<span class="badge badge-secondary">LOKE (fiskais bele koriji)</span>{% endif %}</td>
+						<td>{{ r.submetidu_husi.get_username|default:"–" }}</td><td>{{ r.submetidu_em|date:"d/m/Y H:i"|default:"–" }}</td>
+						<td>{% if r.submetidu %}<form class="d-inline" method="post" action="{% url 'resultado-loke' r.pk %}">{% csrf_token %}
+							<button class="btn btn-sm btn-info" type="submit">Loke Fali <i class="fa fa-unlock"></i></button></form>{% endif %}</td></tr>
+					{% empty %}<tr><td colspan="6" class="text-muted">Seidauk iha rezultadu.</td></tr>{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+{% endblock %}
