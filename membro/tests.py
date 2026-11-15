@@ -272,11 +272,10 @@ class AlokasaunTests(BaseCase):
 		resp = self.client.post(reverse('alokasaun-add'), self.data(self.m1, pozisaun='Presidente'))
 		self.assertEqual(Alokasaun.objects.count(), 0)
 		postu = {'membro': self.m1.pk, 'nivel': 'Postu', 'pozisaun': 'Presidente', 'data_hahu': '2026-01-01', 'ativu': 'Sim'}
-		self.assertEqual(self.client.post(reverse('alokasaun-add'), postu).status_code, 200)  # nivel Postu deit Admin
-		self.assertEqual(Alokasaun.objects.count(), 0)
-		self.login('admin')
-		self.client.post(reverse('alokasaun-add'), postu)
+		self.assertEqual(self.client.post(reverse('alokasaun-add'), postu).status_code, 302)  # Presidente bele aloka nivel Postu
 		self.assertEqual(Alokasaun.objects.count(), 1)
+		self.login('koordpostu')
+		self.assertEqual(self.client.post(reverse('alokasaun-add'), postu).status_code, 403)  # Koord Postu la bele aloka
 
 	def test_organization_level(self):
 		m = self.make('ALO0005', aprovasaun='Aprovadu', organizasaun=self.org)
@@ -2049,43 +2048,29 @@ class FilterButtonsAndTablesTests(BaseCase):
 		self.make('FB00003', self.va, self.a1, sex='Mane', aprovasaun='Aprovadu')
 		self.make('FB00004', self.vb, self.b1, sex='Mane', aprovasaun='Rejeitadu')
 
-	def filters(self, user, query=''):
+	def listed(self, user, query=''):
 		self.login(user)
 		resp = self.client.get(reverse('membro-list') + query)
 		self.assertEqual(resp.status_code, 200)
-		return resp, {f['label']: f for f in resp.context['filters']}
+		return resp, {m.nu_eleitoral for m in resp.context['objects']}
 
-	# ---- daftar membru
-	def test_member_list_has_simple_small_buttons_with_counts_in_tooltip(self):
-		resp, f = self.filters('presidente')
-		self.assertEqual({k: v['count'] for k, v in f.items()}, {'Hotu': 4, 'Pendente': 2, 'Aprovadu': 1, 'Rejeitadu': 1})
-		self.assertContains(resp, 'btn btn-sm btn-info')  # tombol ativu
-		self.assertContains(resp, 'btn btn-sm btn-outline-secondary')
-		self.assertContains(resp, 'title="4 membru"')
-		self.assertNotContains(resp, 'btn-filter')
+	# ---- daftar membru: la iha tombol filter (data deit); filtru GET kontinua serbisu
+	def test_member_list_has_no_filter_buttons(self):
+		resp, _ = self.listed('presidente')
+		for needle in ('btn-filter', 'filter-simple', 'filter-title'):
+			self.assertNotContains(resp, needle)
+		self.assertNotIn('filters', resp.context)
+		self.assertContains(resp, 'KATEGORIA')
+		self.assertNotContains(resp, 'JENIS')
 
-	def test_active_button_follows_query(self):
-		for value in ('Pendente', 'Aprovadu', 'Rejeitadu'):
-			resp, f = self.filters('presidente', f'?aprovasaun={value}')
-			self.assertEqual([k for k, v in f.items() if v['active']], [value])
-			listed = {m.aprovasaun for m in resp.context['objects']}
-			self.assertEqual(listed, {value})
+	def test_aprovasaun_query_still_filters_and_ignores_invalid(self):
+		for value, nus in (('Pendente', {'FB00001', 'FB00002'}), ('Aprovadu', {'FB00003'}), ('Rejeitadu', {'FB00004'})):
+			self.assertEqual(self.listed('presidente', f'?aprovasaun={value}')[1], nus, value)
+		self.assertEqual(len(self.listed('presidente', '?aprovasaun=bukan-status')[1]), 4)
 
-	def test_invalid_value_falls_back_to_hotu(self):
-		_, f = self.filters('presidente', '?aprovasaun=bukan-status')
-		self.assertEqual([k for k, v in f.items() if v['active']], ['Hotu'])
-
-	def test_other_filters_are_kept_and_counted(self):
-		_, f = self.filters('presidente', '?sex=Mane&aprovasaun=Pendente')
-		self.assertEqual({k: v['count'] for k, v in f.items()}, {'Hotu': 3, 'Pendente': 1, 'Aprovadu': 1, 'Rejeitadu': 1})
-		self.assertIn('sex=Mane', f['Aprovadu']['url'])
-		self.assertIn('aprovasaun=Aprovadu', f['Aprovadu']['url'])
-		self.assertNotIn('aprovasaun', f['Hotu']['url'])
-		self.assertIn('sex=Mane', f['Hotu']['url'])
-
-	def test_counts_respect_user_scope(self):
-		_, f = self.filters('koordsuku')
-		self.assertEqual({k: v['count'] for k, v in f.items()}, {'Hotu': 3, 'Pendente': 2, 'Aprovadu': 1, 'Rejeitadu': 0})
+	def test_other_filters_combine_and_scope_applies(self):
+		self.assertEqual(self.listed('presidente', '?sex=Mane&aprovasaun=Pendente')[1], {'FB00001'})
+		self.assertEqual(self.listed('koordsuku')[1], {'FB00001', 'FB00002', 'FB00003'})
 
 	def test_member_list_has_no_search_builder(self):
 		self.login('presidente')
@@ -2851,21 +2836,6 @@ class KategoriaServisuTests(BaseCase):
 			self.assertEqual({o.nu_eleitoral for o in objs}, esperado, jenis)
 		self.assertEqual(len(self.client.get(reverse('membro-list'), {'jenis': 'ngawur'}).context['objects']), 3)  # nilai asing diabaikan
 
-	def test_list_has_separate_filter_rows_with_counts(self):
-		self.make('JN00004', kategoria='Militante'); self.make('JN00005', kategoria='Simpatizante')
-		self.login('presidente')
-		resp = self.client.get(reverse('membro-list'))
-		f = {x['label']: x for x in resp.context['jenis_filters']}
-		self.assertEqual((f['Hotu']['count'], f['Militante']['count'], f['Simpatizante']['count'], f['Struktura Penting']['count']), (2, 1, 1, 0))
-		self.assertContains(resp, 'Struktura Penting')
-		self.assertContains(resp, 'KATEGORIA')
-		self.assertNotContains(resp, 'JENIS')
-		for judul in ('>Kategoria<', '>Aprovasaun<', '>Servisu<'):
-			self.assertContains(resp, judul)
-		self.assertNotContains(resp, 'btn-filter')  # tombol simple btn btn-sm
-		self.assertContains(resp, 'Struktura Penting')
-		self.assertTrue(f['Hotu']['active'])
-
 	def test_servisu_filters(self):
 		from membro.models import Servisu
 		a, b, c = self.make('SF00001'), self.make('SF00002'), self.make('SF00003')
@@ -3067,7 +3037,7 @@ class AldeiaRekapTests(BaseCase):
 
 
 class PozisaunStepTests(BaseCase):
-	"""Pasu pozisaun: Militante / Simpatizante (rai kategoria deit) ka Ejekutivu (nivel Suku, Aldeia, Organizasaun; Postu deit Admin)."""
+	"""Pasu pozisaun: Militante / Simpatizante (rai kategoria deit) ka Ejekutivu (nivel Suku, Aldeia, Organizasaun; Postu deit Presidente no Admin)."""
 
 	def setUp(self):
 		self.m = self.make('PZ000001')
@@ -3138,18 +3108,49 @@ class PozisaunStepTests(BaseCase):
 		self.m.refresh_from_db()
 		self.assertEqual(self.m.organizasaun, self.org)  # membru tama organizasaun ne'e
 
-	def test_postu_level_only_for_admin(self):
-		self.assertEqual(self.post('presidente', nivel='Postu', pozisaun='Presidente', village='').status_code, 200)
-		self.assertFalse(Alokasaun.objects.exists())
-		page = self.client.get(self.url)
-		self.assertNotContains(page, '<option value="Postu">')
-		self.assertEqual(self.post('admin', nivel='Postu', pozisaun='Presidente', village='').status_code, 302)
+	def test_postu_level_and_vice_positions_for_presidente_and_admin(self):
+		self.login('presidente')
+		page = self.client.get(self.url).content.decode()
+		self.assertIn('<option value="Postu">', page)
+		for v in ('Vice I', 'Vice II', 'Vice III'):
+			self.assertIn(f'<option value="{v}">', page)
+		for u in ('presidente', 'admin'):
+			Alokasaun.objects.all().delete()
+			Membro.objects.filter(pk=self.m.pk).update(is_colocado=False)
+			self.assertEqual(self.post(u, nivel='Postu', pozisaun='Vice II', village='').status_code, 302, u)
+			self.assertEqual(Alokasaun.objects.get().pozisaun, 'Vice II')
+
+	def test_postu_level_offered_to_sekjer_suku_but_not_other_sekjer(self):
+		self.login('sekrsuku')
+		page = self.client.get(self.url).content.decode()
+		self.assertIn('<option value="Postu">', page)
+		self.assertIn('<option value="Vice I">', page)
+		self.assertEqual(self.post('sekrsuku', nivel='Postu', pozisaun='Vice I', village='').status_code, 302)
 		self.assertEqual(Alokasaun.objects.get().nivel, 'Postu')
+		Alokasaun.objects.all().delete()
+		Membro.objects.filter(pk=self.m.pk).update(is_colocado=False)
+		self.login('sekraldeia')
+		self.assertNotIn('<option value="Postu">', self.client.get(self.url).content.decode())
+		self.assertEqual(self.post('sekraldeia', nivel='Postu', pozisaun='Vice I', village='').status_code, 200)
+		self.assertFalse(Alokasaun.objects.exists())
+
+	def test_vice_positions_only_at_postu_and_unique_per_postu(self):
+		for niv, extra in (('Suku', {}), ('Aldeia', {'aldeia': self.a1.pk, 'village': ''})):
+			self.assertEqual(self.post('presidente', nivel=niv, pozisaun='Vice I', **extra).status_code, 200, niv)  # Vice la iha iha Suku/Aldeia
+			self.assertEqual(self.post('presidente', nivel=niv, pozisaun='Presidente', **extra).status_code, 200, niv)
+		self.assertEqual(self.post('presidente', nivel='Postu', pozisaun='Vice III', village='').status_code, 302)
+		other = self.make('PZ000020')
+		self.url = reverse('membro-aloka', args=[other.hashed])
+		self.m = other
+		resp = self.post('presidente', nivel='Postu', pozisaun='Vice III', village='')  # Vice III ativu iha ona
+		self.assertEqual(resp.status_code, 200)
+		self.assertEqual(Alokasaun.objects.count(), 1)
+		self.assertEqual(self.post('presidente', nivel='Postu', pozisaun='Vice I', village='').status_code, 302)
 
 	def test_levels_limited_by_role(self):
 		self.login('sekrsuku')
 		page = self.client.get(self.url).content.decode()
-		for n, ok in (('Suku', True), ('Aldeia', True), ('Organizasaun', False), ('Postu', False)):
+		for n, ok in (('Suku', True), ('Aldeia', True), ('Organizasaun', False), ('Postu', True)):
 			self.assertEqual(f'<option value="{n}">' in page, ok, n)
 		self.assertContains(self.client.get(self.url), 'Militante')
 		self.assertEqual(self.post('sekrsuku', nivel='Organizasaun', village='', organizasaun=self.org.pk).status_code, 200)

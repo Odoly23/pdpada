@@ -196,6 +196,9 @@ class EdukasaunForm(forms.ModelForm):
 		return cleaned
 
 
+POSTU_NIVEL_ROLES = (roles.ADMIN, roles.PRESIDENTE, roles.SEKR_SUKU)  # permisaun ne'ebé bele hili nivel Postu
+
+
 class AlokasaunForm(forms.ModelForm):
 	membro = MembroChoiceField(label="Membru", queryset=Membro.objects.none())
 	data_hahu = forms.DateField(label="Data Hahu", widget=DateInput())
@@ -208,8 +211,8 @@ class AlokasaunForm(forms.ModelForm):
 	def __init__(self, *args, user=None, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.group = c_user_group(user) if user else roles.ADMIN
-		# nivel Postu deit ba Admin (pozisaun ne'e mantein se iha ona)
-		if self.group != roles.ADMIN and not (self.instance.pk and self.instance.nivel == 'Postu'):
+		# nivel Postu deit ba Presidente no Admin (pozisaun ne'e mantein se iha ona)
+		if self.group not in POSTU_NIVEL_ROLES and not (self.instance.pk and self.instance.nivel == 'Postu'):
 			self.fields['nivel'].choices = [c for c in self.fields['nivel'].choices if c[0] != 'Postu']
 		# membru yang sudah punya pozisaun ativu (is_colocado) tidak tampil; saat edit, pemegangnya sendiri tetap tampil
 		bebas = Q(is_colocado=False)
@@ -253,8 +256,8 @@ class AlokasaunForm(forms.ModelForm):
 			self.add_error('pozisaun', f'Pozisaun {pozisaun} la existe iha nivel {nivel}.')
 			return cleaned
 		village, aldeia, org = cleaned.get('village'), cleaned.get('aldeia'), cleaned.get('organizasaun')
-		if nivel == 'Postu' and self.group != roles.ADMIN and not (self.instance.pk and self.instance.nivel == 'Postu'):
-			self.add_error('nivel', 'Nivel Postu deit Admin bele aloka.')
+		if nivel == 'Postu' and self.group not in POSTU_NIVEL_ROLES and not (self.instance.pk and self.instance.nivel == 'Postu'):
+			self.add_error('nivel', 'Ita la iha permisaun atu aloka nivel Postu.')
 			return cleaned
 		if nivel == 'Postu':
 			village = aldeia = org = None
@@ -305,7 +308,7 @@ class AlokasaunForm(forms.ModelForm):
 
 class AlokasaunMembroForm(AlokasaunForm):
 	"""Pasu ikus iha fluxu input membru: hili Militante, Simpatizante ka Ejekutivu. Militante/Simpatizante = rai kategoria deit
-	(la iha pozisaun); Ejekutivu = hatudu nivel (Suku, Aldeia ka Organizasaun; Postu deit Admin)."""
+	(la iha pozisaun); Ejekutivu = hatudu nivel (Suku, Aldeia ka Organizasaun; Postu ba Presidente, Admin no Sekjer Suku)."""
 	TIPU = [('Militante', 'Militante'), ('Simpatizante', 'Simpatizante'), ('Ejekutivu', 'Ejekutivu (iha pozisaun iha struktura)')]
 	tipu = forms.ChoiceField(label="Membru ne'e", choices=TIPU)
 
@@ -320,10 +323,11 @@ class AlokasaunMembroForm(AlokasaunForm):
 		for f in ('nivel', 'pozisaun', 'data_hahu'):
 			self.fields[f].required = False
 		self.fields['data_hahu'].initial = datetime.date.today()
-		del self.fields['data_termina'], self.fields['ativu']
-		# nivel tuir permisaun: Admin (Postu, Suku, Aldeia, Organizasaun); Presidente (Suku, Aldeia, Organizasaun); sekjer deit nia unidade
-		allowed = {roles.ADMIN: ('Postu', 'Suku', 'Aldeia', 'Organizasaun'), roles.PRESIDENTE: ('Suku', 'Aldeia', 'Organizasaun'),
-			roles.SEKR_SUKU: ('Suku', 'Aldeia'), roles.SEKR_ALDEIA: ('Aldeia',), roles.SEKR_ORG: ('Organizasaun',)}.get(group, ())
+		del self.fields['data_termina']
+		self.fields['ativu'].required = False  # pozisaun foun sempre ativu (hatama iha clean)
+		# nivel tuir permisaun: Admin (Postu, Suku, Aldeia, Organizasaun); Presidente (Postu, Suku, Aldeia, Organizasaun); Sekjer Suku (Postu, Suku, Aldeia); sekjer seluk deit nia unidade
+		allowed = {roles.ADMIN: ('Postu', 'Suku', 'Aldeia', 'Organizasaun'), roles.PRESIDENTE: ('Postu', 'Suku', 'Aldeia', 'Organizasaun'),
+			roles.SEKR_SUKU: ('Postu', 'Suku', 'Aldeia'), roles.SEKR_ALDEIA: ('Aldeia',), roles.SEKR_ORG: ('Organizasaun',)}.get(group, ())
 		self.allowed_nivel = allowed
 		self.fields['nivel'].choices = [('', '---------')] + [(n, n) for n in allowed]
 		if group == roles.SEKR_SUKU and scope and scope.village_id:
@@ -367,6 +371,7 @@ class AlokasaunMembroForm(AlokasaunForm):
 			self.add_error('nivel', 'Ita la iha permisaun atu aloka nivel ne\'e.')
 		if self.errors:
 			return cleaned
+		self.cleaned_data['ativu'] = 'Sim'  # pozisaun foun ativu: verifika pozisaun ativu seluk no nain-pozisaun nian
 		return AlokasaunForm.clean(self)
 
 

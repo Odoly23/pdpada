@@ -255,7 +255,7 @@ def PainelRekap(request):
 	return render(request, 'membro/painel_rekap.html', context)
 
 
-POZISAUN_LABEL = {'Presidente': 'Presidente', 'Coordenador': 'Cordenador', 'Sekretariu': 'Sekjer'}
+POZISAUN_LABEL = {'Presidente': 'Presidente', 'Vice I': 'Vice I', 'Vice II': 'Vice II', 'Vice III': 'Vice III', 'Coordenador': 'Cordenador', 'Sekretariu': 'Sekjer'}
 
 
 # rekap tuir suku

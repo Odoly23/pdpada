@@ -16,9 +16,10 @@ STATUS = [('Ativu', 'Ativu'), ('Inativu', 'Inativu'), ('Falesidu', 'Falesidu')]
 APROVASAUN = [('Pendente', 'Pendente'), ('Aprovadu', 'Aprovadu'), ('Rejeitadu', 'Rejeitadu')]
 
 NIVEL = [('Postu', 'Postu'), ('Suku', 'Suku'), ('Aldeia', 'Aldeia'), ('Organizasaun', 'Organizasaun')]
-POZISAUN = [('Presidente', 'Presidente'), ('Coordenador', 'Coordenador'), ('Sekretariu', 'Sekretariu')]
+POZISAUN = [('Presidente', 'Presidente'), ('Vice I', 'Vice I'), ('Vice II', 'Vice II'), ('Vice III', 'Vice III'),
+	('Coordenador', 'Coordenador'), ('Sekretariu', 'Sekretariu')]
 POZISAUN_POR_NIVEL = {
-	'Postu': ['Presidente', 'Coordenador', 'Sekretariu'],
+	'Postu': ['Presidente', 'Vice I', 'Vice II', 'Vice III', 'Coordenador', 'Sekretariu'],
 	'Suku': ['Coordenador', 'Sekretariu'],
 	'Aldeia': ['Coordenador', 'Sekretariu'],
 	'Organizasaun': ['Coordenador', 'Sekretariu'],

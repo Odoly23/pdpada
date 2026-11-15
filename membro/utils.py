@@ -6,7 +6,7 @@ from django.db.models import Count, Q
 from urllib.parse import urlencode
 from config.user_utils import membro_scope
 from custom.models import Year
-from membro.models import Membro, Historia, Alokasaun, Servisu, POZISAUN_POR_NIVEL
+from membro.models import Membro, Historia, Alokasaun, Servisu, POZISAUN, POZISAUN_POR_NIVEL
 
 SNAPSHOT_FIELDS = ['kategoria', 'nome', 'sex', 'place_of_birth', 'date_of_birth', 'marital', 'nu_eleitoral',
 	'telefone', 'image', 'file_eleitoral', 'village', 'aldeia', 'address', 'organizasaun', 'data_hakbit', 'status']
@@ -30,9 +30,6 @@ FILTER_CHOICES = {
 	'sex': ['Mane', 'Feto'],
 }
 FILTER_IDS = ['village', 'aldeia', 'organizasaun']
-JENIS_BUTTONS = [('Struktura', 'Struktura Penting', 'fa-sitemap', 'all'), ('Militante', 'Militante', 'fa-user', 'ok'),
-	('Simpatizante', 'Simpatizante', 'fa-heart', 'info')]  # (nilai filter, label, ikon, warna)
-SERVISU_BUTTONS = [('Servisu', 'Iha Servisu', 'fa-briefcase', 'ok'), ('Seidauk', 'Seidauk Servisu', 'fa-hourglass-half', 'warn')]
 
 
 def filter_jenis(qs, jenis):
@@ -106,7 +103,7 @@ def apply_alokasaun_filters(qs, params):
 	"""Filter daftar alokasaun dari parameter GET (dipakai tautan di dashboard Struktura)."""
 	if params.get('nivel') in POZISAUN_POR_NIVEL:
 		qs = qs.filter(nivel=params['nivel'])
-	if params.get('pozisaun') in ('Presidente', 'Coordenador', 'Sekretariu'):
+	if params.get('pozisaun') in dict(POZISAUN):
 		qs = qs.filter(pozisaun=params['pozisaun'])
 	if params.get('ativu') in ('Sim', 'Lae'):
 		qs = qs.filter(ativu=params['ativu'])
@@ -173,60 +170,3 @@ def csv_row(m):
 	return [csv_safe(v) for v in (
 		m.nu_eleitoral, m.nome, m.sex, m.date_of_birth, m.age(), m.marital or '', m.telefone or '', m.village, m.aldeia,
 		m.address or '', m.organizasaun or '', m.data_hakbit or '', m.status, m.aprovasaun, m.year or '', m.jenis(), servisu_text(m))]
-
-
-APROVASAUN_BUTTONS = [  # (nilai filter, label, ikon, warna)
-	('Pendente', 'Pendente', 'fa-clock-o', 'warn'),
-	('Aprovadu', 'Aprovadu', 'fa-check-circle', 'ok'),
-	('Rejeitadu', 'Rejeitadu', 'fa-times-circle', 'bad'),
-]
-
-
-def aprovasaun_filters(user, get):
-	"""Tombol filter status aprovasaun untuk daftar membru: dengan hitungan, status aktif, dan filter lain dipertahankan.
-	Hitungan memakai filter lain (suku, jenis kelamin, ...) kecuali aprovasaun itu sendiri."""
-	params = get.copy()
-	params.pop('aprovasaun', None)
-	base, _ = membro_listing(user, params)
-	counts = dict(base.order_by().values_list('aprovasaun').annotate(n=Count('id')))
-	current = get.get('aprovasaun', '')
-	known = {b[0] for b in APROVASAUN_BUTTONS}
-
-	def url(value=None):
-		q = params.copy()
-		if value:
-			q['aprovasaun'] = value
-		return '?' + q.urlencode() if q else '?'
-
-	filters = [{'label': 'Hotu', 'url': url(), 'icon': 'fa-th-list', 'kind': 'all', 'count': sum(counts.values()),
-		'active': current not in known}]
-	for value, label, icon, kind in APROVASAUN_BUTTONS:
-		filters.append({'label': label, 'url': url(value), 'icon': icon, 'kind': kind, 'count': counts.get(value, 0), 'active': current == value})
-	return filters
-
-
-def kategoria_filters(user, get, param='jenis', buttons=None):
-	"""Tombol filter jenis (Struktura/Militante/Simpatizante) ba lista membru: hitungan tuir filtru seluk, status aktif, filtru seluk mantein."""
-	buttons = buttons or JENIS_BUTTONS
-	params = get.copy()
-	params.pop(param, None)
-	base, _ = membro_listing(user, params)
-	if param == 'jenis':
-		counts = {v: filter_jenis(base, v).count() for v, *_ in buttons}
-	else:  # servisu: Servisu / Seidauk
-		counts = dict(base.order_by().values_list('servisu__status').annotate(n=Count('id')))
-	current = get.get(param, '')
-	known = {b[0] for b in buttons}
-
-	def url(value=None):
-		q = params.copy()
-		if value:
-			q[param] = value
-		return '?' + q.urlencode() if q else '?'
-
-	total = base.count()
-	filters = [{'label': 'Hotu', 'url': url(), 'icon': 'fa-th-list', 'kind': 'all', 'count': total, 'active': current not in known}]
-	for value, label, icon, kind in buttons:
-		filters.append({'label': label, 'url': url(value), 'icon': icon, 'kind': kind, 'count': counts.get(value, 0), 'active': current == value})
-	return filters
-

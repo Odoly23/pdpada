@@ -161,7 +161,7 @@ def AlokasaunDash(request):
 	context = {
 		'group': group, 'show_postu': group in roles.POSTU_ROLES or group == roles.ADMIN,
 		'can_aloka': group in roles.ALOKA_ROLES, 'can_link': group in roles.POSTU_ROLES,
-		'postu': [(p, postu.get(p)) for p in ('Presidente', 'Coordenador', 'Sekretariu')],
+		'postu': [(p, postu.get(p)) for p in ('Presidente', 'Vice I', 'Vice II', 'Vice III', 'Coordenador', 'Sekretariu')],
 		'rows_suku': rows_suku, 'rows_aldeia': rows_aldeia, 'rows_org': rows_org,
 		'ano_ativu_obj': Year.objects.filter(is_active=True).first(),
 		'title': 'Tabel Struktura', 'legend': 'Tabel Struktura'
@@ -182,8 +182,8 @@ def StrukturaBagan(request):
 	for a in aktivu:
 		unit = {'Postu': ('P', 0), 'Suku': ('S', a.village_id), 'Aldeia': ('A', a.aldeia_id), 'Organizasaun': ('O', a.organizasaun_id)}[a.nivel]
 		by_unit.setdefault(unit, []).append(a)
-	order = {'Presidente': 0, 'Coordenador': 1, 'Sekretariu': 2}
-	label = {'Presidente': 'Presidente', 'Coordenador': 'Coordenador', 'Sekretariu': 'Sekretariu/a Geral'}
+	order = {'Presidente': 0, 'Vice I': 1, 'Vice II': 2, 'Vice III': 3, 'Coordenador': 4, 'Sekretariu': 5}
+	label = {'Presidente': 'Presidente', 'Vice I': 'Vice I', 'Vice II': 'Vice II', 'Vice III': 'Vice III', 'Coordenador': 'Coordenador', 'Sekretariu': 'Sekretariu/a Geral'}
 
 	def people(kind, pk, org_code=None):
 		rows = sorted((a for a in by_unit.get((kind, pk), []) if not (kind in ('S', 'A') and a.organizasaun_id)), key=lambda a: order[a.pozisaun])
