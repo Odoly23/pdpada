@@ -13,6 +13,7 @@ from membro.models import Alokasaun
 from membro.utils import log_historia, apply_alokasaun_filters
 
 
+# lista alokasaun (nain-estrutura ativu no istória)
 @login_required
 @allowed_users(allowed_roles=roles.STRUKTURA_ROLES)
 def AlokasaunList(request):
@@ -31,6 +32,7 @@ def AlokasaunList(request):
 	return render(request, 'membro/alokasaun_list.html', context)
 
 
+# adisiona alokasaun foun ba membru
 @login_required
 @allowed_users(allowed_roles=roles.ALOKA_ROLES)
 def AlokasaunAdd(request):
@@ -55,6 +57,7 @@ def AlokasaunAdd(request):
 	return render(request, 'membro/alokasaun_form.html', context)
 
 
+# hadia/edita alokasaun
 @login_required
 @allowed_users(allowed_roles=roles.ALOKA_ROLES)
 def AlokasaunUpdate(request, pk):
@@ -81,6 +84,7 @@ def AlokasaunUpdate(request, pk):
 	return render(request, 'membro/alokasaun_form.html', context)
 
 
+# termina alokasaun (data remata)
 @login_required
 @allowed_users(allowed_roles=roles.ALOKA_ROLES)
 @require_POST
@@ -100,6 +104,7 @@ def AlokasaunTermina(request, pk):
 	return redirect('alokasaun-list')
 
 
+# hamoos alokasaun
 @login_required
 @allowed_users(allowed_roles=roles.ALOKA_ROLES)
 @require_POST
@@ -111,6 +116,7 @@ def AlokasaunDel(request, pk):
 	return redirect('alokasaun-list')
 
 
+# limita unidade (suku/aldeia/organizasaun) tuir permisaun uzuáriu
 def _unit_scope(user):
 	"""Suku, aldeia dan organisasi yang masuk dalam wilayah user."""
 	group, scope = c_user_group(user), c_user_scope(user)
@@ -127,6 +133,7 @@ def _unit_scope(user):
 	return villages, aldeias.select_related('village'), orgs
 
 
+# dashboard alokasaun
 @login_required
 @allowed_users(allowed_roles=roles.STRUKTURA_ROLES)
 def AlokasaunDash(request):

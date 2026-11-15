@@ -10,6 +10,7 @@ from membro.models import OrgPozisaun, OrgResponsavel
 from membro.utils import log_historia
 
 
+# halo ai-rukun estrutura organigrama
 def _tree():
 	"""Pohon posisi: [{'pos', 'resp', 'children'}] + daftar datar urut untuk tabel."""
 	posisi = list(OrgPozisaun.objects.filter(ativu=True).prefetch_related('responsavel__membro'))
@@ -21,6 +22,7 @@ def _tree():
 	return roots, [nodes[p.pk] for p in posisi]
 
 
+# organigrama estrutura PD
 @login_required
 @allowed_users(allowed_roles=roles.STRUKTURA_ROLES)
 def Organigrama(request):
@@ -37,12 +39,14 @@ def Organigrama(request):
 	return render(request, 'membro/organigrama.html', context)
 
 
+# prepara formuláriu organigrama
 def _form_page(request, form, legend, back='organigrama'):
 	return render(request, 'main/form.html', {
 		'form': form, 'group': c_user_group(request.user), 'cancel_url': '/membro/organigrama/',
 		'back_url': back, 'back_label': 'Organigrama', 'title': legend, 'legend': legend})
 
 
+# adisiona pozisaun organigrama
 @login_required
 @allowed_users(allowed_roles=roles.ALOKA_ROLES)
 def OrgPozisaunAdd(request):
@@ -55,6 +59,7 @@ def OrgPozisaunAdd(request):
 	return _form_page(request, form, 'Aumenta Pozisaun')
 
 
+# hadia/edita pozisaun organigrama
 @login_required
 @allowed_users(allowed_roles=roles.ALOKA_ROLES)
 def OrgPozisaunUpdate(request, pk):
@@ -68,6 +73,7 @@ def OrgPozisaunUpdate(request, pk):
 	return _form_page(request, form, 'Edita Pozisaun')
 
 
+# hamoos pozisaun organigrama
 @login_required
 @allowed_users(allowed_roles=roles.ALOKA_ROLES)
 @require_POST
@@ -82,6 +88,7 @@ def OrgPozisaunDel(request, pk):
 	return redirect('organigrama')
 
 
+# adisiona responsavel ba pozisaun
 @login_required
 @allowed_users(allowed_roles=roles.ALOKA_ROLES)
 def OrgResponsavelAdd(request, pk):
@@ -98,6 +105,7 @@ def OrgResponsavelAdd(request, pk):
 	return _form_page(request, form, f'Aumenta Responsavel · {pos.naran}')
 
 
+# hadia/edita responsavel
 @login_required
 @allowed_users(allowed_roles=roles.ALOKA_ROLES)
 def OrgResponsavelUpdate(request, pk):
@@ -111,6 +119,7 @@ def OrgResponsavelUpdate(request, pk):
 	return _form_page(request, form, f'Edita Responsavel · {obj.pozisaun.naran}')
 
 
+# hamoos responsavel
 @login_required
 @allowed_users(allowed_roles=roles.ALOKA_ROLES)
 @require_POST

@@ -7,15 +7,17 @@ from django.urls import reverse
 from config import roles
 from config.decorators import allowed_users
 from config.user_utils import c_user_group, membro_ativu
-from membro.utils import AGE_BINS
+from membro.utils import AGE_BINS, filter_jenis
 from membro.views.rekap_v import _banner
 from users.utils import c_user_emp
 
 
+# liga ba lista ho filtru
 def _url(**params):
 	return reverse('membro-list') + '?' + urlencode(params)
 
 
+# sura liña ba tabela relatóriu
 def _count_rows(qs, field, key, label=None, none_label='Laiha', none_value=None, skip_none=False):
 	"""Baris {name, total, url}: jumlah membru per nilai `field`, tautan ke daftar terfilter."""
 	rows = []
@@ -30,6 +32,7 @@ def _count_rows(qs, field, key, label=None, none_label='Laiha', none_value=None,
 	return rows
 
 
+# liña ho naran ba tabela relatóriu
 def _named_rows(qs, id_field, name_field, key, none_label='Laiha organizasaun'):
 	"""Baris {name, total, mane, feto, url} per suku/aldeia/organizasaun (satu query)."""
 	rows = qs.order_by().values(id_field, name_field).annotate(
@@ -38,6 +41,7 @@ def _named_rows(qs, id_field, name_field, key, none_label='Laiha organizasaun'):
 		'url': _url(**{key: r[id_field] or 0})} for r in rows]
 
 
+# liña grupu idade
 def _age_rows(qs):
 	today = datetime.date.today()
 	counts = {label: 0 for _, _, label in AGE_BINS}
@@ -50,6 +54,7 @@ def _age_rows(qs):
 	return [{'name': label, 'total': counts[label], 'url': _url(umur=label)} for _, _, label in AGE_BINS if counts[label]]
 
 
+# dashboard relatóriu
 @login_required
 @allowed_users(allowed_roles=roles.VIEW_ROLES)
 def Dash(request):
@@ -64,7 +69,17 @@ def Dash(request):
 		falesidu=Count('id', filter=Q(status='Falesidu')),
 		sem_org=Count('id', filter=Q(organizasaun__isnull=True)))
 	age = _age_rows(qs)
+	jenis_rows = [{'name': lbl, 'total': filter_jenis(qs, val).count(), 'url': _url(jenis=val)}
+		for val, lbl in (('Struktura', 'Struktura Penting'), ('Militante', 'Militante'), ('Simpatizante', 'Simpatizante'))]
+	servisu_rows = [
+		{'name': 'Servisu Governu', 'total': qs.filter(servisu__status='Servisu', servisu__setor='Governu').count(), 'url': _url(servisu='Servisu', setor='Governu')},
+		{'name': 'Servisu Laos Governu', 'total': qs.filter(servisu__status='Servisu', servisu__setor='Laos Governu').count(), 'url': _url(servisu='Servisu', setor='Laos Governu')},
+		{'name': 'Seidauk Servisu', 'total': qs.filter(servisu__status='Seidauk').count(), 'url': _url(servisu='Seidauk')},
+		{'name': 'Seidauk iha dadus', 'total': qs.filter(servisu__isnull=True).count(), 'url': _url(servisu='laiha')},
+	]
 	tables = [
+		{'title': 'Membru Tuir Jenis', 'head': 'Jenis', 'rows': jenis_rows},
+		{'title': 'Membru Tuir Servisu', 'head': 'Servisu', 'rows': servisu_rows},
 		{'title': 'Membru Tuir Suku', 'head': 'Suku', 'sexu': True, 'rows': _named_rows(qs, 'village_id', 'village__name', 'village')},
 		{'title': 'Membru Tuir Aldeia', 'head': 'Aldeia', 'sexu': True, 'rows': _named_rows(qs, 'aldeia_id', 'aldeia__name', 'aldeia')},
 		{'title': 'Membru Tuir Organizasaun', 'head': 'Organizasaun', 'sexu': True, 'rows': _named_rows(qs, 'organizasaun_id', 'organizasaun__code', 'organizasaun')},
@@ -81,6 +96,7 @@ def Dash(request):
 	return render(request, 'report/dash.html', context)
 
 
+# dashboard gráfiku
 @login_required
 @allowed_users(allowed_roles=roles.VIEW_ROLES)
 def ChartDash(request):

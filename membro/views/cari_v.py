@@ -6,6 +6,7 @@ from config.user_utils import c_user_group
 from membro.utils import search_membro, SEARCH_MIN
 
 
+# buka membru (nome, nu. eleitoral)
 @login_required
 @allowed_users(allowed_roles=roles.LISTA_ROLES)
 def MembroCari(request):

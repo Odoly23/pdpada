@@ -8,11 +8,13 @@ from config import roles
 from config.user_utils import c_user_group, membro_ativu, alokasaun_scope
 
 
+# permisaun: de'it papél ne'ebé bele haree relatóriu
 class IsViewRole(BasePermission):
 	def has_permission(self, request, view):
 		return bool(request.user and request.user.is_authenticated and c_user_group(request.user) in roles.VIEW_ROLES)
 
 
+# bazu API relatóriu (eskopu tuir permisaun)
 class BaseAPI(APIView):
 	authentication_classes = [SessionAuthentication]
 	permission_classes = [IsAuthenticated, IsViewRole]
@@ -22,48 +24,56 @@ class BaseAPI(APIView):
 		return [str(x[0]) if x[0] is not None else 'Laiha' for x in qs], [x[1] for x in qs]
 
 
+# API sexu
 class APIGender(BaseAPI):
 	def get(self, request, format=None):
 		label, obj = self.grouped('sex')
 		return Response({'label': label, 'obj': obj})
 
 
+# API estadu aprovasaun
 class APIAprovasaun(BaseAPI):
 	def get(self, request, format=None):
 		label, obj = self.grouped('aprovasaun')
 		return Response({'label': label, 'obj': obj})
 
 
+# API membru tuir suku
 class APISuku(BaseAPI):
 	def get(self, request, format=None):
 		label, obj = self.grouped('village__name')
 		return Response({'label': label, 'obj': obj})
 
 
+# API membru tuir organizasaun
 class APIOrganizasaun(BaseAPI):
 	def get(self, request, format=None):
 		label, obj = self.grouped('organizasaun__code')
 		return Response({'label': label, 'obj': obj})
 
 
+# API membru tuir aldeia
 class APIAldeia(BaseAPI):
 	def get(self, request, format=None):
 		label, obj = self.grouped('aldeia__name')
 		return Response({'label': label, 'obj': obj})
 
 
+# API estadu membru (ativu/la ativu)
 class APIStatus(BaseAPI):
 	def get(self, request, format=None):
 		label, obj = self.grouped('status')
 		return Response({'label': label, 'obj': obj})
 
 
+# API estadu sivíl
 class APIMarital(BaseAPI):
 	def get(self, request, format=None):
 		label, obj = self.grouped('marital')
 		return Response({'label': label, 'obj': obj})
 
 
+# API tinan hakbit (tama partidu)
 class APIHakbit(BaseAPI):
 	"""Membru tuir tinan tama PD (tinan data_hakbit); ne'ebé laiha data la konta."""
 	def get(self, request, format=None):
@@ -75,6 +85,7 @@ class APIHakbit(BaseAPI):
 from membro.utils import AGE_BINS
 
 
+# API grupu idade
 class APIAge(BaseAPI):
 	def get(self, request, format=None):
 		today = datetime.date.today()
@@ -88,6 +99,7 @@ class APIAge(BaseAPI):
 		return Response({'label': [b[2] for b in AGE_BINS], 'obj': counts})
 
 
+# API alokasaun
 class APIAlokasaun(BaseAPI):
 	"""Posisi aktif per nivel dan pozisaun (untuk grafik Struktura)."""
 	def get(self, request, format=None):
@@ -98,6 +110,7 @@ class APIAlokasaun(BaseAPI):
 		return Response({'label': [f'{r[0]} · {r[1]}' for r in rows], 'obj': [r[2] for r in rows]})
 
 
+# API suku no sexu
 class APISukuSexu(BaseAPI):
 	"""Perbandingan Mane dan Feto per suku (grafik berkelompok)."""
 	def get(self, request, format=None):
@@ -105,3 +118,24 @@ class APISukuSexu(BaseAPI):
 		rows = membro_ativu(request.user).order_by().values('village__name').annotate(
 			mane=Count('id', filter=Q(sex='Mane')), feto=Count('id', filter=Q(sex='Feto'))).order_by('village__name')
 		return Response({'label': [r['village__name'] for r in rows], 'mane': [r['mane'] for r in rows], 'feto': [r['feto'] for r in rows]})
+
+
+# API kategoria (Militante, Simpatizante, Struktura Penting)
+class APIJenis(BaseAPI):
+	"""Struktura penting, Militante dan Simpatizante (tiga data separadu)."""
+	def get(self, request, format=None):
+		from membro.utils import filter_jenis
+		qs = membro_ativu(request.user)
+		labels = [('Struktura', 'Struktura Penting'), ('Militante', 'Militante'), ('Simpatizante', 'Simpatizante')]
+		return Response({'label': [l for _, l in labels], 'obj': [filter_jenis(qs, v).count() for v, _ in labels]})
+
+
+# API estadu servisu (Governu, Laos Governu, Seidauk)
+class APIServisu(BaseAPI):
+	def get(self, request, format=None):
+		qs = membro_ativu(request.user)
+		rows = [('Servisu Governu', qs.filter(servisu__status='Servisu', servisu__setor='Governu')),
+			('Servisu Laos Governu', qs.filter(servisu__status='Servisu', servisu__setor='Laos Governu')),
+			('Seidauk Servisu', qs.filter(servisu__status='Seidauk')), ('Seidauk iha dadus', qs.filter(servisu__isnull=True))]
+		return Response({'label': [l for l, _ in rows], 'obj': [q.count() for _, q in rows]})
+

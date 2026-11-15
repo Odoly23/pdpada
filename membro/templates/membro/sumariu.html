@@ -21,8 +21,9 @@
 					<a class="btn btn-sm btn-danger mb-2" href="{% url 'report-dash' %}">Relatoriu Tabular <i class="fa fa-table"></i></a>
 				</div>
 				<div class="card">
-					<div class="card-header text-center">Membru Tinan Ativu {% if ano %}{{ ano.year }}{% endif %}</div>
+					<div class="card-header text-center">Membru Tinan Ativu {% if ano %}{{ ano.year }}{% endif %}{% if jenis %} · {{ jenis }}{% endif %}</div>
 				</div>
+				<div class="card-body pb-0">{% include 'main/filter_bar.html' with filters=jenis_buttons %}</div>
 				<div class="card-body text-center">
 					<table class="table table-sm table-bordered display nowrap" style="width:100%;text-align: center;">
 						<thead>

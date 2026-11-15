@@ -31,3 +31,20 @@
 	});
 	window.jQuery(modal).on('hidden.bs.modal', function () { pending = null; });
 })();
+
+/* Formuláriu uza dala ida: "Back" browser (bfcache) foti pájina foun, no botaun submit blokeia depois klik dahuluk. */
+(function () {
+	window.addEventListener('pageshow', function (ev) {
+		var nav = window.performance && performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+		if (ev.persisted || (nav && nav.type === 'back_forward' && document.querySelector('input[name="_ftoken"]'))) {
+			window.location.reload();
+		}
+	});
+	document.addEventListener('submit', function (ev) {
+		var f = ev.target;
+		if (!f || !f.querySelector || !f.querySelector('input[name="_ftoken"]') || ev.defaultPrevented) { return; }
+		setTimeout(function () {
+			f.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (b) { b.disabled = true; });
+		}, 0);
+	});
+})();

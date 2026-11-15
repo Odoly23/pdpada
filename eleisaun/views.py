@@ -17,6 +17,7 @@ from membro.utils import log_historia
 NOME_LOG = 'Eleisaun'
 
 
+# dashboard live rezultadu eleisaun (ekran tomak)
 @login_required
 @allowed_users(allowed_roles=roles.VIEW_ROLES)
 def LiveDashboard(request):
@@ -24,6 +25,7 @@ def LiveDashboard(request):
 	return render(request, 'eleisaun/live.html', {'data_url': reverse('eleisaun-live-data')})
 
 
+# data JSON ba dashboard live
 @login_required
 @allowed_users(allowed_roles=roles.VIEW_ROLES)
 def LiveData(request):
@@ -32,6 +34,7 @@ def LiveData(request):
 	return response
 
 
+# komparasaun rezultadu entre eleisaun
 @login_required
 @allowed_users(allowed_roles=roles.POSTU_ROLES)
 def Komparasaun(request):
@@ -45,6 +48,7 @@ def Komparasaun(request):
 	return render(request, 'eleisaun/komparasaun.html', context)
 
 
+# Fiskais hatama votu no foto (dala ida de'it)
 @login_required
 @allowed_users(allowed_roles=roles.FISKAIS_ROLES)
 def ResultadoInput(request):
@@ -81,6 +85,7 @@ def ResultadoInput(request):
 	return render(request, 'eleisaun/input.html', context)
 
 
+# hatudu foto rezultadu (privadu)
 @login_required
 @allowed_users(allowed_roles=roles.FISKAIS_ROLES + roles.POSTU_ROLES)
 def ResultadoFile(request, pk, kind):
@@ -105,6 +110,7 @@ def ResultadoFile(request, pk, kind):
 	return response
 
 
+# painel Admin eleisaun (tempat votasaun no fiskais)
 @login_required
 @allowed_users(allowed_roles=roles.ELEISAUN_ADMIN_ROLES)
 def EleisaunAdmin(request):
@@ -119,6 +125,7 @@ def EleisaunAdmin(request):
 	return render(request, 'eleisaun/admin.html', context)
 
 
+# prepara formuláriu administrasaun eleisaun
 def _admin_form(request, form_cls, legend, aksaun, detalhe, sucesso):
 	form = form_cls(request.POST or None)
 	if request.method == 'POST' and form.is_valid():
@@ -131,24 +138,28 @@ def _admin_form(request, form_cls, legend, aksaun, detalhe, sucesso):
 		'back_url': 'eleisaun-admin', 'back_label': 'Eleisaun no Tempat', 'title': legend, 'legend': legend})
 
 
+# adisiona eleisaun foun
 @login_required
 @allowed_users(allowed_roles=roles.ELEISAUN_ADMIN_ROLES)
 def EleisaunAdd(request):
 	return _admin_form(request, EleisaunForm, 'Aumenta Eleisaun', 'Eleisaun Foun', lambda o: f'{o.naran} ({o.tinan})', 'Eleisaun aumenta ona.')
 
 
+# adisiona tempat votasaun
 @login_required
 @allowed_users(allowed_roles=roles.ELEISAUN_ADMIN_ROLES)
 def TempatAdd(request):
 	return _admin_form(request, TempatForm, 'Aumenta Tempat Votasaun', 'Tempat Foun', lambda o: f'{o.naran} · {o.village}', 'Tempat aumenta ona.')
 
 
+# adisiona fiskais ba tempat votasaun
 @login_required
 @allowed_users(allowed_roles=roles.ELEISAUN_ADMIN_ROLES)
 def FiskaisAdd(request):
 	return _admin_form(request, FiskaisForm, 'Aloka Fiskais ba Tempat', 'Fiskais Foun', lambda o: f'{o.user.get_username()} @ {o.tempat.naran}', 'Fiskais aloka ona.')
 
 
+# hamoos fiskais husi tempat votasaun
 @login_required
 @allowed_users(allowed_roles=roles.ELEISAUN_ADMIN_ROLES)
 @require_POST
@@ -160,6 +171,7 @@ def FiskaisDel(request, pk):
 	return redirect('eleisaun-admin')
 
 
+# ativa ka taka eleisaun
 @login_required
 @allowed_users(allowed_roles=roles.ELEISAUN_ADMIN_ROLES)
 @require_POST
@@ -172,6 +184,7 @@ def EleisaunToggle(request, pk):
 	return redirect('eleisaun-admin')
 
 
+# loke/taka rezultadu ba edita fila fali
 @login_required
 @allowed_users(allowed_roles=roles.ELEISAUN_ADMIN_ROLES)
 @require_POST

@@ -20,6 +20,7 @@ urlpatterns = [
 	path('delegadu/<int:pk>/', views.DelegaduSuku, name='membro-delegadu'),
 	path('delegadu/<int:pk>/pdf/', views.DelegaduPdf, name='membro-delegadu-pdf'),
 	path('suku/<int:pk>/', views.SukuRekap, name='membro-suku'),
+	path('aldeia/<int:pk>/', views.AldeiaRekap, name='membro-aldeia'),
 	path('cari/', views.MembroCari, name='membro-cari'),
 	path('dupla/', views.MembroDupla, name='membro-dupla'),
 	path('export.csv', views.MembroExport, name='membro-export'),
@@ -39,5 +40,9 @@ urlpatterns = [
 	path('<str:hashid>/', views.MembroDetail, name='membro-detail'),
 	path('<str:hashid>/file/<str:kind>/', views.MembroFile, name='membro-file'),
 	path('<str:hashid>/edit/', views.MembroUpdate, name='membro-update'),
+	path('<str:hashid>/kontaktu/', views.KontaktuUpdate, name='membro-kontaktu'),
+	path('<str:hashid>/edukasaun/', views.EdukasaunUpdate, name='membro-edukasaun'),
+	path('<str:hashid>/aloka/', views.MembroAloka, name='membro-aloka'),
+	path('<str:hashid>/servisu/', views.ServisuUpdate, name='membro-servisu'),
 	path('<str:hashid>/del/', views.MembroDel, name='membro-del'),
 ]

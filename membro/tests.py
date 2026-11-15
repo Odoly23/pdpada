@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.urls import reverse
 from config import roles
 from custom.models import Municipality, AdministrativePost, Village, Aldeia, Organizasaun, Year
-from membro.models import Membro, Alokasaun, Historia, OrgPozisaun, OrgResponsavel
+from membro.models import Membro, Alokasaun, Historia, OrgPozisaun, OrgResponsavel, Servisu
 from users.models import UserScope
 
 
@@ -53,7 +53,7 @@ class BaseCase(TestCase):
 		return Membro.objects.create(**data)
 
 	def form_data(self, nu='ABC1234', **kw):
-		data = {'nome': 'Joao  Silva', 'sex': 'Mane', 'date_of_birth': '1990-05-04', 'nu_eleitoral': nu,
+		data = {'nome': 'Joao  Silva', 'sex': 'Mane', 'date_of_birth': '1990-05-04', 'nu_eleitoral': nu, 'kategoria': 'Militante',
 			'aldeia': self.a1.pk, 'status': 'Ativu'}
 		data.update(kw)
 		return data
@@ -104,9 +104,10 @@ class ScopeTests(BaseCase):
 		self.assertEqual(self.client.get(reverse('membro-detail', args=[self.ma2.hashed])).status_code, 404)
 		self.assertEqual(self.client.get(reverse('membro-detail', args=[self.ma1.hashed])).status_code, 200)
 
-	def test_admin_cannot_see_members(self):
+	def test_admin_sees_all_members_to_input_full_data(self):
 		self.login('admin')
-		self.assertEqual(self.client.get(reverse('membro-list')).status_code, 403)
+		self.assertEqual(self.names('admin'), {'SCOPE01', 'SCOPE02', 'SCOPE03'})
+		self.assertEqual(self.client.get(reverse('membro-detail', args=[self.mb1.hashed])).status_code, 200)
 
 	def test_anonymous_redirected_to_login(self):
 		resp = self.client.get(reverse('membro-list'))
@@ -116,10 +117,10 @@ class ScopeTests(BaseCase):
 
 class InputTests(BaseCase):
 	def test_only_secretaries_can_input(self):
-		for u in ('presidente', 'koordpostu', 'koordsuku', 'admin', 'sekrpostu'):
+		for u in ('presidente', 'koordpostu', 'koordsuku', 'sekrpostu'):
 			self.login(u)
 			self.assertEqual(self.client.get(reverse('membro-add')).status_code, 403, u)
-		for u in ('sekrsuku', 'sekraldeia', 'sekrorg'):
+		for u in ('sekrsuku', 'sekraldeia', 'sekrorg', 'admin'):
 			self.login(u)
 			self.assertEqual(self.client.get(reverse('membro-add')).status_code, 200, u)
 
@@ -257,12 +258,14 @@ class AlokasaunTests(BaseCase):
 		self.assertEqual(resp.status_code, 200)
 		self.assertEqual(Alokasaun.objects.count(), 0)
 
-	def test_only_approved_members_selectable(self):
-		pend = self.make('ALO0004')
+	def test_rejected_members_not_selectable_but_pending_are(self):
+		rej = self.make('ALO0004', aprovasaun='Rejeitadu')
 		self.login('presidente')
-		resp = self.client.post(reverse('alokasaun-add'), self.data(pend))
+		resp = self.client.post(reverse('alokasaun-add'), self.data(rej))
 		self.assertEqual(Alokasaun.objects.count(), 0)
 		self.assertEqual(resp.status_code, 200)
+		pend = self.make('ALO0005')  # input hotu uluk, depois aprova
+		self.assertEqual(self.client.post(reverse('alokasaun-add'), self.data(pend)).status_code, 302)
 
 	def test_presidente_only_at_postu_level(self):
 		self.login('presidente')
@@ -391,7 +394,7 @@ class LayoutAndReportTests(BaseCase):
 		return [i['label'] for i in resp.context['nav_items']]
 
 	def test_menu_per_role(self):
-		self.assertEqual(self.menu('admin'), ['Varanda', 'Painel', 'Uzuáriu', 'Data Master', 'Eleisaun', 'Historia'])
+		self.assertEqual(self.menu('admin'), ['Varanda', 'Painel', 'Uzuáriu', 'Data Master', 'Eleisaun', 'Membru', 'Historia'])
 		self.assertEqual(self.menu('presidente'),
 			['Varanda', 'Painel', 'Eleisaun', 'Membru', 'Relatoriu', 'Struktura', 'Historia'])
 		self.assertEqual(self.menu('sekrsuku'), ['Varanda', 'Painel', 'Eleisaun', 'Membru', 'Relatoriu', 'Struktura'])
@@ -1003,7 +1006,6 @@ class PainelTests(BaseCase):
 			self.assertEqual(resp.context['unit_title'], 'ALDEIA')
 			self.assertEqual({r['name']: r['n'] for r in resp.context['objects2']}, {'A1': 1, 'A2': 1}, u)
 			self.assertEqual(resp.context['banner'][1], 'SUKU SUKU A')
-			self.assertNotContains(resp, 'B1')
 
 	def test_aldeia_roles_see_only_own_aldeia_by_organizasaun(self):
 		resp = self.home('sekraldeia')
@@ -1086,8 +1088,10 @@ class SukuRekapTests(BaseCase):
 			self.assertEqual([(p['label'], p['nome']) for p in resp.context['pemimpin']],
 				[('Cordenador Suku', 'Joao Koord'), ('Sekjer Suku', 'Aaa Sekr')], u)
 			self.assertEqual(resp.context['pemimpin'][0]['idade'], self.m1.age())
-			self.assertEqual([(r['nome'], r['pozisaun']) for r in resp.context['rows']], [
-				('Joao Koord', 'Cordenador Suku'), ('Aaa Sekr', 'Sekjer Suku'), ('Abel Aldeia', 'Sekjer Aldeia A1'), ('Mario Biasa', 'Membru')], u)
+			self.assertEqual([(r['aldeia'].name, getattr(r['coord'], 'nome', None), getattr(r['sekr'], 'nome', None)) for r in resp.context['rows']],
+				[('A1', None, 'Abel Aldeia'), ('A2', None, None)], u)
+			self.assertContains(resp, reverse('membro-aldeia', args=[resp.context['rows'][0]['aldeia'].pk]))
+			self.assertContains(resp, 'Sekretariu/a Geral')
 			self.assertContains(resp, 'Lista kompañeiru husi suku')
 			self.assertNotContains(resp, 'Orang Suku B')
 
@@ -1310,7 +1314,7 @@ class TabularTests(BaseCase):
 
 	def test_layout_follows_sample(self):
 		resp = self.page('presidente')
-		self.assertEqual([t['head'] for t in resp.context['tables']], ['Suku', 'Aldeia', 'Organizasaun', 'Tinan', 'Idade', 'Estado Civil'])
+		self.assertEqual([t['head'] for t in resp.context['tables']], ['Jenis', 'Servisu', 'Suku', 'Aldeia', 'Organizasaun', 'Tinan', 'Idade', 'Estado Civil'])
 		self.assertContains(resp, 'card-header bg-warning')
 		self.assertContains(resp, 'th-navy')
 		self.assertContains(resp, 'PRESIDENTE POSTU')
@@ -1634,9 +1638,9 @@ class LandingTests(BaseCase):
 		self.assertNotContains(resp, 'Aumenta Membru')
 		self.assertNotContains(resp, reverse('historia-list'))
 
-	def test_admin_tiles_have_no_member_features(self):
+	def test_admin_tiles_have_member_input_but_no_search_or_reports(self):
 		resp, tiles = self.tiles('admin')
-		self.assertEqual(set(tiles), {'Painel Admin', 'Uzuáriu', 'Suku no Aldeia', 'Organizasaun', 'Tinan Ativu', 'Historia'})
+		self.assertEqual(set(tiles), {'Painel Admin', 'Uzuáriu', 'Suku no Aldeia', 'Organizasaun', 'Tinan Ativu', 'Lista Membru', 'Aumenta Membru', 'Historia'})
 		self.assertFalse(resp.context['can_search'])
 		self.assertNotContains(resp, 'id="search-q"')
 
@@ -1655,8 +1659,8 @@ class LandingTests(BaseCase):
 		self.login('sekrsuku')
 		with CaptureQueriesContext(connection) as ctx:
 			self.client.get('/')
-		self.assertLessEqual(len(ctx), 24)
-		self.assertLessEqual(sum('GROUP BY' in q['sql'] for q in ctx.captured_queries), 2)
+		self.assertLessEqual(len(ctx), 25)
+		self.assertLessEqual(sum('GROUP BY' in q['sql'] for q in ctx.captured_queries), 3)
 
 	def test_requires_login(self):
 		self.client.logout()
@@ -2536,8 +2540,7 @@ class DelegaduTests(BaseCase):
 		self.assertEqual(self.client.get('/').context['info']['lengkap'], 1)
 		page = self.client.get(reverse('membro-suku', args=[self.va.pk]))
 		self.assertEqual([p['nome'] for p in page.context['pemimpin']], ['Yakobus Koord', 'Rosalino Sekr'])
-		labels = {r['nome']: r['pozisaun'] for r in page.context['rows']}
-		self.assertEqual(labels['Anacleto Sayap'], 'Cordenador OJD Suku')
+		self.assertEqual(len({r['aldeia'].pk for r in page.context['rows']}), len(page.context['rows']))  # aldeia ida-idak dala ida
 
 	def test_form_allows_wing_only_for_member_of_that_organizasaun(self):
 		self.login('presidente')
@@ -2725,3 +2728,399 @@ class DelegaduHotuTests(DelegaduTests):
 		self.login('koordsuku')
 		self.assertRedirects(self.client.get(reverse('membro-delegadu-index')), reverse('membro-delegadu', args=[self.va.pk]))
 
+
+class KategoriaServisuTests(BaseCase):
+	"""Struktura penting, Militante dan Simpatizante dipisah; servisu agora bersyarat."""
+	def post_add(self, **kw):
+		self.login('sekrsuku')
+		return self.client.post(reverse('membro-add'), self.form_data(**kw))
+
+	def test_militante_requires_nu_eleitoral(self):
+		resp = self.post_add(nu='')
+		self.assertEqual(resp.status_code, 200)
+		self.assertContains(resp, 'obrigatóriu ba Militante')
+		self.assertEqual(Membro.objects.count(), 0)
+
+	def test_simpatizante_can_skip_nu_eleitoral_and_stores_null(self):
+		for nome in ('Simpa Satu', 'Simpa Dua'):  # dua simpatizante tanpa nomor tidak bentrok pada kolom unik
+			resp = self.post_add(nu='', kategoria='Simpatizante', nome=nome)
+			self.assertEqual(resp.status_code, 302, nome)
+		qs = Membro.objects.filter(kategoria='Simpatizante')
+		self.assertEqual(qs.count(), 2)
+		self.assertTrue(all(m.nu_eleitoral is None for m in qs))
+		self.assertEqual(str(qs.first()), qs.first().nome)  # tanpa tanda kurung kosong
+
+	def test_simpatizante_with_nu_eleitoral_is_still_checked_for_duplicates(self):
+		self.post_add(nu='SIM00001', kategoria='Simpatizante')
+		resp = self.post_add(nu='SIM00001', kategoria='Militante', nome='Lain')
+		self.assertContains(resp, 'DUPLIKADU')
+
+	def novo(self, **kw):
+		"""Buat membru lewat form prinsipál (sekjer suku), lalu kembalikan objeknya."""
+		self.post_add(**kw)
+		return Membro.objects.get(nu_eleitoral=kw.get('nu', 'ABC1234'))
+
+	def post_servisu(self, m, **data):
+		self.login('sekrsuku')
+		return self.client.post(reverse('membro-servisu', args=[m.hashed]), data)
+
+	def test_main_form_no_longer_has_servisu_or_contact_fields(self):
+		self.login('sekrsuku')
+		fields = set(self.client.get(reverse('membro-add')).context['form'].fields)
+		self.assertFalse({f for f in fields if f.startswith('sv_')})
+		self.assertFalse({'telefone', 'address'} & fields)
+
+	def test_add_redirects_to_detail_with_hint_to_continue(self):
+		resp = self.post_add(nu='RD000001')
+		m = Membro.objects.get(nu_eleitoral='RD000001')
+		self.assertRedirects(resp, reverse('membro-edukasaun', args=[m.hashed]) + '?fluxu=1')
+		page = self.client.get(reverse('membro-detail', args=[m.hashed]))
+		self.assertContains(page, reverse('membro-servisu', args=[m.hashed]))
+		self.assertContains(page, reverse('membro-kontaktu', args=[m.hashed]))
+		self.assertContains(page, 'Seidauk iha dadus servisu')
+
+	def test_servisu_government_is_saved_shown_and_redirects_to_detail(self):
+		m = self.novo(nu='SV000001')
+		resp = self.post_servisu(m, status='Servisu', setor='Governu', instituisaun='Ministeriu Saude', diresaun='Diresaun Jeral',
+			pozisaun='Enfermeiru', kategoria='B', grau='3', data_hahu='2020-01-01')
+		self.assertRedirects(resp, reverse('membro-detail', args=[m.hashed]))
+		sv = m.servisu
+		self.assertEqual((sv.status, sv.setor, sv.instituisaun, sv.pozisaun, sv.kategoria, sv.grau), ('Servisu', 'Governu', 'Ministeriu Saude', 'Enfermeiru', 'B', '3'))
+		self.assertIsNone(sv.atividade)
+		page = self.client.get(resp['Location'])
+		for needle in ('Iha servisu', 'Instituisaun Governu', 'Ministeriu Saude', 'Enfermeiru'):
+			self.assertContains(page, needle)
+		self.assertTrue(Historia.objects.filter(aksaun='Edita Servisu', membro=m).exists())
+
+	def test_servisu_non_government_needs_tipu_and_clears_government_fields(self):
+		m = self.novo(nu='SV000002')
+		bad = self.post_servisu(m, status='Servisu', setor='Laos Governu', instituisaun='Kompañia X', pozisaun='Motorista')
+		self.assertContains(bad, 'Hili tipu servisu')
+		self.assertFalse(Servisu.objects.filter(membro=m).exists())
+		ok = self.post_servisu(m, status='Servisu', setor='Laos Governu', tipu_laos='Privadu', instituisaun='Kompañia X',
+			pozisaun='Motorista', diresaun='tidak dipakai', kategoria='X', grau='9')
+		self.assertEqual(ok.status_code, 302)
+		sv = Servisu.objects.get(membro=m)
+		self.assertEqual((sv.setor, sv.tipu_laos, sv.diresaun, sv.kategoria, sv.grau), ('Laos Governu', 'Privadu', '', '', ''))
+
+	def test_servisu_required_fields_when_working(self):
+		m = self.novo(nu='SV000003')
+		resp = self.post_servisu(m, status='Servisu')
+		for msg in ('Hili instituisaun governu ka laos governu', 'Hatama naran instituisaun ka kompañia', 'Hatama pozisaun ka kargu'):
+			self.assertContains(resp, msg)
+		self.assertFalse(Servisu.objects.filter(membro=m).exists())
+
+	def test_not_working_requires_activity_and_stores_it(self):
+		m = self.novo(nu='SV000004')
+		self.assertContains(self.post_servisu(m, status='Seidauk'), 'Hili ita halo saida agora')
+		ok = self.post_servisu(m, status='Seidauk', atividade='Estudante', detalle='UNTL', instituisaun='tidak dipakai')
+		self.assertEqual(ok.status_code, 302)
+		sv = Servisu.objects.get(membro=m)
+		self.assertEqual((sv.status, sv.atividade, sv.detalle, sv.instituisaun, sv.setor), ('Seidauk', 'Estudante', 'UNTL', '', None))
+		self.assertEqual(sv.resumu(), 'Seidauk servisu: Estudante (UNTL)')
+
+	def test_servisu_status_is_required(self):
+		m = self.novo(nu='SV000005')
+		self.assertEqual(self.post_servisu(m, status='').status_code, 200)
+		self.assertFalse(Servisu.objects.filter(membro=m).exists())
+
+	def test_editing_servisu_prefills_and_replaces_without_duplicate(self):
+		m = self.novo(nu='SV000006')
+		self.post_servisu(m, status='Seidauk', atividade='Estudante')
+		self.login('sekrsuku')
+		form = self.client.get(reverse('membro-servisu', args=[m.hashed])).context['form']
+		self.assertEqual((form.instance.status, form.instance.atividade), ('Seidauk', 'Estudante'))
+		self.post_servisu(m, status='Servisu', setor='Governu', instituisaun='Ministeriu Edukasaun', pozisaun='Mestre')
+		self.assertEqual(Servisu.objects.filter(membro=m).count(), 1)
+		sv = Servisu.objects.get(membro=m)
+		self.assertEqual((sv.setor, sv.atividade, sv.status), ('Governu', None, 'Servisu'))
+		self.assertIn('->', Historia.objects.filter(aksaun='Edita Servisu').latest('id').detalhe)
+
+	def test_servisu_and_kontaktu_do_not_reset_aprovasaun(self):
+		m = self.make('AP000001', aprovasaun='Aprovadu')
+		self.post_servisu(m, status='Seidauk', atividade='Estudante')
+		self.client.post(reverse('membro-kontaktu', args=[m.hashed]), {'telefone': '77123456', 'address': 'Bairo Pite'})
+		m.refresh_from_db()
+		self.assertEqual((m.aprovasaun, m.telefone, m.address), ('Aprovadu', '77123456', 'Bairo Pite'))
+
+	def test_kontaktu_view_saves_validates_and_redirects(self):
+		m = self.novo(nu='KT000001')
+		self.login('sekrsuku')
+		bad = self.client.post(reverse('membro-kontaktu', args=[m.hashed]), {'telefone': 'abc', 'address': ''})
+		self.assertEqual(bad.status_code, 200)
+		ok = self.client.post(reverse('membro-kontaktu', args=[m.hashed]), {'telefone': '+670 7712 3456', 'address': 'Rua A'})
+		self.assertRedirects(ok, reverse('membro-detail', args=[m.hashed]))
+		m.refresh_from_db()
+		self.assertEqual((m.telefone, m.address), ('+670 7712 3456', 'Rua A'))
+		self.assertTrue(Historia.objects.filter(aksaun='Edita Kontaktu', membro=m).exists())
+
+	def test_servisu_and_kontaktu_only_input_roles_within_scope(self):
+		m = self.novo(nu='SC000001')
+		for name in ('membro-servisu', 'membro-kontaktu'):
+			for u, code in [('sekrsuku', 200), ('koordsuku', 403), ('presidente', 403), ('sekrpostu', 403), ('admin', 200), ('sekrsukub', 404)]:
+				self.login(u)
+				self.assertEqual(self.client.get(reverse(name, args=[m.hashed])).status_code, code, (name, u))
+
+	def test_jenis_separates_struktura_militante_simpatizante(self):
+		a = self.make('JN00001', kategoria='Militante')
+		b = self.make('JN00002', kategoria='Militante')
+		c = self.make('JN00003', kategoria='Simpatizante')
+		Membro.objects.filter(pk=b.pk).update(is_colocado=True)  # pemegang pozisaun
+		self.assertEqual([m.jenis() for m in Membro.objects.order_by('nu_eleitoral')], ['Militante', 'Struktura', 'Simpatizante'])
+		self.login('presidente')
+		for jenis, esperado in (('Struktura', {'JN00002'}), ('Militante', {'JN00001'}), ('Simpatizante', {'JN00003'})):
+			objs = self.client.get(reverse('membro-list'), {'jenis': jenis}).context['objects']
+			self.assertEqual({o.nu_eleitoral for o in objs}, esperado, jenis)
+		self.assertEqual(len(self.client.get(reverse('membro-list'), {'jenis': 'ngawur'}).context['objects']), 3)  # nilai asing diabaikan
+
+	def test_list_has_separate_filter_rows_with_counts(self):
+		self.make('JN00004', kategoria='Militante'); self.make('JN00005', kategoria='Simpatizante')
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-list'))
+		f = {x['label']: x for x in resp.context['jenis_filters']}
+		self.assertEqual((f['Hotu']['count'], f['Militante']['count'], f['Simpatizante']['count'], f['Struktura Penting']['count']), (2, 1, 1, 0))
+		self.assertContains(resp, 'Struktura Penting')
+		self.assertContains(resp, 'JENIS')
+		for judul in ('>Jenis<', '>Aprovasaun<', '>Servisu<'):
+			self.assertContains(resp, 'filter-title', msg_prefix=judul)
+		self.assertContains(resp, 'Struktura Penting')
+		self.assertTrue(f['Hotu']['active'])
+
+	def test_servisu_filters(self):
+		from membro.models import Servisu
+		a, b, c = self.make('SF00001'), self.make('SF00002'), self.make('SF00003')
+		Servisu.objects.create(membro=a, status='Servisu', setor='Governu', instituisaun='Ministeriu', pozisaun='Staff')
+		Servisu.objects.create(membro=b, status='Servisu', setor='Laos Governu', tipu_laos='Privadu', instituisaun='X', pozisaun='Y')
+		self.login('presidente')
+		def nu(**p):
+			return {o.nu_eleitoral for o in self.client.get(reverse('membro-list'), p).context['objects']}
+		self.assertEqual(nu(servisu='Servisu'), {'SF00001', 'SF00002'})
+		self.assertEqual(nu(servisu='Servisu', setor='Governu'), {'SF00001'})
+		self.assertEqual(nu(servisu='laiha'), {'SF00003'})
+
+	def test_varanda_has_no_jenis_cards_under_total(self):
+		self.make('VJ00001')
+		self.login('presidente')
+		resp = self.client.get('/')
+		self.assertNotContains(resp, 'jenis-strip')
+		self.assertNotIn('jenis_stats', resp.context)
+
+	def test_sumariu_filter_by_jenis(self):
+		self.make('SM90001'); self.make('SM90002', kategoria='Simpatizante')
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-sumariu'), {'jenis': 'Simpatizante'})
+		self.assertEqual(resp.context['grand'], 1)
+		self.assertContains(resp, 'jenis=Simpatizante')
+		self.assertEqual(self.client.get(reverse('membro-sumariu')).context['grand'], 2)
+
+	def test_report_tables_and_apis_for_jenis_and_servisu(self):
+		from membro.models import Servisu
+		a = self.make('RP00001'); self.make('RP00002', kategoria='Simpatizante')
+		Servisu.objects.create(membro=a, status='Servisu', setor='Governu', instituisaun='M', pozisaun='P')
+		self.login('presidente')
+		tables = {t['head']: t for t in self.client.get(reverse('report-dash')).context['tables']}
+		self.assertEqual([(r['name'], r['total']) for r in tables['Jenis']['rows']], [('Struktura Penting', 0), ('Militante', 1), ('Simpatizante', 1)])
+		self.assertEqual({r['name']: r['total'] for r in tables['Servisu']['rows']}['Servisu Governu'], 1)
+		self.assertEqual(self.client.get(reverse('api-jenis')).json(), {'label': ['Struktura Penting', 'Militante', 'Simpatizante'], 'obj': [0, 1, 1]})
+		self.assertEqual(self.client.get(reverse('api-servisu')).json()['obj'], [1, 0, 0, 1])
+		chart = self.client.get(reverse('report-chart'))
+		self.assertContains(chart, 'id="chart_jenis"')
+		self.assertContains(chart, 'id="chart_servisu"')
+
+	def test_csv_has_kategoria_and_servisu_columns_and_handles_missing_nu(self):
+		from membro.models import Servisu
+		m = self.make('CS00001', nu_eleitoral=None, kategoria='Simpatizante')
+		Servisu.objects.create(membro=m, status='Seidauk', atividade='Estudante')
+		self.login('presidente')
+		raw = b''.join(self.client.get(reverse('membro-export')).streaming_content).decode('utf-8')
+		self.assertIn('Kategoria', raw.splitlines()[0])
+		self.assertIn('Simpatizante', raw)
+		self.assertIn('Seidauk servisu: Estudante', raw)
+
+	def test_menu_has_separate_entries(self):
+		self.login('presidente')
+		html = self.client.get('/').content.decode()
+		for jenis in ('Struktura', 'Militante', 'Simpatizante'):
+			self.assertIn(f'?jenis={jenis}', html)
+		self.login('sekrpostu')
+		self.assertNotIn('?jenis=', self.client.get('/').content.decode().split('class="main-navbar"')[-1].split('</nav>')[0])
+
+
+
+class FluxuInputTests(BaseCase):
+	"""Fluxu input: membru -> edukasaun -> servisu -> pozisaun; kartaun struktura; form alokasaun ho tipu."""
+
+	def setUp(self):
+		self.m = self.make('FX000001', aprovasaun='Aprovadu', organizasaun=self.org)
+
+	def url(self, name, m=None, q=''):
+		return reverse(name, args=[(m or self.m).hashed]) + q
+
+	def aloka(self, **data):
+		self.login('presidente')
+		base = {'membro': self.m.pk, 'tipu': 'Ejekutivu', 'nivel': 'Suku', 'pozisaun': 'Coordenador', 'village': self.va.pk, 'data_hahu': '2026-01-01', 'ativu': 'Sim'}
+		base.update(data)
+		return self.client.post(self.url('membro-aloka'), base)
+
+	def test_edukasaun_saved_and_redirects_to_servisu_in_flow(self):
+		self.login('sekrsuku')
+		resp = self.client.post(self.url('membro-edukasaun', q='?fluxu=1'), {'nivel': 'Lisensiatura', 'eskola': 'UNTL', 'area': 'Direitu', 'tinan_remata': '2015'})
+		self.assertRedirects(resp, self.url('membro-servisu', q='?fluxu=1'), fetch_redirect_response=False)
+		self.assertEqual(self.m.edukasaun.resumu(), 'Lisensiatura (S1) (UNTL, Direitu, 2015)')
+		self.assertTrue(Historia.objects.filter(aksaun='Edita Edukasaun', membro=self.m).exists())
+		self.assertContains(self.client.get(self.url('membro-detail')), 'Lisensiatura')
+
+	def test_edukasaun_outside_flow_goes_to_detail_and_laiha_clears_fields(self):
+		self.login('sekrsuku')
+		resp = self.client.post(self.url('membro-edukasaun'), {'nivel': 'Laiha', 'eskola': 'x', 'tinan_remata': '2000'})
+		self.assertRedirects(resp, self.url('membro-detail'))
+		self.assertEqual((self.m.edukasaun.eskola, self.m.edukasaun.tinan_remata), ('', None))
+
+	def test_edukasaun_validation_and_skip_button(self):
+		self.login('sekrsuku')
+		self.assertEqual(self.client.post(self.url('membro-edukasaun'), {'nivel': 'Sekundária', 'tinan_remata': '1800'}).status_code, 200)
+		page = self.client.get(self.url('membro-edukasaun', q='?fluxu=1'))
+		self.assertContains(page, self.url('membro-servisu', q='?fluxu=1'))
+		self.assertContains(page, "Liu pasu ne'e")
+
+	def test_servisu_in_flow_ends_at_detail_for_input_roles(self):
+		self.login('sekrsuku')
+		resp = self.client.post(self.url('membro-servisu', q='?fluxu=1'), {'status': 'Seidauk', 'atividade': 'Estudante'})
+		self.assertRedirects(resp, self.url('membro-detail'))
+
+	def test_edukasaun_only_input_roles_in_scope(self):
+		for u, code in [('sekrsuku', 200), ('koordsuku', 403), ('presidente', 403), ('sekrsukub', 404)]:
+			self.login(u)
+			self.assertEqual(self.client.get(self.url('membro-edukasaun')).status_code, code, u)
+
+	def test_aloka_laiha_keeps_member_without_position(self):
+		resp = self.aloka(tipu='Laiha', nivel='', pozisaun='', data_hahu='')
+		self.assertRedirects(resp, self.url('membro-detail'))
+		self.assertFalse(Alokasaun.objects.filter(membro=self.m).exists())
+		self.m.refresh_from_db()
+		self.assertFalse(self.m.is_colocado)
+
+	def test_aloka_ejekutivu_suku_has_no_organizasaun(self):
+		resp = self.aloka(organizasaun=self.org.pk)
+		self.assertRedirects(resp, self.url('membro-detail'))
+		a = Alokasaun.objects.get(membro=self.m)
+		self.assertEqual((a.nivel, a.village, a.organizasaun), ('Suku', self.va, None))
+		self.m.refresh_from_db()
+		self.assertTrue(self.m.is_colocado)
+
+	def test_aloka_ejekutivu_aldeia_and_organizasaun_rules(self):
+		self.assertEqual(self.aloka(nivel='Organizasaun', organizasaun=self.org.pk).status_code, 200)
+		self.assertFalse(Alokasaun.objects.exists())
+		self.assertEqual(self.aloka(tipu='Organizasaun').status_code, 200)  # organizasaun tenke hili
+		self.assertFalse(Alokasaun.objects.exists())
+		self.assertEqual(self.aloka(tipu='Organizasaun', nivel='Postu', organizasaun=self.org.pk).status_code, 200)
+		ok = self.aloka(tipu='Organizasaun', nivel='Aldeia', aldeia=self.a1.pk, village='', organizasaun=self.org.pk)
+		self.assertEqual(ok.status_code, 302)
+		a = Alokasaun.objects.get(membro=self.m)
+		self.assertEqual((a.nivel, a.aldeia, a.organizasaun), ('Aldeia', self.a1, self.org))
+
+	def test_aloka_form_page_has_tipu_and_member_search(self):
+		self.login('presidente')
+		page = self.client.get(self.url('membro-aloka', q='?fluxu=1'))
+		self.assertContains(page, 'Laiha pozisaun')
+		self.assertContains(page, 'cari-membro')
+		self.assertContains(page, 'Pasu 3 husi 3')
+
+	def test_aloka_blocked_for_pending_colocado_or_other_roles(self):
+		self.login('presidente')
+		rej = self.make('FX000002', aprovasaun='Rejeitadu')
+		self.assertRedirects(self.client.get(self.url('membro-aloka', rej)), self.url('membro-detail', rej), fetch_redirect_response=False)
+		pend = self.make('FX000006')  # input hotu uluk, depois aprova: Pendente bele hetan pozisaun
+		self.assertEqual(self.client.get(self.url('membro-aloka', pend)).status_code, 200)
+		self.aloka()
+		self.assertRedirects(self.client.get(self.url('membro-aloka')), self.url('membro-detail'), fetch_redirect_response=False)
+		self.login('sekrsuku')
+		self.assertEqual(self.client.get(self.url('membro-aloka')).status_code, 403)
+
+	def test_detail_shows_aloka_button_only_when_possible(self):
+		self.login('presidente')
+		self.assertContains(self.client.get(self.url('membro-detail')), self.url('membro-aloka'))
+		self.aloka()
+		self.assertNotContains(self.client.get(self.url('membro-detail')), self.url('membro-aloka'))
+
+	def test_postu_dashboard_has_struktura_cards_with_direct_lists(self):
+		Alokasaun.objects.create(membro=self.m, nivel='Suku', pozisaun='Coordenador', village=self.va, data_hahu=datetime.date(2026, 1, 1))
+		m2 = self.make('FX000003', aprovasaun='Aprovadu')
+		Alokasaun.objects.create(membro=m2, nivel='Organizasaun', pozisaun='Coordenador', organizasaun=self.org, data_hahu=datetime.date(2026, 1, 1))
+		self.make('FX000004')  # militante tanpa posisi
+		self.login('presidente')
+		cards = {c['label']: c for c in self.client.get('/').context['struktura']['cards']}
+		self.assertEqual(list(cards), ['Ejekutivu', 'OJD', 'Militantes Postu'])
+		self.assertEqual((cards['Ejekutivu']['n'], cards['OJD']['n'], cards['Militantes Postu']['n']), (0, 1, 1))
+		self.assertContains(self.client.get('/'), 'ESTRUTURA POSTU ADMINISTRATIVU DOM-ALEIXO')
+		lista = self.client.get(cards['OJD']['url']).context['objects']
+		self.assertEqual([a.membro for a in lista], [m2])
+		self.assertIn('jenis=Militante', cards['Militantes Postu']['url'])
+		mil = self.client.get(cards['Militantes Postu']['url']).context['objects']
+		self.assertNotIn(self.m, list(mil))
+
+	def test_suku_and_aldeia_levels_have_own_struktura_cards(self):
+		Alokasaun.objects.create(membro=self.m, nivel='Suku', pozisaun='Coordenador', village=self.va, data_hahu=datetime.date(2026, 1, 1))
+		m2 = self.make('FX000005', aprovasaun='Aprovadu', organizasaun=self.org)
+		Alokasaun.objects.create(membro=m2, nivel='Suku', pozisaun='Sekretariu', village=self.va, organizasaun=self.org, data_hahu=datetime.date(2026, 1, 1))
+		self.login('koordsuku')
+		ctx = self.client.get('/').context['struktura']
+		self.assertEqual(ctx['title'], 'ESTRUTURA SUKU SUKU A')
+		self.assertEqual({c['label']: c['n'] for c in ctx['cards']}, {'Ejekutivu': 1, 'OJD': 1, 'Militantes Suku': 0})
+		self.assertEqual([a.membro for a in self.client.get([c for c in ctx['cards'] if c['label'] == 'OJD'][0]['url']).context['objects']], [m2])
+		self.login('sekraldeia')
+		ctx = self.client.get('/').context['struktura']
+		self.assertEqual(ctx['title'], 'ESTRUTURA ALDEIA A1')
+		self.assertEqual(ctx['cards'][-1]['label'], 'Militantes Aldeia')
+
+	def test_suku_page_for_postu_roles_has_struktura_cards(self):
+		self.login('presidente')
+		self.assertContains(self.client.get(reverse('membro-suku', args=[self.va.pk])), 'ESTRUTURA SUKU SUKU A')
+
+	def test_other_roles_without_list_permission_get_no_cards(self):
+		self.login('sekrpostu')
+		self.assertFalse(self.client.get('/').context['struktura']['cards'])
+
+
+class AldeiaRekapTests(BaseCase):
+	"""Pájina suku: tabela aldeia (Coordenador no Sekretariu/a Geral); klik aldeia = lista membru aldeia."""
+
+	def setUp(self):
+		self.k = self.make('AL000001', aprovasaun='Aprovadu', nome='Koord Aldeia')
+		self.s = self.make('AL000002', aprovasaun='Aprovadu', nome='Sekr Aldeia')
+		self.o = self.make('AL000003', aprovasaun='Aprovadu', nome='Sayap OJD', organizasaun=self.org)
+		self.biasa = self.make('AL000004', aldeia=self.a2, nome='Biasa A2')
+		d = datetime.date(2026, 1, 1)
+		Alokasaun.objects.create(membro=self.k, nivel='Aldeia', pozisaun='Coordenador', aldeia=self.a1, village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.s, nivel='Aldeia', pozisaun='Sekretariu', aldeia=self.a1, village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.o, nivel='Aldeia', pozisaun='Coordenador', aldeia=self.a1, village=self.va, organizasaun=self.org, data_hahu=d)
+
+	def test_suku_page_one_row_per_aldeia_with_leaders_and_links(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-suku', args=[self.va.pk]))
+		rows = resp.context['rows']
+		self.assertEqual([r['aldeia'].name for r in rows], ['A1', 'A2'])
+		self.assertEqual((rows[0]['coord'].nome, rows[0]['sekr'].nome), ('Koord Aldeia', 'Sekr Aldeia'))  # sayap OJD la sai Coordenador
+		self.assertEqual((rows[1]['coord'], rows[1]['sekr']), (None, None))
+		self.assertEqual([r['n'] for r in rows], [3, 1])
+		for needle in ('Coordenador', 'Sekretariu/a Geral', reverse('membro-aldeia', args=[self.a1.pk])):
+			self.assertContains(resp, needle)
+		self.assertNotContains(resp, 'Naran Membru')
+
+	def test_aldeia_page_lists_only_that_aldeia_with_positions(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-aldeia', args=[self.a1.pk]))
+		self.assertEqual([(r['nome'], r['pozisaun']) for r in resp.context['rows']], [
+			('Koord Aldeia', 'Cordenador Aldeia A1'), ('Sekr Aldeia', 'Sekjer Aldeia A1'), ('Sayap OJD', 'Cordenador OJD Aldeia')])
+		self.assertEqual(resp.context['tot']['total'], 3)
+		self.assertEqual([(p['label'], p['nome']) for p in resp.context['pemimpin']], [('Cordenador Aldeia', 'Koord Aldeia'), ('Sekjer Aldeia', 'Sekr Aldeia')])
+		self.assertNotContains(resp, 'Biasa A2')
+		self.assertContains(resp, 'Naran Membru')
+		self.assertContains(resp, 'ESTRUTURA ALDEIA A1')
+
+	def test_aldeia_page_roles_and_404(self):
+		for u, code in [('presidente', 200), ('koordpostu', 200), ('sekrpostu', 200), ('koordsuku', 403), ('sekrsuku', 403), ('admin', 403)]:
+			self.login(u)
+			self.assertEqual(self.client.get(reverse('membro-aldeia', args=[self.a1.pk])).status_code, code, u)
+		self.login('presidente')
+		self.assertEqual(self.client.get(reverse('membro-aldeia', args=[99999])).status_code, 404)

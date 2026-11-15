@@ -293,14 +293,14 @@ class AdminManagementTests(EleisaunBase):
 		names = set(self.client.get(reverse('fiskais-add')).context['form'].fields['user'].queryset.values_list('username', flat=True))
 		self.assertEqual(names, {'fiskais1'})
 
-	def test_admin_cannot_see_member_data_and_admin_page_lists_results(self):
+	def test_admin_page_lists_results_and_admin_can_open_member_list(self):
 		el = self.live()
 		Resultado.objects.create(eleisaun=el, tempat=self.t1, votos_partidu=7, submetidu=True, submetidu_husi=self.users['fiskais1'])
 		self.login('admin')
 		page = self.client.get(reverse('eleisaun-admin'))
 		self.assertContains(page, 'Loke Fali')
 		self.assertContains(page, 'Eskola A')
-		self.assertEqual(self.client.get(reverse('membro-list')).status_code, 403)
+		self.assertEqual(self.client.get(reverse('membro-list')).status_code, 200)  # Admin input dadus membru tomak
 
 	def test_delete_fiskais_assignment_post_only(self):
 		self.login('admin')

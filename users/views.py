@@ -13,6 +13,7 @@ from users.forms import UserForm
 ROLE_NAME = dict(roles.ROLE_LABELS)
 
 
+# lista uzuáriu
 @login_required
 @allowed_users(allowed_roles=[roles.ADMIN])
 def UserList(request):
@@ -31,6 +32,7 @@ def UserList(request):
 	return render(request, 'users/list.html', context)
 
 
+# adisiona uzuáriu foun
 @login_required
 @allowed_users(allowed_roles=[roles.ADMIN])
 def UserAdd(request):
@@ -51,6 +53,7 @@ def UserAdd(request):
 	return render(request, 'users/form.html', context)
 
 
+# hadia/edita uzuáriu
 @login_required
 @allowed_users(allowed_roles=[roles.ADMIN])
 def UserUpdate(request, pk):
@@ -75,6 +78,7 @@ def UserUpdate(request, pk):
 	return render(request, 'users/form.html', context)
 
 
+# painel uzuáriu (permisaun no papél)
 @login_required
 @allowed_users(allowed_roles=[roles.ADMIN])
 def UserPainel(request):

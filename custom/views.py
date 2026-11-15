@@ -19,6 +19,7 @@ def load_posts(request):
 	return render(request, 'custom/post_dropdown.html', {'posts': posts})
 
 
+# hatudu lista suku tuir postu ne'ebé hili (ba dropdown)
 @login_required
 def load_villages(request):
 	post_id = request.GET.get('post')
@@ -26,6 +27,7 @@ def load_villages(request):
 	return render(request, 'custom/village_dropdown.html', {'villages': villages})
 
 
+# hatudu lista aldeia tuir suku ne'ebé hili (ba dropdown)
 @login_required
 def load_aldeias(request):
 	village_id = request.GET.get('village')
@@ -42,12 +44,14 @@ MASTER = {
 }
 
 
+# foti konfigurasaun dadus mestre tuir naran
 def _master(tipu):
 	if tipu not in MASTER:
 		raise Http404
 	return MASTER[tipu]
 
 
+# halo lista liña ba tabela dadus mestre
 def _rows(tipu):
 	if tipu == 'suku':
 		qs = Village.objects.annotate(a=Count('aldeia', distinct=True), m=Count('membro', distinct=True))
@@ -62,6 +66,7 @@ def _rows(tipu):
 	return ['Tinan', 'Ativu', 'Total Membru'], [(o, [o.year, 'Sim' if o.is_active else 'Lae', o.m]) for o in qs]
 
 
+# lista dadus mestre (postu, suku, aldeia, organizasaun)
 @login_required
 @allowed_users(allowed_roles=[roles.ADMIN])
 def MasterList(request, tipu):
@@ -74,6 +79,7 @@ def MasterList(request, tipu):
 	return render(request, 'custom/master_list.html', context)
 
 
+# prepara formuláriu ba dadus mestre
 def _master_form(request, tipu, instance=None):
 	cfg = _master(tipu)
 	if request.method == 'POST':
@@ -96,12 +102,14 @@ def _master_form(request, tipu, instance=None):
 	return render(request, 'main/form.html', context)
 
 
+# adisiona dadus mestre
 @login_required
 @allowed_users(allowed_roles=[roles.ADMIN])
 def MasterAdd(request, tipu):
 	return _master_form(request, tipu)
 
 
+# hadia/edita dadus mestre
 @login_required
 @allowed_users(allowed_roles=[roles.ADMIN])
 def MasterUpdate(request, tipu, pk):
@@ -109,6 +117,7 @@ def MasterUpdate(request, tipu, pk):
 	return _master_form(request, tipu, obj)
 
 
+# hamoos dadus mestre
 @login_required
 @allowed_users(allowed_roles=[roles.ADMIN])
 @require_POST
@@ -122,6 +131,7 @@ def MasterDel(request, tipu, pk):
 	return redirect('master-list', tipu)
 
 
+# troka tinan ativu ba relatóriu
 @login_required
 @allowed_users(allowed_roles=[roles.ADMIN])
 @require_POST

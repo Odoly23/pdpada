@@ -9,6 +9,7 @@ from config.user_utils import c_user_group, membro_scope
 LIMITE_GRUPU = 100
 
 
+# grupu membru ne'ebé nu. eleitoral hanesan
 def _group_members(members, key):
 	"""Kumpulkan membru per kunci (dalam urutan kunci pertama muncul)."""
 	groups = {}
@@ -17,6 +18,7 @@ def _group_members(members, key):
 	return [g for g in groups.values() if len(g) > 1]
 
 
+# lista membru dupla (nu. eleitoral hanesan)
 @login_required
 @allowed_users(allowed_roles=roles.DUPLIKAT_ROLES)
 def MembroDupla(request):

@@ -18,6 +18,7 @@ LOGIN_MAX_FAILS = 5            # percobaan gagal sebelum dikunci
 LOGIN_LOCK_SECONDS = 15 * 60   # lama kunci (detik)
 
 
+# login ho limite tentativa (proteje husi koko-koko password)
 class ThrottledLoginView(LoginView):
 	"""Login dengan pembatasan percobaan gagal per (alamat, username): 5 kali dalam 15 menit."""
 	template_name = 'home/login.html'
@@ -47,6 +48,7 @@ class ThrottledLoginView(LoginView):
 		return super().form_valid(form)
 
 
+# halo kartaun menu ba pájina uma tuir permisaun
 def _tiles(group, counts):
 	"""Pintasan beranda sesuai peran: (judul, keterangan, ikon, url, badge)."""
 	tiles = []
@@ -60,6 +62,8 @@ def _tiles(group, counts):
 		add('Suku no Aldeia', 'Rejistu suku Postu Dom Aleixo', 'fa-map-marker', reverse('master-list', args=['suku']))
 		add('Organizasaun', 'OJD, OPD, MPD no seluk', 'fa-flag', reverse('master-list', args=['organizasaun']))
 		add('Tinan Ativu', 'Troka tinan ne\'ebé uza ba relatoriu', 'fa-calendar', reverse('master-list', args=['ano']))
+		add('Lista Membru', 'Hare no jere dadus membru tomak', 'fa-list', reverse('membro-list'))
+		add('Aumenta Membru', 'Input dadus membru: edukasaun, servisu no pozisaun', 'fa-user-plus', reverse('membro-add'))
 		add('Historia', 'Rekorda mudansa dadus tomak', 'fa-history', reverse('historia-list'))
 		return tiles
 	if group == roles.FISKAIS:
@@ -90,6 +94,7 @@ def _tiles(group, counts):
 	return tiles
 
 
+# pájina uma (dashboard menu)
 @login_required
 def home(request):
 	"""Beranda ringan: sambutan, pencarian, dan pintasan sesuai peran (tanpa query berat)."""
@@ -107,11 +112,13 @@ def home(request):
 	return render(request, 'home/home.html', context)
 
 
+# robots.txt (la husu motor buka)
 def robots_txt(request):
 	"""Sistem privat: larang semua mesin pencari."""
 	return HttpResponse('User-agent: *\nDisallow: /\n', content_type='text/plain')
 
 
+# verifika sistema moris (health check)
 def healthz(request):
 	"""Pemeriksaan kesehatan untuk pemantauan (tanpa login, tanpa data sensitif)."""
 	try:
@@ -126,13 +133,16 @@ def healthz(request):
 	return JsonResponse({'app': 'SGDM-PDPADA', 'status': 'ok' if db == 'ok' else 'error', 'database': db}, status=status)
 
 
+# pájina erru 403 (la iha permisaun)
 def error_403(request, exception=None):
 	return render(request, 'home/403.html', status=403)
 
 
+# pájina erru 404 (la hetan)
 def error_404(request, exception=None):
 	return render(request, 'home/404.html', status=404)
 
 
+# pájina erru 500 (erru servidor)
 def error_500(request):
 	return render(request, 'home/500.html', status=500)
