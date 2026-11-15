@@ -115,18 +115,17 @@ class AdminRegistrationTests(TestCase):
 	def test_every_model_is_registered(self):
 		from django.apps import apps
 		from django.contrib import admin
-		models = [m for app in self.APPS for m in apps.get_app_config(app).get_models()]
-		self.assertEqual(len(models), 18)
-		self.assertEqual([m.__name__ for m in models if m not in admin.site._registry], [])
+		models = list(apps.get_models())
+		self.assertGreaterEqual(len(models), 24)  # aplikasi (18) + bawaan Django (User, Group, LogEntry, Permission, ContentType, Session)
+		self.assertEqual([m.__name__ for m in models if m not in admin.site._registry], [])  # SEMUA model rejistu
 
 	def test_changelists_open_for_superuser(self):
 		from django.contrib import admin
 		su = User.objects.create_superuser('super', 'su@example.com', 'Teste-12345!')
 		self.client.force_login(su)
 		for model in admin.site._registry:
-			if model._meta.app_label in self.APPS:
-				url = reverse(f'admin:{model._meta.app_label}_{model._meta.model_name}_changelist')
-				self.assertEqual(self.client.get(url).status_code, 200, model.__name__)
+			url = reverse(f'admin:{model._meta.app_label}_{model._meta.model_name}_changelist')
+			self.assertEqual(self.client.get(url).status_code, 200, model.__name__)
 
 	def test_admin_group_user_without_staff_cannot_open_admin(self):
 		u = User.objects.create_user('biasa', password='Teste-12345!')
