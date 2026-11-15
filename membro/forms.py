@@ -11,7 +11,7 @@ from config import roles
 from config.file_utils import sanitize_image, validate_image_content
 from config.upload_utils import validate_image_size
 from config.user_utils import c_user_group, c_user_scope
-from membro.models import Membro, Alokasaun, OrgPozisaun, OrgResponsavel, Servisu, KATEGORIA, POZISAUN_POR_NIVEL
+from membro.models import Membro, Alokasaun, OrgPozisaun, OrgResponsavel, Servisu, Edukasaun, KATEGORIA, POZISAUN_POR_NIVEL
 
 BTN_CANCEL = """ <a class="btn btn-secondary" href="{{ cancel_url }}" title="Cancela"><i class="fa fa-close"></i> Cancela</a> """
 BTN_SAVE = """ <button class="btn btn-primary" type="submit" title="Rai"> Rai <i class="fa fa-save"></i></button> """
@@ -179,8 +179,41 @@ class MembroChoiceField(forms.ModelChoiceField):
 		return f'{obj.nome}{nu} - {obj.village}/{obj.aldeia}'
 
 
+class EdukasaunForm(forms.ModelForm):
+	class Meta:
+		model = Edukasaun
+		fields = ['nivel', 'eskola', 'area', 'tinan_remata']
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.fields['tinan_remata'].widget.attrs.update({'min': 1950, 'max': datetime.date.today().year})
+		self.helper = FormHelper()
+		self.helper.form_method = 'post'
+		self.helper.layout = Layout(
+			Row(Column('nivel', css_class='form-group col-md-6 mb-0'), Column('tinan_remata', css_class='form-group col-md-6 mb-0'), css_class='form-row'),
+			Row(Column('eskola', css_class='form-group col-md-6 mb-0'), Column('area', css_class='form-group col-md-6 mb-0'), css_class='form-row'),
+			HTML(BTN_CANCEL),
+			HTML(BTN_SAVE)
+		)
+
+	def clean(self):
+		cleaned = super().clean()
+		ano = cleaned.get('tinan_remata')
+		if ano and not 1950 <= ano <= datetime.date.today().year:
+			self.add_error('tinan_remata', 'Tinan remata la loos.')
+		if cleaned.get('nivel') == 'Laiha':
+			cleaned['eskola'] = cleaned['area'] = ''
+			cleaned['tinan_remata'] = None
+		return cleaned
+
+
+TIPU_ALOKASAUN = [('Ejekutivu', 'Ejekutivu (Postu, Suku ka Aldeia)'), ('Organizasaun', 'Organizasaun (sayap: OJD, OMD, MPD...)')]
+NIVEL_TIPU = {'Ejekutivu': ('Postu', 'Suku', 'Aldeia'), 'Organizasaun': ('Suku', 'Aldeia', 'Organizasaun')}
+
+
 class AlokasaunForm(forms.ModelForm):
 	membro = MembroChoiceField(label="Membru", queryset=Membro.objects.none())
+	tipu = forms.ChoiceField(label="Tipu Pozisaun", choices=TIPU_ALOKASAUN, required=False)
 	data_hahu = forms.DateField(label="Data Hahu", widget=DateInput())
 	data_termina = forms.DateField(label="Data Termina", widget=DateInput(), required=False)
 
@@ -196,6 +229,8 @@ class AlokasaunForm(forms.ModelForm):
 			bebas |= Q(pk=self.instance.membro_id)
 		self.fields['membro'].queryset = Membro.objects.filter(bebas, aprovasaun='Aprovadu', status='Ativu').select_related('village', 'aldeia')
 		self.fields['organizasaun'].queryset = Organizasaun.objects.filter(is_active=True)
+		if self.instance.pk and not self.is_bound:
+			self.initial['tipu'] = 'Organizasaun' if self.instance.organizasaun_id else 'Ejekutivu'
 		self.helper = FormHelper()
 		self.helper.form_method = 'post'
 		self.helper.form_id = 'alokasaunForm'
@@ -203,8 +238,9 @@ class AlokasaunForm(forms.ModelForm):
 		self.helper.layout = Layout(
 			Row(Column('membro', css_class='form-group col-md-12 mb-0'), css_class='form-row'),
 			Row(
-				Column('nivel', css_class='form-group col-md-6 mb-0'),
-				Column('pozisaun', css_class='form-group col-md-6 mb-0'),
+				Column('tipu', css_class='form-group col-md-4 mb-0'),
+				Column('nivel', css_class='form-group col-md-4 mb-0'),
+				Column('pozisaun', css_class='form-group col-md-4 mb-0'),
 				css_class='form-row'
 			),
 			Row(
@@ -232,6 +268,16 @@ class AlokasaunForm(forms.ModelForm):
 			self.add_error('pozisaun', f'Pozisaun {pozisaun} la existe iha nivel {nivel}.')
 			return cleaned
 		village, aldeia, org = cleaned.get('village'), cleaned.get('aldeia'), cleaned.get('organizasaun')
+		tipu = cleaned.get('tipu')
+		if tipu in NIVEL_TIPU:
+			if nivel not in NIVEL_TIPU[tipu]:
+				self.add_error('nivel', f'Tipu {tipu}: hili nivel {" / ".join(NIVEL_TIPU[tipu])}.')
+				return cleaned
+			if tipu == 'Ejekutivu':
+				org = None  # ejekutivu la iha organizasaun
+			elif not org:
+				self.add_error('organizasaun', 'Organizasaun tenke hili.')
+				return cleaned
 		if nivel == 'Postu':
 			village = aldeia = org = None
 		elif nivel == 'Suku':
@@ -277,6 +323,32 @@ class AlokasaunForm(forms.ModelForm):
 			if atual:
 				raise ValidationError(f'{pozisaun} {nivel} ativu iha ona: {atual.membro.nome}. Halo nia la ativu uluk.')
 		return cleaned
+
+
+class AlokasaunMembroForm(AlokasaunForm):
+	"""Pasu ikus iha fluxu input membru: membru fixu; 'Laiha' = Militante/Simpatizante deit (la iha pozisaun, la rai buat ruma)."""
+
+	def __init__(self, *args, membro=None, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.fields['membro'].queryset = Membro.objects.filter(pk=membro.pk)
+		self.fields['membro'].widget = forms.HiddenInput()
+		self.fields['membro'].initial = membro.pk
+		self.fields['tipu'].choices = [('Laiha', 'Laiha pozisaun (Militante/Simpatizante deit)')] + TIPU_ALOKASAUN
+		self.fields['tipu'].initial = 'Laiha'
+		self.fields['tipu'].required = True
+		for f in ('nivel', 'pozisaun', 'data_hahu'):
+			self.fields[f].required = False
+
+	def clean(self):
+		if self.data.get(self.add_prefix('tipu')) == 'Laiha':
+			return forms.ModelForm.clean(self)
+		cleaned = forms.ModelForm.clean(self)
+		for f, msg in (('nivel', 'Nivel tenke hili.'), ('pozisaun', 'Pozisaun tenke hili.'), ('data_hahu', 'Data hahu tenke hatama.')):
+			if not cleaned.get(f):
+				self.add_error(f, msg)
+		if self.errors:
+			return cleaned
+		return AlokasaunForm.clean(self)
 
 
 def _descendants(pos):

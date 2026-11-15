@@ -8,8 +8,9 @@ from config import roles
 from config.decorators import allowed_users
 from config.user_utils import c_user_group, membro_scope
 from custom.models import Year, Village, Aldeia, Organizasaun
-from membro.forms import MembroForm, KontaktuForm, ServisuForm
-from membro.models import Membro, Alokasaun, Servisu
+from django.urls import reverse
+from membro.forms import MembroForm, KontaktuForm, ServisuForm, EdukasaunForm, AlokasaunMembroForm
+from membro.models import Membro, Alokasaun, Servisu, Edukasaun
 from membro.utils import snapshot, diff_snapshot, log_historia, membro_listing, aprovasaun_filters, kategoria_filters, SERVISU_BUTTONS
 
 
@@ -42,6 +43,8 @@ def MembroDetail(request, hashid):
 	context = {
 		'group': group, 'obj': obj, 'hashid': hashid, 'alokasauns': alokasauns, 'historias': historias,
 		'servisu': Servisu.objects.filter(membro=obj).select_related('municipality').first(),
+		'edukasaun': Edukasaun.objects.filter(membro=obj).first(),
+		'can_aloka': _bele_aloka(request.user, obj),
 		'can_edit': group in roles.INPUT_ROLES,
 		'can_aprova': group in roles.APROVA_ROLES and obj.aprovasaun == 'Pendente',
 		'can_del': group in roles.APROVA_ROLES,
@@ -69,11 +72,11 @@ def MembroAdd(request):
 			instance.user = request.user
 			instance.save()
 			log_historia(request.user, instance, 'Kria', f'Membru foun ({instance.kategoria}): {instance}')
-			messages.success(request, 'Membru foun aumenta ona. Hein aprovasaun. Lanjuta: hatama kontaktu no servisu iha pájina detalle.')
+			messages.success(request, 'Membru foun aumenta ona. Hein aprovasaun. Lanjuta: hatama edukasaun, servisu no pozisaun.')
 			duplikadu = Membro.objects.filter(nome__iexact=instance.nome, date_of_birth=instance.date_of_birth).exclude(pk=instance.pk)
 			if duplikadu.exists():
 				messages.warning(request, f'Atensaun: iha membru seluk ho naran no data moris hanesan ({duplikadu.first()}). Verifika!')
-			return redirect('membro-detail', instance.hashed)
+			return redirect(reverse('membro-edukasaun', args=[instance.hashed]) + '?fluxu=1')  # pasu tuir mai: edukasaun
 	else:
 		form = MembroForm(user=request.user)
 	context = {
@@ -166,6 +169,95 @@ def MembroFile(request, hashid, kind):
 	return response
 
 
+# fluxu input membru: membru -> edukasaun -> servisu -> pozisaun -> detalle
+def _bele_aloka(user, emp):
+	"""Pozisaun bele aloka de'it husi Presidente ba membru aprovadu, ativu no seidauk iha pozisaun."""
+	return (c_user_group(user) in roles.ALOKA_ROLES and emp.aprovasaun == 'Aprovadu' and emp.status == 'Ativu' and not emp.is_colocado)
+
+
+# URL pasu tuir mai iha fluxu (ho ?fluxu=1)
+def _url_tuir_mai(request, emp, pasu):
+	if pasu == 'edukasaun':
+		return reverse('membro-servisu', args=[emp.hashed]) + '?fluxu=1'
+	if pasu == 'servisu' and _bele_aloka(request.user, emp):
+		return reverse('membro-aloka', args=[emp.hashed]) + '?fluxu=1'
+	return reverse('membro-detail', args=[emp.hashed])
+
+
+# depois rai: ba pasu tuir mai (se fluxu) ka detalle
+def _pasu_tuir_mai(request, emp, pasu):
+	if request.GET.get('fluxu') == '1':
+		return redirect(_url_tuir_mai(request, emp, pasu))
+	return redirect('membro-detail', hashid=emp.hashed)
+
+
+# kontestu formuláriu fluxu (botaun "Liu pasu ne'e" no informasaun pasu)
+def _fluxu_context(request, emp, pasu, info):
+	if request.GET.get('fluxu') != '1':
+		return {}
+	return {'skip_url': _url_tuir_mai(request, emp, pasu), 'fluxu_info': info}
+
+
+# hadia/edita edukasaun membru (nivel as-aas)
+@login_required
+@allowed_users(allowed_roles=roles.INPUT_ROLES)
+def EdukasaunUpdate(request, hashid):
+	group = c_user_group(request.user)
+	emp = get_object_or_404(membro_scope(request.user), hashed=hashid)
+	objects = Edukasaun.objects.filter(membro=emp).first()
+	old = objects.resumu() if objects else '-'
+	if request.method == 'POST':
+		form = EdukasaunForm(request.POST, instance=objects)
+		if form.is_valid():
+			instance = form.save(commit=False)
+			instance.membro = emp
+			instance.save()
+			log_historia(request.user, emp, 'Edita Edukasaun', f'Edukasaun: {old} -> {instance.resumu()}')
+			messages.success(request, 'Dadus edukasaun rai ona.')
+			return _pasu_tuir_mai(request, emp, 'edukasaun')
+	else:
+		form = EdukasaunForm(instance=objects)
+	context = {
+		'form': form, 'group': group, 'hashid': hashid, 'emp': emp, 'cancel_url': f'/membro/{hashid}/',
+		'back_url': 'membro-detail', 'back_args': [hashid], 'back_label': 'Detalha Membru',
+		'title': 'Edukasaun Membru', 'legend': f'Edukasaun · {emp.nome}', **_fluxu_context(request, emp, 'edukasaun', 'Pasu 1 husi 3: nivel edukasaun.')
+	}
+	return render(request, 'main/form.html', context)
+
+
+# aloka pozisaun ba membru ida (Militante/Simpatizante deit, Ejekutivu ka Organizasaun)
+@login_required
+@allowed_users(allowed_roles=roles.ALOKA_ROLES)
+def MembroAloka(request, hashid):
+	group = c_user_group(request.user)
+	emp = get_object_or_404(membro_scope(request.user), hashed=hashid)
+	if not _bele_aloka(request.user, emp):
+		messages.warning(request, 'Membru ne\'e la bele hetan pozisaun (seidauk aprovadu, la ativu ka iha ona pozisaun).')
+		return redirect('membro-detail', hashid=hashid)
+	if request.method == 'POST':
+		form = AlokasaunMembroForm(request.POST, membro=emp)
+		if form.is_valid():
+			if form.cleaned_data.get('tipu') == 'Laiha':
+				messages.info(request, f'{emp.nome} kontinua nu\'udar {emp.kategoria} (la iha pozisaun).')
+				return redirect('membro-detail', hashid=hashid)
+			instance = form.save(commit=False)
+			instance.datetime = timezone.now()
+			instance.user = request.user
+			instance.save()
+			log_historia(request.user, emp, 'Aloka', f'{instance.pozisaun} {instance.nivel} {instance.unit() or ""}'.strip())
+			messages.success(request, 'Pozisaun aloka ona.')
+			return redirect('membro-detail', hashid=hashid)
+	else:
+		form = AlokasaunMembroForm(membro=emp, initial={'membro': emp.pk})
+	context = {
+		'form': form, 'group': group, 'hashid': hashid, 'emp': emp, 'cancel_url': f'/membro/{hashid}/',
+		'back_url': 'membro-detail', 'back_args': [hashid], 'back_label': 'Detalha Membru',
+		'title': 'Pozisaun Membru', 'legend': f'Pozisaun · {emp.nome}',
+		'fluxu_info': 'Pasu 3 husi 3: hili "Laiha pozisaun" se membru ne\'e Militante/Simpatizante deit.' if request.GET.get('fluxu') == '1' else ''
+	}
+	return render(request, 'membro/alokasaun_form.html', context)
+
+
 # hadia/edita kontaktu membru (telefone no hela fatin)
 @login_required
 @allowed_users(allowed_roles=roles.INPUT_ROLES)
@@ -206,13 +298,13 @@ def ServisuUpdate(request, hashid):
 			instance.save()
 			log_historia(request.user, emp, 'Edita Servisu', f'Servisu: {old} -> {instance.resumu()}')
 			messages.success(request, 'Dadus servisu rai ona.')
-			return redirect('membro-detail', hashid=hashid)
+			return _pasu_tuir_mai(request, emp, 'servisu')
 	else:
 		form = ServisuForm(instance=objects)
 	context = {
 		'form': form, 'group': group, 'hashid': hashid, 'emp': emp, 'cancel_url': f'/membro/{hashid}/',
 		'back_url': 'membro-detail', 'back_args': [hashid], 'back_label': 'Detalha Membru',
-		'title': 'Servisu Membru', 'legend': f'Servisu · {emp.nome}'
+		'title': 'Servisu Membru', 'legend': f'Servisu · {emp.nome}', **_fluxu_context(request, emp, 'servisu', 'Pasu 2 husi 3: servisu agora.')
 	}
 	return render(request, 'membro/servisu_form.html', context)
 

@@ -74,6 +74,40 @@ def _units(level, e, aldeia_rows, suku_rows):
 	return villages, aldeias
 
 
+# kartaun struktura (Ejekutivu, sayap no Militante) tuir nivel
+def struktura_cards(group, nivel, qs_membro, village=None, aldeia=None):
+	"""Kartaun Ejekutivu + sayap (OJD, OMD, MPD...) + Militante ba Postu/Suku/Aldeia; klik = lista de'it.
+	Ejekutivu/sayap = pozisaun ativu; Militante = kategoria Militante ne'ebé la iha pozisaun (is_colocado False)."""
+	if group not in roles.LISTA_ROLES:
+		return []
+	base = Alokasaun.objects.filter(ativu='Sim')
+	if nivel == 'Postu':
+		base, eje_nivel, eje_q, sayap_nivel, mil_q = base.filter(nivel__in=('Postu', 'Organizasaun')), 'Postu', {'nivel': 'Postu'}, 'Organizasaun', {}
+		sayap_q = {'nivel': 'Organizasaun'}
+	elif nivel == 'Suku':
+		base, eje_nivel, sayap_nivel = base.filter(nivel='Suku', village=village), 'Suku', 'Suku'
+		eje_q = sayap_q = {'nivel': 'Suku', 'village': village.pk}
+		mil_q = {'village': village.pk}
+		qs_membro = qs_membro.filter(village=village)
+	else:
+		base, eje_nivel, sayap_nivel = base.filter(nivel='Aldeia', aldeia=aldeia), 'Aldeia', 'Aldeia'
+		eje_q = sayap_q = {'nivel': 'Aldeia', 'aldeia': aldeia.pk}
+		mil_q = {'aldeia': aldeia.pk}
+		qs_membro = qs_membro.filter(aldeia=aldeia)
+	n = {(r['nivel'], r['organizasaun__code']): r['n'] for r in base.order_by().values('nivel', 'organizasaun__code').annotate(n=Count('id'))}
+	lista = reverse('alokasaun-list')
+
+	def url(q, organ):
+		return lista + '?' + '&'.join(f'{k}={v}' for k, v in {**q, 'organ': organ, 'ativu': 'Sim'}.items())
+	cards = [{'label': 'Ejekutivu', 'n': n.get((eje_nivel, None), 0), 'url': url(eje_q, 'Ejekutivu')}]
+	for code in Organizasaun.objects.filter(is_active=True).order_by('code').values_list('code', flat=True):
+		cards.append({'label': code, 'n': n.get((sayap_nivel, code), 0), 'url': url(sayap_q, code)})
+	mil = qs_membro.filter(kategoria='Militante', is_colocado=False).count()
+	cards.append({'label': {'Postu': 'Militantes Postu', 'Suku': 'Militantes Suku', 'Aldeia': 'Militantes Aldeia'}[nivel], 'n': mil,
+		'url': _list_url(group, jenis='Militante', **mil_q)})
+	return cards
+
+
 # dadus ba gráfiku rekap
 def _chart(labels, values, title, mane=None, feto=None, horizontal=None):
 	"""Data grafik; `mane`/`feto` (jika ada) membuat grafik berkelompok perbandingan Mane dan Feto per label."""
@@ -137,9 +171,18 @@ def VarandaRekap(request):
 		chart = _chart([r['obj'].name for r in objects2], [r['n'] for r in objects2], 'Grafiku Mane no Feto Tuir Aldeia',
 			[r['mane'] for r in objects2], [r['feto'] for r in objects2])
 
+	struktura_info = None
+	if level == 'postu':
+		struktura_info = {'title': 'ESTRUTURA POSTU ADMINISTRATIVU DOM-ALEIXO', 'cards': struktura_cards(group, 'Postu', qs)}
+	elif level == 'suku' and e and e.village_id:
+		struktura_info = {'title': f'ESTRUTURA SUKU {e.village.name.upper()}', 'cards': struktura_cards(group, 'Suku', qs, village=e.village)}
+	elif level == 'aldeia' and e and e.aldeia_id:
+		struktura_info = {'title': f'ESTRUTURA ALDEIA {e.aldeia.name.upper()}', 'cards': struktura_cards(group, 'Aldeia', qs, aldeia=e.aldeia)}
+
 	context = {
 		'group': group, 'role_label': ROLE_NAME.get(group, ''), 'e': e, 'level': level, 'banner': _banner(group, e),
 		'total': total, 'total_url': _list_url(group), 'objects1': objects1, 'objects2': objects2, 'suku_cards': suku_cards, 'info': info, 'chart': chart, 'jenis_stats': jenis_stats,
+		'struktura': struktura_info,
 		'can_list': group in roles.LISTA_ROLES, 'can_add': group in roles.INPUT_ROLES,
 		'can_struktura': group in roles.STRUKTURA_ROLES, 'group_cards': False,
 		'title': 'Varanda', 'legend': 'Varanda',
@@ -263,6 +306,7 @@ def SukuRekap(request, pk):
 	context = {
 		'group': group, 'village': village, 'tot': tot, 'rows': rows, 'pemimpin': pemimpin,
 		'can_delegadu': group in roles.DELEGADU_ROLES,
+		'struktura': {'title': f'ESTRUTURA SUKU {village.name.upper()}', 'cards': struktura_cards(group, 'Suku', membro_scope(request.user), village=village)},
 		'title': f'Suku {village.name}', 'legend': f'Suku {village.name}',
 		'meta_description': f'Lista membru suku {village.name}, Partido Democratico, Postu Dom Aleixo.',
 	}

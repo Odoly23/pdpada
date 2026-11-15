@@ -43,6 +43,7 @@
 		<div class="col-6 col-md-3 mb-2"><div class="info-box"><span class="stat-label">Membru Foun (30 Loron)</span><span class="info-n">{{ info.baru }}</span></div></div>
 		<div class="col-6 col-md-3 mb-2"><div class="info-box"><span class="stat-label">Struktura Suku Kompletu</span><span class="info-n">{{ info.lengkap }}/{{ info.suku }}</span></div></div>
 	</div>
+	{% include "home/_struktura_cards.html" %}
 	<h6 class="rekap-head">MEMBRU TUIR SUKU <small class="text-muted">&middot; klik suku atu hare detalle no imprime</small></h6>
 	<div class="row">
 		{% for c in suku_cards %}
@@ -59,6 +60,7 @@
 		{% endfor %}
 	</div>
 	{% else %}
+	{% include "home/_struktura_cards.html" %}
 	<h6 class="rekap-head">MEMBRU TUIR ALDEIA</h6>
 	{% regroup objects2 by obj.village as by_suku %}
 	{% for g in by_suku %}

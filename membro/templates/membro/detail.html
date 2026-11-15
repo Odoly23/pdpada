@@ -13,7 +13,9 @@
 				<div class="mb-2 no-print">
 					{% if can_edit %}<a class="btn btn-sm btn-success" href="{% url 'membro-update' hashid %}"><i class="fa fa-edit"></i> Edita</a>
 					<a class="btn btn-sm btn-info" href="{% url 'membro-kontaktu' hashid %}">Kontaktu <i class="fa fa-phone"></i></a>
+					<a class="btn btn-sm btn-info" href="{% url 'membro-edukasaun' hashid %}">Edukasaun <i class="fa fa-graduation-cap"></i></a>
 					<a class="btn btn-sm btn-info" href="{% url 'membro-servisu' hashid %}">Servisu <i class="fa fa-briefcase"></i></a>{% endif %}
+					{% if can_aloka %}<a class="btn btn-sm btn-info" href="{% url 'membro-aloka' hashid %}">Aloka Pozisaun <i class="fa fa-sitemap"></i></a>{% endif %}
 					{% if can_aprova %}
 					<form class="d-inline" method="post" action="{% url 'aprovasaun-aprova' hashid %}">{% csrf_token %}
 						<input type="hidden" name="next" value="detail">
@@ -49,6 +51,9 @@
 					<tr><td>Organizasaun</td><td>{{ obj.organizasaun|default:"-" }}</td></tr>
 					<tr><td>Data Hakbit</td><td>{{ obj.data_hakbit|date:"d/m/Y"|default:"-" }}</td></tr>
 					<tr><td>Status</td><td>{{ obj.status }}</td></tr>
+					<tr><th colspan="3" bgcolor="#eceefa">EDUKASAUN</th></tr>
+					{% if edukasaun %}<tr><td>Nivel Edukasaun</td><td colspan="2">{{ edukasaun.resumu }}</td></tr>
+					{% else %}<tr><td colspan="3" class="text-muted">Seidauk iha dadus edukasaun.{% if can_edit %} <a href="{% url 'membro-edukasaun' hashid %}">Hatama agora</a>{% endif %}</td></tr>{% endif %}
 					<tr><th colspan="3" bgcolor="#eceefa">SERVISU</th></tr>
 					{% if servisu %}
 					<tr><td>Servisu agora</td><td colspan="2">{{ servisu.get_status_display }}</td></tr>

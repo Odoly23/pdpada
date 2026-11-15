@@ -200,6 +200,30 @@ class OrgResponsavel(models.Model):
 		return f'{self.naran} - {self.pozisaun}'
 
 
+class Edukasaun(models.Model):
+	"""Nivel edukasaun as-aas membru (baris ida de'it)."""
+	NIVEL = [('Laiha', 'Laiha / la eskola'), ('Primária', 'Eskola Primária (SD)'), ('Pré-Sekundária', 'Pré-Sekundária (SMP)'),
+		('Sekundária', 'Sekundária (SMA)'), ('Diploma', 'Diploma (D1-D3)'), ('Lisensiatura', 'Lisensiatura (S1)'),
+		('Mestrado', 'Mestrado (S2)'), ('Doutoramentu', 'Doutoramentu (S3)')]
+	membro = models.OneToOneField(Membro, on_delete=models.CASCADE, related_name='edukasaun')
+	nivel = models.CharField(choices=NIVEL, max_length=15, db_index=True, verbose_name="Nivel Edukasaun")
+	eskola = models.CharField(max_length=150, blank=True, verbose_name="Eskola / Universidade")
+	area = models.CharField(max_length=120, blank=True, verbose_name="Área Estudu")
+	tinan_remata = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Tinan Remata")
+
+	class Meta:
+		constraints = [models.CheckConstraint(condition=models.Q(nivel__in=[c[0] for c in [
+			('Laiha', ''), ('Primária', ''), ('Pré-Sekundária', ''), ('Sekundária', ''), ('Diploma', ''), ('Lisensiatura', ''),
+			('Mestrado', ''), ('Doutoramentu', '')]]), name='edukasaun_nivel_valid')]
+
+	def resumu(self):
+		extra = ', '.join(x for x in (self.eskola, self.area, str(self.tinan_remata or '')) if x)
+		return f'{self.get_nivel_display()}' + (f' ({extra})' if extra else '')
+
+	def __str__(self):
+		return self.resumu()
+
+
 class Servisu(models.Model):
 	"""Servisu agora: iha servisu ka seidauk. Se iha servisu: governu ka laos governu, instituisaun, pozisaun; se seidauk: atividade agora."""
 	STATUS = [('Servisu', 'Iha servisu'), ('Seidauk', 'Seidauk iha servisu')]

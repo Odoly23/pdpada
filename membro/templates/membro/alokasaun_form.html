@@ -1,15 +1,48 @@
 {% extends "main/form.html" %}
 {% block form_scripts %}
 <script type="text/javascript">
-	// tampilkan unit (suku/aldeia/organizasaun) sesuai nivel
+	function grp(id) { return $('#id_' + id).closest('.form-group'); }
+	var NIVEL_TIPU = {Ejekutivu: ['Postu', 'Suku', 'Aldeia'], Organizasaun: ['Suku', 'Aldeia', 'Organizasaun']};
+	// hatudu de'it kampu ne'ebé relevante tuir tipu no nivel
 	function toggleUnit() {
+		var tipu = $('#id_tipu').val() || '';
+		var laiha = tipu === 'Laiha';
+		var allowed = NIVEL_TIPU[tipu];
+		$('#id_nivel option').each(function () {
+			var ok = !this.value || !allowed || allowed.indexOf(this.value) >= 0;
+			$(this).prop('disabled', !ok).toggle(ok);
+		});
+		if (allowed && allowed.indexOf($('#id_nivel').val()) < 0) { $('#id_nivel').val(''); }
 		var n = ($('#id_nivel').val() || '').toLowerCase();
 		$('.unit-suku, .unit-aldeia, .unit-organizasaun').hide();
-		if (n === 'suku') { $('.unit-suku, .unit-organizasaun').show(); }  // organizasaun = sayap (opsional)
-		if (n === 'aldeia') { $('.unit-aldeia, .unit-organizasaun').show(); }
-		if (n === 'organizasaun') { $('.unit-organizasaun').show(); }
+		if (!laiha) {
+			if (n === 'suku') { $('.unit-suku').show(); }
+			if (n === 'aldeia') { $('.unit-aldeia').show(); }
+			if (tipu === 'Organizasaun' || n === 'organizasaun') { $('.unit-organizasaun').show(); }
+		}
+		['nivel', 'pozisaun', 'data_hahu', 'data_termina', 'ativu'].forEach(function (f) { grp(f).toggle(!laiha); });
 	}
-	$('#id_nivel').on('change', toggleUnit);
+	$('#id_tipu, #id_nivel').on('change', toggleUnit);
 	toggleUnit();
+
+	// buka membru: filtru lista tuir naran/nu. eleitoral (data barak)
+	(function () {
+		var sel = $('select#id_membro');
+		if (!sel.length) { return; }
+		var box = $('<input type="search" class="form-control form-control-sm mb-1" id="cari-membro" placeholder="Buka membru (naran ka nu. eleitoral)..." autocomplete="off">');
+		var info = $('<small class="form-text text-muted" id="cari-info"></small>');
+		sel.before(box).after(info);
+		var opts = sel.find('option').map(function () { return {v: this.value, t: $(this).text()}; }).get();
+		box.on('input', function () {
+			var words = this.value.toLowerCase().split(/\s+/).filter(Boolean), keep = sel.val(), html = '', n = 0;
+			opts.forEach(function (o) {
+				if (!o.v || o.v === keep || words.every(function (w) { return o.t.toLowerCase().indexOf(w) >= 0; })) {
+					html += '<option value="' + o.v + '"' + (o.v === keep ? ' selected' : '') + '>' + $('<div>').text(o.t).html() + '</option>'; n++;
+				}
+			});
+			sel.html(html);
+			info.text(words.length ? (n - 1) + ' membru hetan' : '');
+		});
+	})();
 </script>
 {% endblock %}

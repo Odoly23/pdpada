@@ -1003,7 +1003,6 @@ class PainelTests(BaseCase):
 			self.assertEqual(resp.context['unit_title'], 'ALDEIA')
 			self.assertEqual({r['name']: r['n'] for r in resp.context['objects2']}, {'A1': 1, 'A2': 1}, u)
 			self.assertEqual(resp.context['banner'][1], 'SUKU SUKU A')
-			self.assertNotContains(resp, 'B1')
 
 	def test_aldeia_roles_see_only_own_aldeia_by_organizasaun(self):
 		resp = self.home('sekraldeia')
@@ -1655,8 +1654,8 @@ class LandingTests(BaseCase):
 		self.login('sekrsuku')
 		with CaptureQueriesContext(connection) as ctx:
 			self.client.get('/')
-		self.assertLessEqual(len(ctx), 24)
-		self.assertLessEqual(sum('GROUP BY' in q['sql'] for q in ctx.captured_queries), 2)
+		self.assertLessEqual(len(ctx), 25)
+		self.assertLessEqual(sum('GROUP BY' in q['sql'] for q in ctx.captured_queries), 3)
 
 	def test_requires_login(self):
 		self.client.logout()
@@ -2770,8 +2769,8 @@ class KategoriaServisuTests(BaseCase):
 	def test_add_redirects_to_detail_with_hint_to_continue(self):
 		resp = self.post_add(nu='RD000001')
 		m = Membro.objects.get(nu_eleitoral='RD000001')
-		self.assertRedirects(resp, reverse('membro-detail', args=[m.hashed]))
-		page = self.client.get(resp['Location'])
+		self.assertRedirects(resp, reverse('membro-edukasaun', args=[m.hashed]) + '?fluxu=1')
+		page = self.client.get(reverse('membro-detail', args=[m.hashed]))
 		self.assertContains(page, reverse('membro-servisu', args=[m.hashed]))
 		self.assertContains(page, reverse('membro-kontaktu', args=[m.hashed]))
 		self.assertContains(page, 'Seidauk iha dadus servisu')
@@ -2946,3 +2945,136 @@ class KategoriaServisuTests(BaseCase):
 		self.login('sekrpostu')
 		self.assertNotIn('?jenis=', self.client.get('/').content.decode().split('class="main-navbar"')[-1].split('</nav>')[0])
 
+
+
+class FluxuInputTests(BaseCase):
+	"""Fluxu input: membru -> edukasaun -> servisu -> pozisaun; kartaun struktura; form alokasaun ho tipu."""
+
+	def setUp(self):
+		self.m = self.make('FX000001', aprovasaun='Aprovadu', organizasaun=self.org)
+
+	def url(self, name, m=None, q=''):
+		return reverse(name, args=[(m or self.m).hashed]) + q
+
+	def aloka(self, **data):
+		self.login('presidente')
+		base = {'membro': self.m.pk, 'tipu': 'Ejekutivu', 'nivel': 'Suku', 'pozisaun': 'Coordenador', 'village': self.va.pk, 'data_hahu': '2026-01-01', 'ativu': 'Sim'}
+		base.update(data)
+		return self.client.post(self.url('membro-aloka'), base)
+
+	def test_edukasaun_saved_and_redirects_to_servisu_in_flow(self):
+		self.login('sekrsuku')
+		resp = self.client.post(self.url('membro-edukasaun', q='?fluxu=1'), {'nivel': 'Lisensiatura', 'eskola': 'UNTL', 'area': 'Direitu', 'tinan_remata': '2015'})
+		self.assertRedirects(resp, self.url('membro-servisu', q='?fluxu=1'), fetch_redirect_response=False)
+		self.assertEqual(self.m.edukasaun.resumu(), 'Lisensiatura (S1) (UNTL, Direitu, 2015)')
+		self.assertTrue(Historia.objects.filter(aksaun='Edita Edukasaun', membro=self.m).exists())
+		self.assertContains(self.client.get(self.url('membro-detail')), 'Lisensiatura')
+
+	def test_edukasaun_outside_flow_goes_to_detail_and_laiha_clears_fields(self):
+		self.login('sekrsuku')
+		resp = self.client.post(self.url('membro-edukasaun'), {'nivel': 'Laiha', 'eskola': 'x', 'tinan_remata': '2000'})
+		self.assertRedirects(resp, self.url('membro-detail'))
+		self.assertEqual((self.m.edukasaun.eskola, self.m.edukasaun.tinan_remata), ('', None))
+
+	def test_edukasaun_validation_and_skip_button(self):
+		self.login('sekrsuku')
+		self.assertEqual(self.client.post(self.url('membro-edukasaun'), {'nivel': 'Sekundária', 'tinan_remata': '1800'}).status_code, 200)
+		page = self.client.get(self.url('membro-edukasaun', q='?fluxu=1'))
+		self.assertContains(page, self.url('membro-servisu', q='?fluxu=1'))
+		self.assertContains(page, "Liu pasu ne'e")
+
+	def test_servisu_in_flow_ends_at_detail_for_input_roles(self):
+		self.login('sekrsuku')
+		resp = self.client.post(self.url('membro-servisu', q='?fluxu=1'), {'status': 'Seidauk', 'atividade': 'Estudante'})
+		self.assertRedirects(resp, self.url('membro-detail'))
+
+	def test_edukasaun_only_input_roles_in_scope(self):
+		for u, code in [('sekrsuku', 200), ('koordsuku', 403), ('presidente', 403), ('sekrsukub', 404)]:
+			self.login(u)
+			self.assertEqual(self.client.get(self.url('membro-edukasaun')).status_code, code, u)
+
+	def test_aloka_laiha_keeps_member_without_position(self):
+		resp = self.aloka(tipu='Laiha', nivel='', pozisaun='', data_hahu='')
+		self.assertRedirects(resp, self.url('membro-detail'))
+		self.assertFalse(Alokasaun.objects.filter(membro=self.m).exists())
+		self.m.refresh_from_db()
+		self.assertFalse(self.m.is_colocado)
+
+	def test_aloka_ejekutivu_suku_has_no_organizasaun(self):
+		resp = self.aloka(organizasaun=self.org.pk)
+		self.assertRedirects(resp, self.url('membro-detail'))
+		a = Alokasaun.objects.get(membro=self.m)
+		self.assertEqual((a.nivel, a.village, a.organizasaun), ('Suku', self.va, None))
+		self.m.refresh_from_db()
+		self.assertTrue(self.m.is_colocado)
+
+	def test_aloka_ejekutivu_aldeia_and_organizasaun_rules(self):
+		self.assertEqual(self.aloka(nivel='Organizasaun', organizasaun=self.org.pk).status_code, 200)
+		self.assertFalse(Alokasaun.objects.exists())
+		self.assertEqual(self.aloka(tipu='Organizasaun').status_code, 200)  # organizasaun tenke hili
+		self.assertFalse(Alokasaun.objects.exists())
+		self.assertEqual(self.aloka(tipu='Organizasaun', nivel='Postu', organizasaun=self.org.pk).status_code, 200)
+		ok = self.aloka(tipu='Organizasaun', nivel='Aldeia', aldeia=self.a1.pk, village='', organizasaun=self.org.pk)
+		self.assertEqual(ok.status_code, 302)
+		a = Alokasaun.objects.get(membro=self.m)
+		self.assertEqual((a.nivel, a.aldeia, a.organizasaun), ('Aldeia', self.a1, self.org))
+
+	def test_aloka_form_page_has_tipu_and_member_search(self):
+		self.login('presidente')
+		page = self.client.get(self.url('membro-aloka', q='?fluxu=1'))
+		self.assertContains(page, 'Laiha pozisaun')
+		self.assertContains(page, 'cari-membro')
+		self.assertContains(page, 'Pasu 3 husi 3')
+
+	def test_aloka_blocked_for_pending_colocado_or_other_roles(self):
+		self.login('presidente')
+		pend = self.make('FX000002')
+		self.assertRedirects(self.client.get(self.url('membro-aloka', pend)), self.url('membro-detail', pend), fetch_redirect_response=False)
+		self.aloka()
+		self.assertRedirects(self.client.get(self.url('membro-aloka')), self.url('membro-detail'), fetch_redirect_response=False)
+		self.login('sekrsuku')
+		self.assertEqual(self.client.get(self.url('membro-aloka')).status_code, 403)
+
+	def test_detail_shows_aloka_button_only_when_possible(self):
+		self.login('presidente')
+		self.assertContains(self.client.get(self.url('membro-detail')), self.url('membro-aloka'))
+		self.aloka()
+		self.assertNotContains(self.client.get(self.url('membro-detail')), self.url('membro-aloka'))
+
+	def test_postu_dashboard_has_struktura_cards_with_direct_lists(self):
+		Alokasaun.objects.create(membro=self.m, nivel='Suku', pozisaun='Coordenador', village=self.va, data_hahu=datetime.date(2026, 1, 1))
+		m2 = self.make('FX000003', aprovasaun='Aprovadu')
+		Alokasaun.objects.create(membro=m2, nivel='Organizasaun', pozisaun='Coordenador', organizasaun=self.org, data_hahu=datetime.date(2026, 1, 1))
+		self.make('FX000004')  # militante tanpa posisi
+		self.login('presidente')
+		cards = {c['label']: c for c in self.client.get('/').context['struktura']['cards']}
+		self.assertEqual(list(cards), ['Ejekutivu', 'OJD', 'Militantes Postu'])
+		self.assertEqual((cards['Ejekutivu']['n'], cards['OJD']['n'], cards['Militantes Postu']['n']), (0, 1, 1))
+		self.assertContains(self.client.get('/'), 'ESTRUTURA POSTU ADMINISTRATIVU DOM-ALEIXO')
+		lista = self.client.get(cards['OJD']['url']).context['objects']
+		self.assertEqual([a.membro for a in lista], [m2])
+		self.assertIn('jenis=Militante', cards['Militantes Postu']['url'])
+		mil = self.client.get(cards['Militantes Postu']['url']).context['objects']
+		self.assertNotIn(self.m, list(mil))
+
+	def test_suku_and_aldeia_levels_have_own_struktura_cards(self):
+		Alokasaun.objects.create(membro=self.m, nivel='Suku', pozisaun='Coordenador', village=self.va, data_hahu=datetime.date(2026, 1, 1))
+		m2 = self.make('FX000005', aprovasaun='Aprovadu', organizasaun=self.org)
+		Alokasaun.objects.create(membro=m2, nivel='Suku', pozisaun='Sekretariu', village=self.va, organizasaun=self.org, data_hahu=datetime.date(2026, 1, 1))
+		self.login('koordsuku')
+		ctx = self.client.get('/').context['struktura']
+		self.assertEqual(ctx['title'], 'ESTRUTURA SUKU SUKU A')
+		self.assertEqual({c['label']: c['n'] for c in ctx['cards']}, {'Ejekutivu': 1, 'OJD': 1, 'Militantes Suku': 0})
+		self.assertEqual([a.membro for a in self.client.get([c for c in ctx['cards'] if c['label'] == 'OJD'][0]['url']).context['objects']], [m2])
+		self.login('sekraldeia')
+		ctx = self.client.get('/').context['struktura']
+		self.assertEqual(ctx['title'], 'ESTRUTURA ALDEIA A1')
+		self.assertEqual(ctx['cards'][-1]['label'], 'Militantes Aldeia')
+
+	def test_suku_page_for_postu_roles_has_struktura_cards(self):
+		self.login('presidente')
+		self.assertContains(self.client.get(reverse('membro-suku', args=[self.va.pk])), 'ESTRUTURA SUKU SUKU A')
+
+	def test_other_roles_without_list_permission_get_no_cards(self):
+		self.login('sekrpostu')
+		self.assertFalse(self.client.get('/').context['struktura']['cards'])

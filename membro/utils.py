@@ -117,6 +117,11 @@ def apply_alokasaun_filters(qs, params):
 		val = params.get(key)
 		if val and val.isdigit():
 			qs = qs.filter(**{f'{key}_id': int(val)})
+	organ = params.get('organ')  # Ejekutivu = la iha organizasaun; kódigu (OJD, OMD, MPD...) = sayap
+	if organ == 'Ejekutivu':
+		qs = qs.filter(organizasaun__isnull=True)
+	elif organ:
+		qs = qs.filter(organizasaun__code=organ)
 	return qs
 
 
