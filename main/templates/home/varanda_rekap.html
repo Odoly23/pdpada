@@ -16,11 +16,6 @@
 				<span class="stat-label">Total Membru</span>
 				<div class="rekap-number">{% if total_url %}<a href="{{ total_url }}">{{ total }}</a>{% else %}{{ total }}{% endif %}</div>
 			</div>
-			<div class="row jenis-strip justify-content-center">
-				{% for j in jenis_stats %}
-				<div class="col-4 col-md-3">{% if j.url %}<a class="jenis-box jenis-{{ j.kind }}" href="{{ j.url }}">{% else %}<div class="jenis-box jenis-{{ j.kind }}">{% endif %}<span>{{ j.label }}</span><strong>{{ j.n }}</strong>{% if j.url %}</a>{% else %}</div>{% endif %}</div>
-				{% endfor %}
-			</div>
 			{% if level != 'postu' %}<p class="rekap-line">
 				{% for v, n in objects1 %}<span class="rekap-suku"><strong>{{ v.name }}</strong> {{ n }}</span>{% if not forloop.last %}<span class="rekap-sep">&middot;</span>{% endif %}{% endfor %}
 			</p>{% endif %}

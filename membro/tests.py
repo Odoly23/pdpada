@@ -2898,16 +2898,12 @@ class KategoriaServisuTests(BaseCase):
 		self.assertEqual(nu(servisu='Servisu', setor='Governu'), {'SF00001'})
 		self.assertEqual(nu(servisu='laiha'), {'SF00003'})
 
-	def test_varanda_shows_three_separate_counts(self):
-		a = self.make('VJ00001'); b = self.make('VJ00002'); self.make('VJ00003', kategoria='Simpatizante')
-		Membro.objects.filter(pk=b.pk).update(is_colocado=True)
+	def test_varanda_has_no_jenis_cards_under_total(self):
+		self.make('VJ00001')
 		self.login('presidente')
 		resp = self.client.get('/')
-		self.assertEqual({j['label']: j['n'] for j in resp.context['jenis_stats']}, {'Struktura Penting': 1, 'Militante': 1, 'Simpatizante': 1})
-		self.assertContains(resp, 'jenis-strip')
-		self.login('sekrpostu')
-		stats = self.client.get('/').context['jenis_stats']
-		self.assertEqual({j['url'] for j in stats}, {''})  # Sekretariu Postu tanpa tautan ke lista membru
+		self.assertNotContains(resp, 'jenis-strip')
+		self.assertNotIn('jenis_stats', resp.context)
 
 	def test_sumariu_filter_by_jenis(self):
 		self.make('SM90001'); self.make('SM90002', kategoria='Simpatizante')

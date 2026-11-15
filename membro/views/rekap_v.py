@@ -128,13 +128,8 @@ def VarandaRekap(request):
 	ano = Year.objects.filter(is_active=True).first()
 	qs = membro_scope(request.user).filter(year=ano) if ano else membro_scope(request.user)
 	agg = qs.aggregate(total=Count('id'), mane=Count('id', filter=Q(sex='Mane')), feto=Count('id', filter=Q(sex='Feto')),
-		baru=Count('id', filter=Q(datetime__gte=timezone.now() - datetime.timedelta(days=30))),
-		struktura=Count('id', filter=Q(is_colocado=True)), militante=Count('id', filter=Q(kategoria='Militante', is_colocado=False)),
-		simpatizante=Count('id', filter=Q(kategoria='Simpatizante', is_colocado=False)))
+		baru=Count('id', filter=Q(datetime__gte=timezone.now() - datetime.timedelta(days=30))))
 	total = agg['total']
-	jenis_stats = [{'label': lbl, 'n': agg[key], 'kind': kind, 'url': _list_url(group, jenis=val)}
-		for val, lbl, key, kind in (('Struktura', 'Struktura Penting', 'struktura', 'struktura'), ('Militante', 'Militante', 'militante', 'militante'),
-			('Simpatizante', 'Simpatizante', 'simpatizante', 'simpatizante'))]
 	suku_rows, aldeia_rows = _counts(qs, 'village_id'), _counts(qs, 'aldeia_id')
 	villages, aldeias = _units(level, e, aldeia_rows, suku_rows)
 
@@ -181,7 +176,7 @@ def VarandaRekap(request):
 
 	context = {
 		'group': group, 'role_label': ROLE_NAME.get(group, ''), 'e': e, 'level': level, 'banner': _banner(group, e),
-		'total': total, 'total_url': _list_url(group), 'objects1': objects1, 'objects2': objects2, 'suku_cards': suku_cards, 'info': info, 'chart': chart, 'jenis_stats': jenis_stats,
+		'total': total, 'total_url': _list_url(group), 'objects1': objects1, 'objects2': objects2, 'suku_cards': suku_cards, 'info': info, 'chart': chart,
 		'struktura': struktura_info,
 		'can_list': group in roles.LISTA_ROLES, 'can_add': group in roles.INPUT_ROLES,
 		'can_struktura': group in roles.STRUKTURA_ROLES, 'group_cards': False,
