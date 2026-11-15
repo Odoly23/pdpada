@@ -21,7 +21,7 @@ NIVEL = [('Postu', 'Postu'), ('Suku', 'Suku'), ('Aldeia', 'Aldeia'), ('Organizas
 class Pozisaun(models.Model):
 	"""Data mestre pozisaun (Presidente, Vice I-III, Coordenador, Sekretariu, ...). Alokasaun.pozisaun rai naran husi tabela ne'e;
 	kampu iha_* hatudu iha nivel ida-ne'ebé pozisaun ne'e bele uza."""
-	naran = models.CharField(max_length=15, unique=True, verbose_name="Naran Pozisaun")
+	naran = models.CharField(max_length=30, unique=True, verbose_name="Naran Pozisaun")
 	urutan = models.PositiveSmallIntegerField(default=10, verbose_name="Urutan")
 	iha_postu = models.BooleanField(default=False, verbose_name="Nivel Postu")
 	iha_suku = models.BooleanField(default=False, verbose_name="Nivel Suku")
@@ -118,7 +118,7 @@ class Alokasaun(models.Model):
 	"""Pozisaun/kargu ne'ebé Presidente Postu aloka ba membru (modelu hanesan Kolokasaun)."""
 	membro = models.ForeignKey(Membro, on_delete=models.CASCADE, related_name='alokasaun', verbose_name="Membru")
 	nivel = models.CharField(choices=NIVEL, max_length=15, verbose_name="Nivel")
-	pozisaun = models.CharField(max_length=15, verbose_name="Pozisaun")  # naran husi tabela Pozisaun
+	pozisaun = models.CharField(max_length=30, verbose_name="Pozisaun")  # naran husi tabela Pozisaun
 	village = models.ForeignKey(Village, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Suku")
 	aldeia = models.ForeignKey(Aldeia, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Aldeia")
 	organizasaun = models.ForeignKey(Organizasaun, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Organizasaun")

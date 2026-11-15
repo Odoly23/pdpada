@@ -3262,11 +3262,41 @@ class PozisaunMasterTests(BaseCase):
 		self.m = self.make('PM000001', aprovasaun='Aprovadu')
 
 	def test_initial_rows_and_levels(self):
-		self.assertEqual(list(Pozisaun.objects.values_list('naran', flat=True)), ['Presidente', 'Vice I', 'Vice II', 'Vice III', 'Coordenador', 'Sekretariu'])
+		vice_c = ['Vice Coordenador I', 'Vice Coordenador II', 'Vice Coordenador III']
+		vice_s = ['Vice Sekretariu I', 'Vice Sekretariu II', 'Vice Sekretariu III']
+		semua = ['Presidente', 'Vice I', 'Vice II', 'Vice III', 'Coordenador'] + vice_c + ['Sekretariu'] + vice_s
+		self.assertEqual(list(Pozisaun.objects.values_list('naran', flat=True)), semua)
 		por_nivel = pozisaun_por_nivel()
-		self.assertEqual(por_nivel['Postu'], ['Presidente', 'Vice I', 'Vice II', 'Vice III', 'Coordenador', 'Sekretariu'])
-		for n in ('Suku', 'Aldeia', 'Organizasaun'):
-			self.assertEqual(por_nivel[n], ['Coordenador', 'Sekretariu'], n)
+		self.assertEqual(por_nivel['Postu'], semua)
+		for n in ('Suku', 'Aldeia', 'Organizasaun'):  # Coordenador ho Vice I-III no Sekretariu ho Vice I-III
+			self.assertEqual(por_nivel[n], ['Coordenador'] + vice_c + ['Sekretariu'] + vice_s, n)
+
+	def test_vice_coordenador_and_sekretariu_selectable_and_saved_at_suku_and_aldeia(self):
+		self.login('presidente')
+		page = self.client.get(reverse('alokasaun-add')).content.decode()
+		for n in ('Vice Coordenador I', 'Vice Coordenador III', 'Vice Sekretariu I', 'Vice Sekretariu III'):
+			self.assertIn(f'<option value="{n}">', page)
+		base = {'membro': self.m.pk, 'nivel': 'Suku', 'pozisaun': 'Vice Coordenador II', 'village': self.va.pk, 'data_hahu': '2026-01-01', 'ativu': 'Sim'}
+		self.assertEqual(self.client.post(reverse('alokasaun-add'), base).status_code, 302)
+		self.assertEqual(Alokasaun.objects.get().pozisaun, 'Vice Coordenador II')
+		m2 = self.make('PM000002', aprovasaun='Aprovadu')
+		ok = dict(base, membro=m2.pk, nivel='Aldeia', pozisaun='Vice Sekretariu III', aldeia=self.a1.pk, village='')
+		self.assertEqual(self.client.post(reverse('alokasaun-add'), ok).status_code, 302)
+		m3 = self.make('PM000003', aprovasaun='Aprovadu')  # Vice Coordenador II suku ne'e iha ona
+		self.assertEqual(self.client.post(reverse('alokasaun-add'), dict(base, membro=m3.pk)).status_code, 200)
+		m4 = self.make('PM000004', aprovasaun='Aprovadu')  # Vice Coordenador I seidauk iha: bele
+		self.assertEqual(self.client.post(reverse('alokasaun-add'), dict(base, membro=m4.pk, pozisaun='Vice Coordenador I')).status_code, 302)
+
+	def test_vice_coordenador_in_pozisaun_step_and_bagan(self):
+		self.login('sekrsuku')
+		url = reverse('membro-aloka', args=[self.m.hashed])
+		self.assertIn('<option value="Vice Sekretariu II">', self.client.get(url).content.decode())
+		d = {'membro': self.m.pk, 'tipu': 'Ejekutivu', 'nivel': 'Aldeia', 'pozisaun': 'Vice Sekretariu II', 'aldeia': self.a1.pk, 'data_hahu': '2026-01-01'}
+		self.assertEqual(self.client.post(url, d).status_code, 302)
+		self.login('presidente')
+		suku_a = [c for c in self.client.get(reverse('alokasaun-dash')).context['roots'][0]['children'] if c['title'] == 'Suku A'][0]
+		a1 = [c for c in suku_a['children'] if c['title'] == 'A1'][0]
+		self.assertIn(('Vice Sekretariu II', self.m.nome), [(p['label'], p['membro'].nome) for p in a1['people'] if p['membro']])
 
 	def post(self, **kw):
 		self.login('presidente')
@@ -3297,14 +3327,15 @@ class PozisaunMasterTests(BaseCase):
 		Pozisaun.objects.create(naran='Tesoureiru', urutan=3, iha_postu=True)
 		self.login('presidente')
 		names = [p for p, _ in self.client.get(reverse('alokasaun-tabel')).context['postu']]
-		self.assertEqual(names, ['Presidente', 'Vice I', 'Tesoureiru', 'Vice II', 'Vice III', 'Coordenador', 'Sekretariu'])
+		self.assertEqual(names[:5], ['Presidente', 'Vice I', 'Tesoureiru', 'Vice II', 'Vice III'])
+		self.assertIn('Vice Sekretariu III', names)
 
 	def test_admin_pozisaun_and_alokasaun_dropdown(self):
 		su = User.objects.create_superuser('su', 'su@example.com', 'Teste-12345!')
 		self.client.force_login(su)
 		self.assertContains(self.client.get('/admin/membro/pozisaun/'), 'Vice III')
 		page = self.client.get('/admin/membro/alokasaun/add/').content.decode()
-		for n in ('Presidente', 'Vice I', 'Vice II', 'Vice III', 'Coordenador', 'Sekretariu'):
+		for n in ('Presidente', 'Vice I', 'Vice III', 'Coordenador', 'Vice Coordenador I', 'Sekretariu', 'Vice Sekretariu III'):
 			self.assertIn(f'<option value="{n}">', page)
 
 	def test_admin_protects_used_pozisaun(self):
