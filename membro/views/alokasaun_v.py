@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from config import roles
 from config.decorators import allowed_users
+from django.urls import reverse
 from config.user_utils import c_user_group, c_user_scope, alokasaun_scope
 from custom.models import Village, Aldeia, Organizasaun, Year
 from membro.forms import AlokasaunForm
@@ -121,7 +122,7 @@ def _unit_scope(user):
 	"""Suku, aldeia dan organisasi yang masuk dalam wilayah user."""
 	group, scope = c_user_group(user), c_user_scope(user)
 	villages, aldeias, orgs = Village.objects.none(), Aldeia.objects.none(), Organizasaun.objects.none()
-	if group in roles.POSTU_ROLES:
+	if group in roles.POSTU_ROLES or group == roles.ADMIN:
 		villages, aldeias, orgs = Village.objects.all(), Aldeia.objects.all(), Organizasaun.objects.filter(is_active=True)
 	elif scope and group in roles.SUKU_ROLES and scope.village_id:
 		villages, aldeias = Village.objects.filter(pk=scope.village_id), Aldeia.objects.filter(village_id=scope.village_id)
@@ -158,11 +159,68 @@ def AlokasaunDash(request):
 	rows_aldeia = [{'a': a, 'coord': aldeia_hold.get((a.pk, 'Coordenador')), 'sekr': aldeia_hold.get((a.pk, 'Sekretariu'))} for a in aldeias]
 	rows_org = [{'o': o, 'coord': org.get((o.pk, 'Coordenador')), 'sekr': org.get((o.pk, 'Sekretariu'))} for o in orgs]
 	context = {
-		'group': group, 'show_postu': group in roles.POSTU_ROLES,
+		'group': group, 'show_postu': group in roles.POSTU_ROLES or group == roles.ADMIN,
 		'can_aloka': group in roles.ALOKA_ROLES, 'can_link': group in roles.POSTU_ROLES,
 		'postu': [(p, postu.get(p)) for p in ('Presidente', 'Coordenador', 'Sekretariu')],
 		'rows_suku': rows_suku, 'rows_aldeia': rows_aldeia, 'rows_org': rows_org,
 		'ano_ativu_obj': Year.objects.filter(is_active=True).first(),
-		'title': 'Struktura PD', 'legend': 'Struktura PD'
+		'title': 'Tabel Struktura', 'legend': 'Tabel Struktura'
 	}
 	return render(request, 'membro/alokasaun_dash.html', context)
+
+
+# struktura PD nu'udar bagan organigrama (Postu -> Suku -> Aldeia, ho sayap OJD, OMD, MPD)
+@login_required
+@allowed_users(allowed_roles=roles.STRUKTURA_ROLES)
+def StrukturaBagan(request):
+	"""Bagan organigrama Struktura PD: pozisaun ativu (Coordenador, Sekretariu/a Geral, sayap) iha Postu, Suku no Aldeia.
+	Postu nia pájina suku/aldeia bele loke husi bagan; peran seluk hare de'it nia unidade."""
+	group = c_user_group(request.user)
+	villages, aldeias, orgs = _unit_scope(request.user)
+	aktivu = Alokasaun.objects.filter(ativu='Sim').select_related('membro', 'organizasaun')
+	by_unit = {}
+	for a in aktivu:
+		unit = {'Postu': ('P', 0), 'Suku': ('S', a.village_id), 'Aldeia': ('A', a.aldeia_id), 'Organizasaun': ('O', a.organizasaun_id)}[a.nivel]
+		by_unit.setdefault(unit, []).append(a)
+	order = {'Presidente': 0, 'Coordenador': 1, 'Sekretariu': 2}
+	label = {'Presidente': 'Presidente', 'Coordenador': 'Coordenador', 'Sekretariu': 'Sekretariu/a Geral'}
+
+	def people(kind, pk, org_code=None):
+		rows = sorted((a for a in by_unit.get((kind, pk), []) if not (kind in ('S', 'A') and a.organizasaun_id)), key=lambda a: order[a.pozisaun])
+		out = []
+		for a in rows:  # sayap (OJD, OMD, MPD) iha suku/aldeia hatudu iha kartaun Sayap iha okos
+			out.append({'label': label[a.pozisaun], 'membro': a.membro})
+		# Coordenador no Sekretariu/a Geral sempre hatudu (mamuk = "-")
+		have = {p['label'] for p in out}
+		for pos in (('Coordenador',) if kind == 'P' else ('Coordenador', 'Sekretariu')):
+			if label[pos] not in have:
+				out.insert(0 if pos == 'Coordenador' else min(1, len(out)), {'label': label[pos], 'membro': None})
+		return out
+	todas_org = list(Organizasaun.objects.filter(is_active=True).order_by('code'))
+
+	def sayap(kind, pk):
+		"""Kartaun Sayap iha okos suku/aldeia: Coordenador no Sekretariu/a Geral ba OJD, OMD, MPD (tuir organizasaun ativu)."""
+		hold = {(a.organizasaun_id, a.pozisaun): a.membro for a in by_unit.get((kind, pk), []) if a.organizasaun_id}
+		rows = [{'code': o.code, 'coord': hold.get((o.pk, 'Coordenador')), 'sekr': hold.get((o.pk, 'Sekretariu'))} for o in todas_org]
+		return {'title': ' · '.join(o.code for o in todas_org) or 'Sayap', 'kind': 'Sayap', 'people': [], 'sayap': rows, 'url': '', 'children': []}
+	can_link = group in roles.POSTU_ROLES
+	aldeias = list(aldeias)
+	suku_nodes = []
+	for v in villages:
+		kids = [{'title': a.name, 'kind': 'Aldeia', 'people': people('A', a.pk),
+			'url': reverse('membro-aldeia', args=[a.pk]) if can_link else '', 'children': [sayap('A', a.pk)]} for a in aldeias if a.village_id == v.pk]
+		suku_nodes.append({'title': v.name, 'kind': 'Suku', 'people': people('S', v.pk),
+			'url': reverse('membro-suku', args=[v.pk]) if can_link else '', 'children': [sayap('S', v.pk)] + kids})
+	org_nodes = [{'title': o.code, 'kind': 'Organizasaun', 'people': people('O', o.pk), 'url': '', 'children': []} for o in orgs]
+	if group in roles.POSTU_ROLES or group == roles.ADMIN:
+		roots = [{'title': 'Postu Administrativu Dom Aleixo', 'kind': 'Postu', 'people': people('P', 0), 'url': '', 'children': org_nodes + suku_nodes}]
+	else:
+		roots = suku_nodes or [{'title': n['title'], 'kind': n['kind'], 'people': n['people'], 'url': '', 'children': []} for n in org_nodes]
+		if not suku_nodes and aldeias:
+			roots = [{'title': a.name, 'kind': 'Aldeia', 'people': people('A', a.pk), 'url': '', 'children': [sayap('A', a.pk)]} for a in aldeias]
+	context = {
+		'group': group, 'roots': roots, 'can_aloka': group in roles.ALOKA_ROLES,
+		'n_suku': len(suku_nodes), 'n_aldeia': len(aldeias), 'n_pozisaun': sum(len(v) for v in by_unit.values()),
+		'title': 'Struktura PD', 'legend': 'Struktura PD'
+	}
+	return render(request, 'membro/struktura_bagan.html', context)

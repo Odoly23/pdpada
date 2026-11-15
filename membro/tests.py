@@ -544,7 +544,7 @@ class StrukturaDashTests(BaseCase):
 
 	def dash(self, user):
 		self.login(user)
-		resp = self.client.get(reverse('alokasaun-dash'))
+		resp = self.client.get(reverse('alokasaun-tabel'))
 		self.assertEqual(resp.status_code, 200)
 		return resp
 
@@ -577,9 +577,10 @@ class StrukturaDashTests(BaseCase):
 		self.assertEqual([r['o'].code for r in resp.context['rows_org']], ['OJD'])
 		self.assertEqual(resp.context['rows_suku'], [])
 
-	def test_admin_forbidden(self):
+	def test_admin_can_open_struktura_pages(self):
 		self.login('admin')
-		self.assertEqual(self.client.get(reverse('alokasaun-dash')).status_code, 403)
+		for name in ('alokasaun-dash', 'alokasaun-tabel', 'alokasaun-list'):
+			self.assertEqual(self.client.get(reverse(name)).status_code, 200, name)
 
 	def test_inactive_allocation_not_counted(self):
 		Alokasaun.objects.filter(pozisaun='Presidente').update(ativu='Lae')
@@ -602,7 +603,7 @@ class StrukturaDashTests(BaseCase):
 		self.login('presidente')
 		resp = self.client.get(reverse('alokasaun-dash'))
 		struktura = [i for i in resp.context['nav_items'] if i['label'] == 'Struktura'][0]
-		self.assertEqual([c['url'] for c in struktura['children']], [reverse('alokasaun-dash'), reverse('organigrama')])  # dropdown: Struktura PD dan Organigrama
+		self.assertEqual([c['url'] for c in struktura['children']], [reverse('alokasaun-dash'), reverse('organigrama'), reverse('alokasaun-tabel')])  # dropdown: Struktura PD, Organigrama, Tabel Struktura
 		self.assertTrue(struktura['active'])
 
 	def test_alokasaun_api_scoped(self):
@@ -2526,7 +2527,7 @@ class DelegaduTests(BaseCase):
 
 	def test_wings_do_not_break_main_leaders_elsewhere(self):
 		self.login('presidente')
-		dash = self.client.get(reverse('alokasaun-dash'))
+		dash = self.client.get(reverse('alokasaun-tabel'))
 		row = [r for r in dash.context['rows_suku'] if r['v'] == self.va][0]
 		self.assertEqual(row['coord'].membro, self.k)  # bukan sayap OJD
 		self.assertEqual(self.client.get('/').context['info']['lengkap'], 1)
@@ -2589,9 +2590,10 @@ class OrganigramaTests(BaseCase):
 	def test_view_roles_and_manage_buttons(self):
 		for u in ('presidente', 'koordpostu', 'koordsuku', 'sekrsuku', 'sekraldeia', 'koordorg', 'sekrorg'):
 			self.assertEqual(self.page(u).status_code, 200, u)
-		for u in ('sekrpostu', 'admin'):
-			self.login(u)
-			self.assertEqual(self.client.get(reverse('organigrama')).status_code, 403, u)
+		self.login('sekrpostu')
+		self.assertEqual(self.client.get(reverse('organigrama')).status_code, 403)
+		self.assertEqual(self.page('admin').status_code, 200)  # Admin bele hare
+		self.assertContains(self.page('admin'), reverse('org-pozisaun-add'))  # Admin mós jere (ALOKA_ROLES)
 		self.assertContains(self.page('presidente'), reverse('org-pozisaun-add'))
 		self.assertNotContains(self.page('koordpostu'), reverse('org-pozisaun-add'))
 
@@ -3171,3 +3173,80 @@ class PozisaunStepTests(BaseCase):
 		for needle in ('Militante', 'Simpatizante', 'Ejekutivu', 'Pasu 3 husi 3', 'ejekutivu-field'):
 			self.assertContains(page, needle)
 		self.assertContains(self.client.get(self.detail()), self.url)
+
+
+class StrukturaBaganTests(BaseCase):
+	"""Struktura PD nu'udar bagan organigrama (Postu -> Suku -> Aldeia, sayap); tabel ho menu aparte."""
+
+	def setUp(self):
+		d = datetime.date(2026, 1, 1)
+		self.k = self.make('BG000001', aprovasaun='Aprovadu', nome='Koord Suku A')
+		self.sk = self.make('BG000002', aprovasaun='Aprovadu', nome='Sekr Suku A')
+		self.ka = self.make('BG000003', aprovasaun='Aprovadu', nome='Koord Aldeia A1')
+		self.p = self.make('BG000004', aprovasaun='Aprovadu', nome='Presidente Postu')
+		self.o = self.make('BG000005', aprovasaun='Aprovadu', nome='Koord OJD Postu', organizasaun=self.org)
+		Alokasaun.objects.create(membro=self.k, nivel='Suku', pozisaun='Coordenador', village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.sk, nivel='Suku', pozisaun='Sekretariu', village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.ka, nivel='Aldeia', pozisaun='Coordenador', aldeia=self.a1, village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.p, nivel='Postu', pozisaun='Presidente', data_hahu=d)
+		Alokasaun.objects.create(membro=self.o, nivel='Organizasaun', pozisaun='Coordenador', organizasaun=self.org, data_hahu=d)
+
+	def test_postu_sees_tree_with_all_levels_and_links(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('alokasaun-dash'))
+		self.assertTemplateUsed(resp, 'membro/struktura_bagan.html')
+		for needle in ('org-tree', 'Postu Administrativu Dom Aleixo', 'Presidente Postu', 'Koord Suku A', 'Sekr Suku A', 'Koord Aldeia A1',
+				'Koord OJD Postu', 'Sekretariu/a Geral', reverse('membro-suku', args=[self.va.pk]), reverse('membro-aldeia', args=[self.a1.pk])):
+			self.assertContains(resp, needle)
+		root = resp.context['roots'][0]
+		self.assertEqual([c['title'] for c in root['children']], ['OJD', 'Suku A', 'Suku B'])  # sayap Postu nia nivel
+		suku_a = [c for c in root['children'] if c['title'] == 'Suku A'][0]
+		self.assertEqual([(c['kind'], c['title']) for c in suku_a['children']][1:], [('Aldeia', 'A1'), ('Aldeia', 'A2')])
+		self.assertEqual(suku_a['children'][0]['kind'], 'Sayap')  # OJD/OMD/MPD iha okos suku
+		self.assertEqual([c['kind'] for c in suku_a['children'][1]['children']], ['Sayap'])  # no iha okos aldeia
+		self.assertEqual([(p['label'], p['membro'].nome if p['membro'] else None) for p in suku_a['people']],
+			[('Coordenador', 'Koord Suku A'), ('Sekretariu/a Geral', 'Sekr Suku A')])
+
+	def test_sayap_holders_listed_under_suku_and_aldeia_not_in_main_card(self):
+		d = datetime.date(2026, 1, 1)
+		m1 = self.make('BG000010', aprovasaun='Aprovadu', nome='Koord OJD Suku A', organizasaun=self.org)
+		m2 = self.make('BG000011', aprovasaun='Aprovadu', nome='Sekr OJD A1', organizasaun=self.org)
+		Alokasaun.objects.create(membro=m1, nivel='Suku', pozisaun='Coordenador', village=self.va, organizasaun=self.org, data_hahu=d)
+		Alokasaun.objects.create(membro=m2, nivel='Aldeia', pozisaun='Sekretariu', aldeia=self.a1, village=self.va, organizasaun=self.org, data_hahu=d)
+		self.login('presidente')
+		suku_a = [c for c in self.client.get(reverse('alokasaun-dash')).context['roots'][0]['children'] if c['title'] == 'Suku A'][0]
+		self.assertEqual([p['membro'].nome for p in suku_a['people'] if p['membro']], ['Koord Suku A', 'Sekr Suku A'])  # sayap la bolu iha kartaun prinsipál
+		sayap_suku = {r['code']: r for r in suku_a['children'][0]['sayap']}
+		self.assertEqual(sayap_suku['OJD']['coord'].nome, 'Koord OJD Suku A')
+		self.assertIsNone(sayap_suku['OJD']['sekr'])
+		a1 = suku_a['children'][1]
+		self.assertEqual({r['code']: r for r in a1['children'][0]['sayap']}['OJD']['sekr'].nome, 'Sekr OJD A1')
+
+	def test_empty_positions_show_dash_not_missing(self):
+		self.login('presidente')
+		suku_b = [c for c in self.client.get(reverse('alokasaun-dash')).context['roots'][0]['children'] if c['title'] == 'Suku B'][0]
+		self.assertEqual([p['membro'] for p in suku_b['people']], [None, None])
+
+	def test_suku_role_sees_only_own_suku_without_page_links(self):
+		self.login('koordsuku')
+		resp = self.client.get(reverse('alokasaun-dash'))
+		self.assertEqual([r['title'] for r in resp.context['roots']], ['Suku A'])
+		self.assertNotContains(resp, 'Suku B')
+		self.assertNotContains(resp, reverse('membro-suku', args=[self.va.pk]))  # pájina suku deit ba Postu
+
+	def test_org_role_sees_own_org_node(self):
+		self.login('koordorg')
+		self.assertEqual([r['title'] for r in self.client.get(reverse('alokasaun-dash')).context['roots']], ['OJD'])
+
+	def test_table_view_moved_to_own_menu_and_menu_order(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('alokasaun-tabel'))
+		self.assertTemplateUsed(resp, 'membro/alokasaun_dash.html')
+		self.assertEqual(resp.context['title'], 'Tabel Struktura')
+		struktura = [i for i in resp.context['nav_items'] if i['label'] == 'Struktura'][0]
+		self.assertEqual([c['label'] for c in struktura['children']], ['Struktura PD', 'Organigrama', 'Tabel Struktura'])
+		self.assertEqual([c['active'] for c in struktura['children']], [False, False, True])
+
+	def test_sekretariu_postu_and_koord_org_other_rules(self):
+		self.login('sekrpostu')
+		self.assertEqual(self.client.get(reverse('alokasaun-dash')).status_code, 403)

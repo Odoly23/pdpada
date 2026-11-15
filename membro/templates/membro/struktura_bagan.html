@@ -1,0 +1,37 @@
+{% extends "main/layout.html" %}
+{% block content %}
+	<ol class="breadcrumb mb-2 mt-1">
+		<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+		<li class="breadcrumb-item active" aria-current="page">STRUKTURA PD</li>
+	</ol>
+	<div class="row">
+		<div class="col-sm-12 mb-2">
+			<div class="card"><div class="card-header bg-primary text-white text-center">STRUKTURA PARTIDO DEMOCRATICO <br/> POSTU DOM ALEIXO</div></div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-sm-12">
+			<div class="card shadow-lg pt-0 rounded">
+				<div class="card-header no-print">
+					{% if can_aloka %}<a class="btn btn-sm btn-primary mb-2" href="{% url 'alokasaun-add' %}">Aloka Pozisaun <i class="fa fa-plus"></i></a>{% endif %}
+					<a class="btn btn-sm btn-secondary mb-2" href="{% url 'alokasaun-tabel' %}">Tabel Struktura <i class="fa fa-table"></i></a>
+					<a class="btn btn-sm btn-secondary mb-2" href="{% url 'organigrama' %}">Organigrama <i class="fa fa-share-alt"></i></a>
+					<button type="button" class="btn btn-sm btn-info mb-2" onclick="window.print()">Imprime <i class="fa fa-print"></i></button>
+				</div>
+				<div class="card-body">
+					<div class="row text-center org-stats no-print mb-4">
+						<div class="col-4"><span class="stat-label">Suku</span><span class="stat-number d-block">{{ n_suku }}</span></div>
+						<div class="col-4"><span class="stat-label">Aldeia</span><span class="stat-number d-block">{{ n_aldeia }}</span></div>
+						<div class="col-4"><span class="stat-label">Pozisaun Ativu</span><span class="stat-number d-block">{{ n_pozisaun }}</span></div>
+					</div>
+					<div class="org-scroll">
+						<ul class="org-tree struk-tree">
+							{% for node in roots %}{% include "membro/_struk_node.html" with node=node %}
+							{% empty %}<li class="text-center text-muted">Seidauk iha struktura.</li>{% endfor %}
+						</ul>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock %}
