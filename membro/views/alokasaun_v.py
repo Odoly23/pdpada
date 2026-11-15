@@ -199,7 +199,7 @@ def StrukturaBagan(request):
 	todas_org = list(Organizasaun.objects.filter(is_active=True).order_by('code'))
 
 	def sayap(kind, pk):
-		"""Kartaun Sayap iha okos suku/aldeia: Coordenador no Sekretariu/a Geral ba OJD, OMD, MPD (tuir organizasaun ativu)."""
+		"""Kartaun Sayap iha okos aldeia (bagan: Postu > Suku > Aldeia > OJD, OMD, MPD): Coordenador no Sekretariu/a Geral ba OJD, OMD, MPD (tuir organizasaun ativu)."""
 		hold = {(a.organizasaun_id, a.pozisaun): a.membro for a in by_unit.get((kind, pk), []) if a.organizasaun_id}
 		rows = [{'code': o.code, 'coord': hold.get((o.pk, 'Coordenador')), 'sekr': hold.get((o.pk, 'Sekretariu'))} for o in todas_org]
 		return {'title': ' · '.join(o.code for o in todas_org) or 'Sayap', 'kind': 'Sayap', 'people': [], 'sayap': rows, 'url': '', 'children': []}
@@ -210,10 +210,10 @@ def StrukturaBagan(request):
 		kids = [{'title': a.name, 'kind': 'Aldeia', 'people': people('A', a.pk),
 			'url': reverse('membro-aldeia', args=[a.pk]) if can_link else '', 'children': [sayap('A', a.pk)]} for a in aldeias if a.village_id == v.pk]
 		suku_nodes.append({'title': v.name, 'kind': 'Suku', 'people': people('S', v.pk),
-			'url': reverse('membro-suku', args=[v.pk]) if can_link else '', 'children': [sayap('S', v.pk)] + kids})
+			'url': reverse('membro-suku', args=[v.pk]) if can_link else '', 'children': kids})
 	org_nodes = [{'title': o.code, 'kind': 'Organizasaun', 'people': people('O', o.pk), 'url': '', 'children': []} for o in orgs]
 	if group in roles.POSTU_ROLES or group == roles.ADMIN:
-		roots = [{'title': 'Postu Administrativu Dom Aleixo', 'kind': 'Postu', 'people': people('P', 0), 'url': '', 'children': org_nodes + suku_nodes}]
+		roots = [{'title': 'Postu Administrativu Dom Aleixo', 'kind': 'Postu', 'people': people('P', 0), 'url': '', 'children': suku_nodes}]
 	else:
 		roots = suku_nodes or [{'title': n['title'], 'kind': n['kind'], 'people': n['people'], 'url': '', 'children': []} for n in org_nodes]
 		if not suku_nodes and aldeias:

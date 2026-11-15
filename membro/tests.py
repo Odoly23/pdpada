@@ -3085,7 +3085,11 @@ class PozisaunStepTests(BaseCase):
 		self.login('sekrsuku')
 		fields = self.client.get(reverse('membro-add')).context['form'].fields
 		self.assertFalse({'kategoria', 'organizasaun'} & set(fields))
-		self.assertEqual(self.post_add_nu_empty('sekrsuku').status_code, 302)  # Nu. Eleitoral la obrigatóriu iha form prinsipál
+		self.assertTrue(self.client.get(reverse('membro-add')).context['form'].fields['nu_eleitoral'].required)
+		resp = self.post_add_nu_empty('sekrsuku')  # Nu. Eleitoral obrigatóriu ba membru hotu (Militante no Simpatizante)
+		self.assertEqual(resp.status_code, 200)
+		self.assertContains(resp, 'Nu. Eleitoral obrigatóriu ba membru hotu')
+		self.assertEqual(Membro.objects.count(), 1)  # ha'u deit husi setUp
 
 	def post_add_nu_empty(self, user):
 		self.login(user)
@@ -3196,18 +3200,17 @@ class StrukturaBaganTests(BaseCase):
 		resp = self.client.get(reverse('alokasaun-dash'))
 		self.assertTemplateUsed(resp, 'membro/struktura_bagan.html')
 		for needle in ('org-tree', 'Postu Administrativu Dom Aleixo', 'Presidente Postu', 'Koord Suku A', 'Sekr Suku A', 'Koord Aldeia A1',
-				'Koord OJD Postu', 'Sekretariu/a Geral', reverse('membro-suku', args=[self.va.pk]), reverse('membro-aldeia', args=[self.a1.pk])):
+				'Sekretariu/a Geral', reverse('membro-suku', args=[self.va.pk]), reverse('membro-aldeia', args=[self.a1.pk])):
 			self.assertContains(resp, needle)
 		root = resp.context['roots'][0]
-		self.assertEqual([c['title'] for c in root['children']], ['OJD', 'Suku A', 'Suku B'])  # sayap Postu nia nivel
-		suku_a = [c for c in root['children'] if c['title'] == 'Suku A'][0]
-		self.assertEqual([(c['kind'], c['title']) for c in suku_a['children']][1:], [('Aldeia', 'A1'), ('Aldeia', 'A2')])
-		self.assertEqual(suku_a['children'][0]['kind'], 'Sayap')  # OJD/OMD/MPD iha okos suku
-		self.assertEqual([c['kind'] for c in suku_a['children'][1]['children']], ['Sayap'])  # no iha okos aldeia
+		self.assertEqual([c['title'] for c in root['children']], ['Suku A', 'Suku B'])  # Postu > Suku hotu
+		suku_a = root['children'][0]
+		self.assertEqual([(c['kind'], c['title']) for c in suku_a['children']], [('Aldeia', 'A1'), ('Aldeia', 'A2')])  # Suku > Aldeia
+		self.assertEqual([c['kind'] for c in suku_a['children'][0]['children']], ['Sayap'])  # Aldeia > OJD, OMD, MPD
 		self.assertEqual([(p['label'], p['membro'].nome if p['membro'] else None) for p in suku_a['people']],
 			[('Coordenador', 'Koord Suku A'), ('Sekretariu/a Geral', 'Sekr Suku A')])
 
-	def test_sayap_holders_listed_under_suku_and_aldeia_not_in_main_card(self):
+	def test_sayap_holders_listed_under_aldeia_not_in_main_card(self):
 		d = datetime.date(2026, 1, 1)
 		m1 = self.make('BG000010', aprovasaun='Aprovadu', nome='Koord OJD Suku A', organizasaun=self.org)
 		m2 = self.make('BG000011', aprovasaun='Aprovadu', nome='Sekr OJD A1', organizasaun=self.org)
@@ -3216,11 +3219,11 @@ class StrukturaBaganTests(BaseCase):
 		self.login('presidente')
 		suku_a = [c for c in self.client.get(reverse('alokasaun-dash')).context['roots'][0]['children'] if c['title'] == 'Suku A'][0]
 		self.assertEqual([p['membro'].nome for p in suku_a['people'] if p['membro']], ['Koord Suku A', 'Sekr Suku A'])  # sayap la bolu iha kartaun prinsipál
-		sayap_suku = {r['code']: r for r in suku_a['children'][0]['sayap']}
-		self.assertEqual(sayap_suku['OJD']['coord'].nome, 'Koord OJD Suku A')
-		self.assertIsNone(sayap_suku['OJD']['sekr'])
-		a1 = suku_a['children'][1]
-		self.assertEqual({r['code']: r for r in a1['children'][0]['sayap']}['OJD']['sekr'].nome, 'Sekr OJD A1')
+		a1 = suku_a['children'][0]
+		self.assertEqual([p['membro'].nome for p in a1['people'] if p['membro']], ['Koord Aldeia A1'])
+		sayap = {r['code']: r for r in a1['children'][0]['sayap']}
+		self.assertEqual(sayap['OJD']['sekr'].nome, 'Sekr OJD A1')
+		self.assertIsNone(sayap['OJD']['coord'])
 
 	def test_empty_positions_show_dash_not_missing(self):
 		self.login('presidente')

@@ -41,7 +41,9 @@ class MembroForm(forms.ModelForm):
 		super().__init__(*args, **kwargs)
 		group = c_user_group(user) if user else None
 		scope = c_user_scope(user) if user else None
-		self.fields['nu_eleitoral'].help_text = 'Obrigatóriu se iha pasu pozisaun ita hili Militante ka Ejekutivu; Simpatizante bele husik mamuk.'
+		self.fields['nu_eleitoral'].error_messages['required'] = 'Nu. Eleitoral obrigatóriu ba membru hotu (Militante no Simpatizante).'
+		self.fields['nu_eleitoral'].required = True  # importante: obrigatóriu ba membru hotu (Militante no Simpatizante)
+		self.fields['nu_eleitoral'].help_text = 'Obrigatóriu. Nu. Eleitoral ida deit ba membru ida (la bele dobra).'
 		# upload: FileInput biasa (tanpa tautan/URL publik); isi file diperiksa di server
 		self.fields['image'].widget = forms.FileInput(attrs={'accept': 'image/jpeg,image/png'})
 		self.fields['file_eleitoral'].widget = forms.FileInput(attrs={'accept': 'application/pdf'})
@@ -128,7 +130,7 @@ class MembroForm(forms.ModelForm):
 	def clean_nu_eleitoral(self):
 		valor = normalize_eleitoral(self.cleaned_data.get('nu_eleitoral'))
 		if not valor:
-			return None  # Simpatizante bele laiha; Militante/Ejekutivu diperiksa iha pasu pozisaun
+			return None  # la mosu (field obrigatóriu); membru antigu ho nu. mamuk tenke hatama bainhira edita
 		qs = Membro.objects.filter(nu_eleitoral__iexact=valor)
 		if self.instance.pk:
 			qs = qs.exclude(pk=self.instance.pk)
