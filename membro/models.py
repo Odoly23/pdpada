@@ -116,6 +116,8 @@ class Alokasaun(models.Model):
 		old = Alokasaun.objects.filter(pk=self.pk).values_list('membro_id', flat=True).first() if self.pk else None
 		super().save(*args, **kwargs)
 		sync_colocado(self.membro_id)
+		if self.organizasaun_id:  # membru ne'e tama organizasaun ne'e (hatama organizasaun la iha iha form membru)
+			Membro.objects.filter(pk=self.membro_id, organizasaun__isnull=True).update(organizasaun_id=self.organizasaun_id)
 		if old and old != self.membro_id:  # alokasaun dipindah ke membru lain
 			sync_colocado(old)
 

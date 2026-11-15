@@ -1,26 +1,19 @@
 {% extends "main/form.html" %}
 {% block form_scripts %}
 <script type="text/javascript">
-	function grp(id) { return $('#id_' + id).closest('.form-group'); }
-	var NIVEL_TIPU = {Ejekutivu: ['Postu', 'Suku', 'Aldeia'], Organizasaun: ['Suku', 'Aldeia', 'Organizasaun']};
-	// hatudu de'it kampu ne'ebé relevante tuir tipu no nivel
+	// hatudu de'it kampu ne'ebé relevante: Militante/Simpatizante = la presiza pozisaun; Ejekutivu = nivel, pozisaun no unidade
 	function toggleUnit() {
-		var tipu = $('#id_tipu').val() || '';
-		var laiha = tipu === 'Laiha';
-		var allowed = NIVEL_TIPU[tipu];
-		$('#id_nivel option').each(function () {
-			var ok = !this.value || !allowed || allowed.indexOf(this.value) >= 0;
-			$(this).prop('disabled', !ok).toggle(ok);
-		});
-		if (allowed && allowed.indexOf($('#id_nivel').val()) < 0) { $('#id_nivel').val(''); }
+		var tipu = $('#id_tipu').val() || 'Ejekutivu';
+		var ejek = tipu === 'Ejekutivu';
 		var n = ($('#id_nivel').val() || '').toLowerCase();
+		$('.ejekutivu-field').toggle(ejek);
 		$('.unit-suku, .unit-aldeia, .unit-organizasaun').hide();
-		if (!laiha) {
-			if (n === 'suku') { $('.unit-suku').show(); }
+		if (ejek) {
+			if (n === 'suku') { $('.unit-suku').show(); }  // organizasaun = sayap (opsionál)
 			if (n === 'aldeia') { $('.unit-aldeia').show(); }
-			if (tipu === 'Organizasaun' || n === 'organizasaun') { $('.unit-organizasaun').show(); }
+			if (n === 'organizasaun') { $('.unit-organizasaun').show(); }
 		}
-		['nivel', 'pozisaun', 'data_hahu', 'data_termina', 'ativu'].forEach(function (f) { grp(f).toggle(!laiha); });
+		if (!$('#id_tipu').length) { $('#id_data_hahu').closest('.form-group').show(); }
 	}
 	$('#id_tipu, #id_nivel').on('change', toggleUnit);
 	toggleUnit();

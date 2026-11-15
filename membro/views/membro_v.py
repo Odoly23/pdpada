@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from config import roles
 from config.decorators import allowed_users
-from config.user_utils import c_user_group, membro_scope
+from config.user_utils import c_user_group, c_user_scope, membro_scope
 from custom.models import Year, Village, Aldeia, Organizasaun
 from django.urls import reverse
 from membro.forms import MembroForm, KontaktuForm, ServisuForm, EdukasaunForm, AlokasaunMembroForm
@@ -67,6 +67,9 @@ def MembroAdd(request):
 		if form.is_valid():
 			instance = form.save(commit=False)
 			instance.year = ano
+			scope = c_user_scope(request.user)
+			if group == roles.SEKR_ORG and scope and scope.organizasaun_id:
+				instance.organizasaun_id = scope.organizasaun_id  # sekjer organizasaun: membru tama organizasaun nia
 			instance.aprovasaun = 'Pendente'
 			instance.datetime = timezone.now()
 			instance.user = request.user
@@ -171,8 +174,8 @@ def MembroFile(request, hashid, kind):
 
 # fluxu input membru: membru -> edukasaun -> servisu -> pozisaun -> detalle
 def _bele_aloka(user, emp):
-	"""Pozisaun bele aloka (Presidente/Admin) ba membru ativu, seidauk iha pozisaun no la rejeitadu; input hotu uluk, depois aprova."""
-	return (c_user_group(user) in roles.ALOKA_ROLES and emp.aprovasaun != 'Rejeitadu' and emp.status == 'Ativu' and not emp.is_colocado)
+	"""Pasu pozisaun (Militante/Simpatizante/Ejekutivu) ba membru ativu, seidauk iha pozisaun no la rejeitadu; input hotu uluk, depois aprova."""
+	return (c_user_group(user) in roles.INPUT_ROLES + roles.ALOKA_ROLES and emp.aprovasaun != 'Rejeitadu' and emp.status == 'Ativu' and not emp.is_colocado)
 
 
 # URL pasu tuir mai iha fluxu (ho ?fluxu=1)
@@ -225,35 +228,41 @@ def EdukasaunUpdate(request, hashid):
 	return render(request, 'main/form.html', context)
 
 
-# aloka pozisaun ba membru ida (Militante/Simpatizante deit, Ejekutivu ka Organizasaun)
+# pasu pozisaun: hili Militante, Simpatizante ka Ejekutivu (nivel Suku, Aldeia ka Organizasaun; Postu deit Admin)
 @login_required
-@allowed_users(allowed_roles=roles.ALOKA_ROLES)
+@allowed_users(allowed_roles=roles.INPUT_ROLES + roles.ALOKA_ROLES)
 def MembroAloka(request, hashid):
 	group = c_user_group(request.user)
 	emp = get_object_or_404(membro_scope(request.user), hashed=hashid)
 	if not _bele_aloka(request.user, emp):
-		messages.warning(request, 'Membru ne\'e la bele hetan pozisaun (rejeitadu, la ativu ka iha ona pozisaun).')
+		messages.warning(request, 'Membru ne\'e la bele troka kategoria/pozisaun (rejeitadu, la ativu ka iha ona pozisaun).')
 		return redirect('membro-detail', hashid=hashid)
 	if request.method == 'POST':
-		form = AlokasaunMembroForm(request.POST, membro=emp)
+		form = AlokasaunMembroForm(request.POST, membro=emp, user=request.user)
 		if form.is_valid():
-			if form.cleaned_data.get('tipu') == 'Laiha':
-				messages.info(request, f'{emp.nome} kontinua nu\'udar {emp.kategoria} (la iha pozisaun).')
-				return redirect('membro-detail', hashid=hashid)
-			instance = form.save(commit=False)
-			instance.datetime = timezone.now()
-			instance.user = request.user
-			instance.save()
-			log_historia(request.user, emp, 'Aloka', f'{instance.pozisaun} {instance.nivel} {instance.unit() or ""}'.strip())
-			messages.success(request, 'Pozisaun aloka ona.')
+			tipu = form.cleaned_data['tipu']
+			kategoria = 'Simpatizante' if tipu == 'Simpatizante' else 'Militante'
+			if emp.kategoria != kategoria:
+				old = emp.kategoria
+				Membro.objects.filter(pk=emp.pk).update(kategoria=kategoria)
+				log_historia(request.user, emp, 'Edita Kategoria', f'Kategoria: {old} -> {kategoria}')
+			if tipu == 'Ejekutivu':
+				instance = form.save(commit=False)
+				instance.datetime = timezone.now()
+				instance.user = request.user
+				instance.save()
+				log_historia(request.user, emp, 'Aloka', f'{instance.pozisaun} {instance.nivel} {instance.unit() or ""}'.strip())
+				messages.success(request, 'Pozisaun aloka ona. Hein aprovasaun.')
+			else:
+				messages.success(request, f'{emp.nome} rai ona nu\'udar {tipu}. Hein aprovasaun.')
 			return redirect('membro-detail', hashid=hashid)
 	else:
-		form = AlokasaunMembroForm(membro=emp, initial={'membro': emp.pk})
+		form = AlokasaunMembroForm(membro=emp, user=request.user, initial={'membro': emp.pk})
 	context = {
 		'form': form, 'group': group, 'hashid': hashid, 'emp': emp, 'cancel_url': f'/membro/{hashid}/',
 		'back_url': 'membro-detail', 'back_args': [hashid], 'back_label': 'Detalha Membru',
-		'title': 'Pozisaun Membru', 'legend': f'Pozisaun · {emp.nome}',
-		'fluxu_info': 'Pasu 3 husi 3: hili "Laiha pozisaun" se membru ne\'e Militante/Simpatizante deit.' if request.GET.get('fluxu') == '1' else ''
+		'title': 'Kategoria no Pozisaun', 'legend': f'Kategoria no Pozisaun · {emp.nome}',
+		'fluxu_info': 'Pasu 3 husi 3: hili Militante, Simpatizante ka Ejekutivu.' if request.GET.get('fluxu') == '1' else ''
 	}
 	return render(request, 'membro/alokasaun_form.html', context)
 

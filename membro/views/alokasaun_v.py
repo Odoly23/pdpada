@@ -38,7 +38,7 @@ def AlokasaunList(request):
 def AlokasaunAdd(request):
 	group = c_user_group(request.user)
 	if request.method == 'POST':
-		form = AlokasaunForm(request.POST)
+		form = AlokasaunForm(request.POST, user=request.user)
 		if form.is_valid():
 			instance = form.save(commit=False)
 			instance.datetime = timezone.now()
@@ -48,7 +48,7 @@ def AlokasaunAdd(request):
 			messages.success(request, 'Pozisaun aloka ona.')
 			return redirect('alokasaun-list')
 	else:
-		form = AlokasaunForm()
+		form = AlokasaunForm(user=request.user)
 	context = {
 		'form': form, 'group': group, 'cancel_url': '/membro/alokasaun/',
 		'back_url': 'alokasaun-list', 'back_label': 'Struktura no Pozisaun',
@@ -64,7 +64,7 @@ def AlokasaunUpdate(request, pk):
 	group = c_user_group(request.user)
 	obj = get_object_or_404(Alokasaun, pk=pk)
 	if request.method == 'POST':
-		form = AlokasaunForm(request.POST, instance=obj)
+		form = AlokasaunForm(request.POST, instance=obj, user=request.user)
 		if form.is_valid():
 			instance = form.save(commit=False)
 			instance.datetime = timezone.now()
@@ -75,7 +75,7 @@ def AlokasaunUpdate(request, pk):
 			messages.success(request, 'Pozisaun atualiza ona.')
 			return redirect('alokasaun-list')
 	else:
-		form = AlokasaunForm(instance=obj)
+		form = AlokasaunForm(instance=obj, user=request.user)
 	context = {
 		'form': form, 'group': group, 'cancel_url': '/membro/alokasaun/',
 		'back_url': 'alokasaun-list', 'back_label': 'Struktura no Pozisaun',

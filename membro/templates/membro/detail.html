@@ -15,7 +15,7 @@
 					<a class="btn btn-sm btn-info" href="{% url 'membro-kontaktu' hashid %}">Kontaktu <i class="fa fa-phone"></i></a>
 					<a class="btn btn-sm btn-info" href="{% url 'membro-edukasaun' hashid %}">Edukasaun <i class="fa fa-graduation-cap"></i></a>
 					<a class="btn btn-sm btn-info" href="{% url 'membro-servisu' hashid %}">Servisu <i class="fa fa-briefcase"></i></a>{% endif %}
-					{% if can_aloka %}<a class="btn btn-sm btn-info" href="{% url 'membro-aloka' hashid %}">Aloka Pozisaun <i class="fa fa-sitemap"></i></a>{% endif %}
+					{% if can_aloka %}<a class="btn btn-sm btn-info" href="{% url 'membro-aloka' hashid %}">Kategoria/Pozisaun <i class="fa fa-sitemap"></i></a>{% endif %}
 					{% if can_aprova %}
 					<form class="d-inline" method="post" action="{% url 'aprovasaun-aprova' hashid %}">{% csrf_token %}
 						<input type="hidden" name="next" value="detail">
