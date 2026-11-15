@@ -7,13 +7,14 @@
 		var ejek = tipu === 'Ejekutivu';
 		var n = ($('#id_nivel').val() || '').toLowerCase();
 		$('.ejekutivu-field').toggle(ejek);
-		// pozisaun tuir nivel: Presidente no Vice I-III deit iha Postu
-		var postuDeit = ['Presidente', 'Vice I', 'Vice II', 'Vice III'];
+		// pozisaun tuir nivel (husi tabela Pozisaun): hatudu pozisaun ne'ebé loos ba nivel ne'e deit
+		var pozMap = $('#alokasaunForm').data('pozisaun-nivel') || {};
 		$('#id_pozisaun option').each(function () {
-			var hide = n !== 'postu' && postuDeit.indexOf(this.value) >= 0;
+			var niveis = (pozMap[this.value] || []).map(function (x) { return x.toLowerCase(); });
+			var hide = !!this.value && !!n && niveis.indexOf(n) < 0;
 			$(this).prop('disabled', hide).toggle(!hide);
 		});
-		if (n !== 'postu' && postuDeit.indexOf($('#id_pozisaun').val()) >= 0) { $('#id_pozisaun').val(''); }
+		if ($('#id_pozisaun option:selected').prop('disabled')) { $('#id_pozisaun').val(''); }
 		$('.unit-suku, .unit-aldeia, .unit-organizasaun').hide();
 		if (ejek) {
 			if (n === 'suku') { $('.unit-suku').show(); }  // organizasaun = sayap (opsionál)

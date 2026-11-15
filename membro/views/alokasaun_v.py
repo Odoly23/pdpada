@@ -10,7 +10,7 @@ from django.urls import reverse
 from config.user_utils import c_user_group, c_user_scope, alokasaun_scope
 from custom.models import Village, Aldeia, Organizasaun, Year
 from membro.forms import AlokasaunForm
-from membro.models import Alokasaun
+from membro.models import Alokasaun, Pozisaun
 from membro.utils import log_historia, apply_alokasaun_filters
 
 
@@ -161,7 +161,7 @@ def AlokasaunDash(request):
 	context = {
 		'group': group, 'show_postu': group in roles.POSTU_ROLES or group == roles.ADMIN,
 		'can_aloka': group in roles.ALOKA_ROLES, 'can_link': group in roles.POSTU_ROLES,
-		'postu': [(p, postu.get(p)) for p in ('Presidente', 'Vice I', 'Vice II', 'Vice III', 'Coordenador', 'Sekretariu')],
+		'postu': [(p, postu.get(p)) for p in Pozisaun.objects.filter(ativu=True, iha_postu=True).values_list('naran', flat=True)],
 		'rows_suku': rows_suku, 'rows_aldeia': rows_aldeia, 'rows_org': rows_org,
 		'ano_ativu_obj': Year.objects.filter(is_active=True).first(),
 		'title': 'Tabel Struktura', 'legend': 'Tabel Struktura'
@@ -182,19 +182,19 @@ def StrukturaBagan(request):
 	for a in aktivu:
 		unit = {'Postu': ('P', 0), 'Suku': ('S', a.village_id), 'Aldeia': ('A', a.aldeia_id), 'Organizasaun': ('O', a.organizasaun_id)}[a.nivel]
 		by_unit.setdefault(unit, []).append(a)
-	order = {'Presidente': 0, 'Vice I': 1, 'Vice II': 2, 'Vice III': 3, 'Coordenador': 4, 'Sekretariu': 5}
-	label = {'Presidente': 'Presidente', 'Vice I': 'Vice I', 'Vice II': 'Vice II', 'Vice III': 'Vice III', 'Coordenador': 'Coordenador', 'Sekretariu': 'Sekretariu/a Geral'}
+	order = {p.naran: p.urutan for p in Pozisaun.objects.all()}
+	label = {'Sekretariu': 'Sekretariu/a Geral'}  # naran seluk hatudu hanesan naran Pozisaun
 
 	def people(kind, pk, org_code=None):
-		rows = sorted((a for a in by_unit.get((kind, pk), []) if not (kind in ('S', 'A') and a.organizasaun_id)), key=lambda a: order[a.pozisaun])
+		rows = sorted((a for a in by_unit.get((kind, pk), []) if not (kind in ('S', 'A') and a.organizasaun_id)), key=lambda a: order.get(a.pozisaun, 99))
 		out = []
 		for a in rows:  # sayap (OJD, OMD, MPD) iha suku/aldeia hatudu iha kartaun Sayap iha okos
-			out.append({'label': label[a.pozisaun], 'membro': a.membro})
+			out.append({'label': label.get(a.pozisaun, a.pozisaun), 'membro': a.membro})
 		# Coordenador no Sekretariu/a Geral sempre hatudu (mamuk = "-")
 		have = {p['label'] for p in out}
 		for pos in (('Coordenador',) if kind == 'P' else ('Coordenador', 'Sekretariu')):
-			if label[pos] not in have:
-				out.insert(0 if pos == 'Coordenador' else min(1, len(out)), {'label': label[pos], 'membro': None})
+			if label.get(pos, pos) not in have:
+				out.insert(0 if pos == 'Coordenador' else min(1, len(out)), {'label': label.get(pos, pos), 'membro': None})
 		return out
 	todas_org = list(Organizasaun.objects.filter(is_active=True).order_by('code'))
 

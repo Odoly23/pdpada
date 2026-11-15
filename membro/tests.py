@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.urls import reverse
 from config import roles
 from custom.models import Municipality, AdministrativePost, Village, Aldeia, Organizasaun, Year
-from membro.models import Membro, Alokasaun, Historia, OrgPozisaun, OrgResponsavel, Servisu
+from membro.models import Membro, Alokasaun, Historia, OrgPozisaun, OrgResponsavel, Servisu, Pozisaun, pozisaun_por_nivel
 from users.models import UserScope
 
 
@@ -1889,8 +1889,6 @@ class DatabaseIntegrityTests(BaseCase):
 				Membro.objects.filter(pk=m.pk).update(**{field: bad})
 		with self.assertRaises(IntegrityError), transaction.atomic():
 			Alokasaun.objects.create(membro=m, nivel='Negara', pozisaun='Coordenador', data_hahu=datetime.date(2026, 1, 1))
-		with self.assertRaises(IntegrityError), transaction.atomic():
-			Alokasaun.objects.create(membro=m, nivel='Postu', pozisaun='Raja', data_hahu=datetime.date(2026, 1, 1))
 
 	def test_hashed_is_unique(self):
 		a, b = self.make('DB00002'), self.make('DB00003')
@@ -3255,3 +3253,69 @@ class StrukturaBaganTests(BaseCase):
 	def test_sekretariu_postu_and_koord_org_other_rules(self):
 		self.login('sekrpostu')
 		self.assertEqual(self.client.get(reverse('alokasaun-dash')).status_code, 403)
+
+
+class PozisaunMasterTests(BaseCase):
+	"""Model Pozisaun (data mestre): Alokasaun hili pozisaun husi tabela ne'e, jere iha admin."""
+
+	def setUp(self):
+		self.m = self.make('PM000001', aprovasaun='Aprovadu')
+
+	def test_initial_rows_and_levels(self):
+		self.assertEqual(list(Pozisaun.objects.values_list('naran', flat=True)), ['Presidente', 'Vice I', 'Vice II', 'Vice III', 'Coordenador', 'Sekretariu'])
+		por_nivel = pozisaun_por_nivel()
+		self.assertEqual(por_nivel['Postu'], ['Presidente', 'Vice I', 'Vice II', 'Vice III', 'Coordenador', 'Sekretariu'])
+		for n in ('Suku', 'Aldeia', 'Organizasaun'):
+			self.assertEqual(por_nivel[n], ['Coordenador', 'Sekretariu'], n)
+
+	def post(self, **kw):
+		self.login('presidente')
+		d = {'membro': self.m.pk, 'nivel': 'Postu', 'pozisaun': 'Vice IV', 'data_hahu': '2026-01-01', 'ativu': 'Sim'}
+		d.update(kw)
+		return self.client.post(reverse('alokasaun-add'), d)
+
+	def test_new_pozisaun_added_in_table_becomes_selectable_only_at_its_levels(self):
+		self.assertEqual(self.post().status_code, 200)  # Vice IV seidauk iha
+		Pozisaun.objects.create(naran='Vice IV', urutan=5, iha_postu=True)
+		self.assertEqual(self.post(nivel='Suku', village=self.va.pk).status_code, 200)  # la iha iha nivel Suku
+		self.assertEqual(self.post().status_code, 302)
+		self.assertEqual(Alokasaun.objects.get().pozisaun, 'Vice IV')
+
+	def test_inactive_pozisaun_not_offered_or_accepted(self):
+		Pozisaun.objects.filter(naran='Vice III').update(ativu=False)
+		self.login('presidente')
+		self.assertNotIn('<option value="Vice III">', self.client.get(reverse('alokasaun-add')).content.decode())
+		self.assertEqual(self.post(pozisaun='Vice III').status_code, 200)
+
+	def test_form_exposes_level_map_for_js(self):
+		self.login('presidente')
+		page = self.client.get(reverse('alokasaun-add')).content.decode()
+		self.assertIn('data-pozisaun-nivel', page)
+		self.assertIn('Vice I', page)
+
+	def test_new_pozisaun_appears_in_struktura_dashboard_ordering(self):
+		Pozisaun.objects.create(naran='Tesoureiru', urutan=3, iha_postu=True)
+		self.login('presidente')
+		names = [p for p, _ in self.client.get(reverse('alokasaun-tabel')).context['postu']]
+		self.assertEqual(names, ['Presidente', 'Vice I', 'Tesoureiru', 'Vice II', 'Vice III', 'Coordenador', 'Sekretariu'])
+
+	def test_admin_pozisaun_and_alokasaun_dropdown(self):
+		su = User.objects.create_superuser('su', 'su@example.com', 'Teste-12345!')
+		self.client.force_login(su)
+		self.assertContains(self.client.get('/admin/membro/pozisaun/'), 'Vice III')
+		page = self.client.get('/admin/membro/alokasaun/add/').content.decode()
+		for n in ('Presidente', 'Vice I', 'Vice II', 'Vice III', 'Coordenador', 'Sekretariu'):
+			self.assertIn(f'<option value="{n}">', page)
+
+	def test_admin_protects_used_pozisaun(self):
+		su = User.objects.create_superuser('su2', 'su2@example.com', 'Teste-12345!')
+		self.client.force_login(su)
+		Alokasaun.objects.create(membro=self.m, nivel='Suku', pozisaun='Coordenador', village=self.va, data_hahu=datetime.date(2026, 1, 1))
+		coord = Pozisaun.objects.get(naran='Coordenador')
+		page = self.client.get(f'/admin/membro/pozisaun/{coord.pk}/change/').content.decode()
+		self.assertNotIn('name="naran"', page)  # naran read-only
+		self.assertEqual(self.client.post(f'/admin/membro/pozisaun/{coord.pk}/delete/', {'post': 'yes'}).status_code, 403)
+		self.assertTrue(Pozisaun.objects.filter(pk=coord.pk).exists())
+		unused = Pozisaun.objects.get(naran='Vice III')
+		self.client.post(f'/admin/membro/pozisaun/{unused.pk}/delete/', {'post': 'yes'})
+		self.assertFalse(Pozisaun.objects.filter(pk=unused.pk).exists())

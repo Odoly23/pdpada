@@ -16,14 +16,38 @@ STATUS = [('Ativu', 'Ativu'), ('Inativu', 'Inativu'), ('Falesidu', 'Falesidu')]
 APROVASAUN = [('Pendente', 'Pendente'), ('Aprovadu', 'Aprovadu'), ('Rejeitadu', 'Rejeitadu')]
 
 NIVEL = [('Postu', 'Postu'), ('Suku', 'Suku'), ('Aldeia', 'Aldeia'), ('Organizasaun', 'Organizasaun')]
-POZISAUN = [('Presidente', 'Presidente'), ('Vice I', 'Vice I'), ('Vice II', 'Vice II'), ('Vice III', 'Vice III'),
-	('Coordenador', 'Coordenador'), ('Sekretariu', 'Sekretariu')]
-POZISAUN_POR_NIVEL = {
-	'Postu': ['Presidente', 'Vice I', 'Vice II', 'Vice III', 'Coordenador', 'Sekretariu'],
-	'Suku': ['Coordenador', 'Sekretariu'],
-	'Aldeia': ['Coordenador', 'Sekretariu'],
-	'Organizasaun': ['Coordenador', 'Sekretariu'],
-}
+
+
+class Pozisaun(models.Model):
+	"""Data mestre pozisaun (Presidente, Vice I-III, Coordenador, Sekretariu, ...). Alokasaun.pozisaun rai naran husi tabela ne'e;
+	kampu iha_* hatudu iha nivel ida-ne'ebé pozisaun ne'e bele uza."""
+	naran = models.CharField(max_length=15, unique=True, verbose_name="Naran Pozisaun")
+	urutan = models.PositiveSmallIntegerField(default=10, verbose_name="Urutan")
+	iha_postu = models.BooleanField(default=False, verbose_name="Nivel Postu")
+	iha_suku = models.BooleanField(default=False, verbose_name="Nivel Suku")
+	iha_aldeia = models.BooleanField(default=False, verbose_name="Nivel Aldeia")
+	iha_organizasaun = models.BooleanField(default=False, verbose_name="Nivel Organizasaun")
+	ativu = models.BooleanField(default=True, verbose_name="Ativu")
+
+	class Meta:
+		ordering = ['urutan', 'naran']
+		verbose_name = 'Pozisaun'
+		verbose_name_plural = 'Pozisaun'
+
+	def nivel_list(self):
+		return [n for n, on in (('Postu', self.iha_postu), ('Suku', self.iha_suku), ('Aldeia', self.iha_aldeia), ('Organizasaun', self.iha_organizasaun)) if on]
+
+	def __str__(self):
+		return self.naran
+
+
+def pozisaun_por_nivel():
+	"""{nivel: [naran pozisaun ativu tuir urutan]} husi tabela Pozisaun."""
+	result = {n: [] for n, _ in NIVEL}
+	for p in Pozisaun.objects.filter(ativu=True):
+		for n in p.nivel_list():
+			result[n].append(p.naran)
+	return result
 
 
 class Membro(HashedModel):
@@ -94,7 +118,7 @@ class Alokasaun(models.Model):
 	"""Pozisaun/kargu ne'ebé Presidente Postu aloka ba membru (modelu hanesan Kolokasaun)."""
 	membro = models.ForeignKey(Membro, on_delete=models.CASCADE, related_name='alokasaun', verbose_name="Membru")
 	nivel = models.CharField(choices=NIVEL, max_length=15, verbose_name="Nivel")
-	pozisaun = models.CharField(choices=POZISAUN, max_length=15, verbose_name="Pozisaun")
+	pozisaun = models.CharField(max_length=15, verbose_name="Pozisaun")  # naran husi tabela Pozisaun
 	village = models.ForeignKey(Village, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Suku")
 	aldeia = models.ForeignKey(Aldeia, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Aldeia")
 	organizasaun = models.ForeignKey(Organizasaun, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Organizasaun")
@@ -109,7 +133,6 @@ class Alokasaun(models.Model):
 		indexes = [models.Index(fields=['ativu', 'nivel', 'pozisaun'], name='aloka_ativu_niv_poz_idx')]
 		constraints = [
 			models.CheckConstraint(condition=models.Q(nivel__in=[c[0] for c in NIVEL]), name='aloka_nivel_valid'),
-			models.CheckConstraint(condition=models.Q(pozisaun__in=[c[0] for c in POZISAUN]), name='aloka_pozisaun_valid'),
 			models.CheckConstraint(condition=models.Q(ativu__in=['Sim', 'Lae']), name='aloka_ativu_valid'),
 		]
 

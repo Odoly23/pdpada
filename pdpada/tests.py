@@ -116,7 +116,7 @@ class AdminRegistrationTests(TestCase):
 		from django.apps import apps
 		from django.contrib import admin
 		models = list(apps.get_models())
-		self.assertGreaterEqual(len(models), 24)  # aplikasi (18) + bawaan Django (User, Group, LogEntry, Permission, ContentType, Session)
+		self.assertGreaterEqual(len(models), 25)  # aplikasi (19) + bawaan Django (User, Group, LogEntry, Permission, ContentType, Session)
 		self.assertEqual([m.__name__ for m in models if m not in admin.site._registry], [])  # SEMUA model rejistu
 
 	def test_changelists_open_for_superuser(self):
