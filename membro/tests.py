@@ -1307,7 +1307,7 @@ class TabularTests(BaseCase):
 
 	def test_layout_follows_sample(self):
 		resp = self.page('presidente')
-		self.assertEqual([t['head'] for t in resp.context['tables']], ['Jenis', 'Servisu', 'Suku', 'Aldeia', 'Organizasaun', 'Tinan', 'Idade', 'Estado Civil'])
+		self.assertEqual([t['head'] for t in resp.context['tables']], ['Kategoria', 'Servisu', 'Suku', 'Aldeia', 'Organizasaun', 'Tinan', 'Idade', 'Estado Civil'])
 		self.assertContains(resp, 'card-header bg-warning')
 		self.assertContains(resp, 'th-navy')
 		self.assertContains(resp, 'PRESIDENTE POSTU')
@@ -2056,14 +2056,13 @@ class FilterButtonsAndTablesTests(BaseCase):
 		return resp, {f['label']: f for f in resp.context['filters']}
 
 	# ---- daftar membru
-	def test_member_list_has_coloured_buttons_with_counts(self):
+	def test_member_list_has_simple_small_buttons_with_counts_in_tooltip(self):
 		resp, f = self.filters('presidente')
 		self.assertEqual({k: v['count'] for k, v in f.items()}, {'Hotu': 4, 'Pendente': 2, 'Aprovadu': 1, 'Rejeitadu': 1})
-		self.assertContains(resp, 'class="btn-filter btn-filter-all active"')
-		self.assertContains(resp, 'btn-filter-warn')
-		self.assertContains(resp, 'btn-filter-ok')
-		self.assertContains(resp, 'btn-filter-bad')
-		self.assertContains(resp, '<span class="count">4</span>')
+		self.assertContains(resp, 'btn btn-sm btn-info')  # tombol ativu
+		self.assertContains(resp, 'btn btn-sm btn-outline-secondary')
+		self.assertContains(resp, 'title="4 membru"')
+		self.assertNotContains(resp, 'btn-filter')
 
 	def test_active_button_follows_query(self):
 		for value in ('Pendente', 'Aprovadu', 'Rejeitadu'):
@@ -2859,9 +2858,11 @@ class KategoriaServisuTests(BaseCase):
 		f = {x['label']: x for x in resp.context['jenis_filters']}
 		self.assertEqual((f['Hotu']['count'], f['Militante']['count'], f['Simpatizante']['count'], f['Struktura Penting']['count']), (2, 1, 1, 0))
 		self.assertContains(resp, 'Struktura Penting')
-		self.assertContains(resp, 'JENIS')
-		for judul in ('>Jenis<', '>Aprovasaun<', '>Servisu<'):
-			self.assertContains(resp, 'filter-title', msg_prefix=judul)
+		self.assertContains(resp, 'KATEGORIA')
+		self.assertNotContains(resp, 'JENIS')
+		for judul in ('>Kategoria<', '>Aprovasaun<', '>Servisu<'):
+			self.assertContains(resp, judul)
+		self.assertNotContains(resp, 'btn-filter')  # tombol simple btn btn-sm
 		self.assertContains(resp, 'Struktura Penting')
 		self.assertTrue(f['Hotu']['active'])
 
@@ -2898,7 +2899,7 @@ class KategoriaServisuTests(BaseCase):
 		Servisu.objects.create(membro=a, status='Servisu', setor='Governu', instituisaun='M', pozisaun='P')
 		self.login('presidente')
 		tables = {t['head']: t for t in self.client.get(reverse('report-dash')).context['tables']}
-		self.assertEqual([(r['name'], r['total']) for r in tables['Jenis']['rows']], [('Struktura Penting', 0), ('Militante', 1), ('Simpatizante', 1)])
+		self.assertEqual([(r['name'], r['total']) for r in tables['Kategoria']['rows']], [('Struktura Penting', 0), ('Militante', 1), ('Simpatizante', 1)])
 		self.assertEqual({r['name']: r['total'] for r in tables['Servisu']['rows']}['Servisu Governu'], 1)
 		self.assertEqual(self.client.get(reverse('api-jenis')).json(), {'label': ['Struktura Penting', 'Militante', 'Simpatizante'], 'obj': [0, 1, 1]})
 		self.assertEqual(self.client.get(reverse('api-servisu')).json()['obj'], [1, 0, 0, 1])
@@ -3174,7 +3175,7 @@ class PozisaunStepTests(BaseCase):
 	def test_page_shows_three_choices_and_detail_button(self):
 		self.login('sekrsuku')
 		page = self.client.get(self.url + '?fluxu=1')
-		for needle in ('Militante', 'Simpatizante', 'Ejekutivu', 'Pasu 3 husi 3', 'ejekutivu-field'):
+		for needle in ('Militante', 'Simpatizante', 'Ejekutivu', 'ejekutivu-field'):
 			self.assertContains(page, needle)
 		self.assertContains(self.client.get(self.detail()), self.url)
 

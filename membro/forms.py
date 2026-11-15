@@ -43,7 +43,6 @@ class MembroForm(forms.ModelForm):
 		scope = c_user_scope(user) if user else None
 		self.fields['nu_eleitoral'].error_messages['required'] = 'Nu. Eleitoral obrigatóriu ba membru hotu (Militante no Simpatizante).'
 		self.fields['nu_eleitoral'].required = True  # importante: obrigatóriu ba membru hotu (Militante no Simpatizante)
-		self.fields['nu_eleitoral'].help_text = 'Obrigatóriu. Nu. Eleitoral ida deit ba membru ida (la bele dobra).'
 		# upload: FileInput biasa (tanpa tautan/URL publik); isi file diperiksa di server
 		self.fields['image'].widget = forms.FileInput(attrs={'accept': 'image/jpeg,image/png'})
 		self.fields['file_eleitoral'].widget = forms.FileInput(attrs={'accept': 'application/pdf'})
@@ -458,7 +457,6 @@ class ServisuForm(forms.ModelForm):
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
-		self.fields['detalle'].help_text = 'Ezemplu: naran eskola, fatin servisu, atividade.'
 		self.helper = FormHelper()
 		self.helper.form_method = 'post'
 		self.helper.form_id = 'servisuForm'

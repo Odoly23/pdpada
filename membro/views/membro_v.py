@@ -75,7 +75,7 @@ def MembroAdd(request):
 			instance.user = request.user
 			instance.save()
 			log_historia(request.user, instance, 'Kria', f'Membru foun ({instance.kategoria}): {instance}')
-			messages.success(request, 'Membru foun aumenta ona. Hein aprovasaun. Lanjuta: hatama edukasaun, servisu no pozisaun.')
+			messages.success(request, 'Membru foun aumenta ona. Hein aprovasaun.')
 			duplikadu = Membro.objects.filter(nome__iexact=instance.nome, date_of_birth=instance.date_of_birth).exclude(pk=instance.pk)
 			if duplikadu.exists():
 				messages.warning(request, f'Atensaun: iha membru seluk ho naran no data moris hanesan ({duplikadu.first()}). Verifika!')
@@ -194,11 +194,11 @@ def _pasu_tuir_mai(request, emp, pasu):
 	return redirect('membro-detail', hashid=emp.hashed)
 
 
-# kontestu formuláriu fluxu (botaun "Liu pasu ne'e" no informasaun pasu)
-def _fluxu_context(request, emp, pasu, info):
+# kontestu formuláriu fluxu (botaun "Liu pasu ne'e")
+def _fluxu_context(request, emp, pasu):
 	if request.GET.get('fluxu') != '1':
 		return {}
-	return {'skip_url': _url_tuir_mai(request, emp, pasu), 'fluxu_info': info}
+	return {'skip_url': _url_tuir_mai(request, emp, pasu)}
 
 
 # hadia/edita edukasaun membru (nivel as-aas)
@@ -223,7 +223,7 @@ def EdukasaunUpdate(request, hashid):
 	context = {
 		'form': form, 'group': group, 'hashid': hashid, 'emp': emp, 'cancel_url': f'/membro/{hashid}/',
 		'back_url': 'membro-detail', 'back_args': [hashid], 'back_label': 'Detalha Membru',
-		'title': 'Edukasaun Membru', 'legend': f'Edukasaun · {emp.nome}', **_fluxu_context(request, emp, 'edukasaun', 'Pasu 1 husi 3: nivel edukasaun.')
+		'title': 'Edukasaun Membru', 'legend': f'Edukasaun · {emp.nome}', **_fluxu_context(request, emp, 'edukasaun')
 	}
 	return render(request, 'main/form.html', context)
 
@@ -261,8 +261,7 @@ def MembroAloka(request, hashid):
 	context = {
 		'form': form, 'group': group, 'hashid': hashid, 'emp': emp, 'cancel_url': f'/membro/{hashid}/',
 		'back_url': 'membro-detail', 'back_args': [hashid], 'back_label': 'Detalha Membru',
-		'title': 'Kategoria no Pozisaun', 'legend': f'Kategoria no Pozisaun · {emp.nome}',
-		'fluxu_info': 'Pasu 3 husi 3: hili Militante, Simpatizante ka Ejekutivu.' if request.GET.get('fluxu') == '1' else ''
+		'title': 'Kategoria no Pozisaun', 'legend': f'Kategoria no Pozisaun · {emp.nome}'
 	}
 	return render(request, 'membro/alokasaun_form.html', context)
 
@@ -313,7 +312,7 @@ def ServisuUpdate(request, hashid):
 	context = {
 		'form': form, 'group': group, 'hashid': hashid, 'emp': emp, 'cancel_url': f'/membro/{hashid}/',
 		'back_url': 'membro-detail', 'back_args': [hashid], 'back_label': 'Detalha Membru',
-		'title': 'Servisu Membru', 'legend': f'Servisu · {emp.nome}', **_fluxu_context(request, emp, 'servisu', 'Pasu 2 husi 3: servisu agora.')
+		'title': 'Servisu Membru', 'legend': f'Servisu · {emp.nome}', **_fluxu_context(request, emp, 'servisu')
 	}
 	return render(request, 'membro/servisu_form.html', context)
 

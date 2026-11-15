@@ -39,7 +39,7 @@
 						{% if obj.image %}<img class="foto-membro" src="{% url 'membro-file' hashid 'foto' %}" alt="{{ obj.nome }}">{% else %}<div class="text-muted"><i class="fa fa-user-circle fa-5x"></i><br><small>Seidauk upload fotu</small></div>{% endif %}
 						</td>
 					</tr>
-					<tr><td>Jenis / Kategoria</td><td><span class="badge badge-jenis-{{ obj.jenis|lower }}">{{ obj.jenis }}</span>{% if obj.jenis == 'Struktura' %} <small class="text-muted">({{ obj.kategoria }})</small>{% endif %}</td></tr>
+					<tr><td>Kategoria</td><td><span class="badge badge-jenis-{{ obj.jenis|lower }}">{{ obj.jenis }}</span>{% if obj.jenis == 'Struktura' %} <small class="text-muted">({{ obj.kategoria }})</small>{% endif %}</td></tr>
 					<tr><td>Nu. Eleitoral</td><td>{{ obj.nu_eleitoral|default_if_none:"-" }}</td></tr>
 					<tr><td>Sexu</td><td>{{ obj.sex }}</td></tr>
 					<tr><td>Fatin/Data Moris</td><td>{{ obj.place_of_birth|default:"-" }} / {{ obj.date_of_birth|date:"d/m/Y" }} ({{ obj.age }} tinan)</td></tr>

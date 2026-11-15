@@ -19,9 +19,11 @@
 						{% else %}<a class="btn btn-sm btn-link" href="?ano=hotu">Tinan hotu</a>{% endif %}
 					{% endif %}
 				</div>
-				{% include 'main/filter_bar.html' with filters=jenis_filters title='Jenis' %}
-				{% include 'main/filter_bar.html' with filters=filters title='Aprovasaun' %}
-				{% include 'main/filter_bar.html' with filters=servisu_filters title='Servisu' %}
+				<div class="mb-2">
+					{% include 'main/filter_simple.html' with filters=jenis_filters title='Kategoria' %}
+					{% include 'main/filter_simple.html' with filters=filters title='Aprovasaun' %}
+					{% include 'main/filter_simple.html' with filters=servisu_filters title='Servisu' %}
+				</div>
 				<section id="no-more-tables">
 					<table id="example" class="table table-sm responsive" style="width:100%">
 						<thead>
@@ -34,7 +36,7 @@
 								<th>SUKU</th>
 								<th>ALDEIA</th>
 								<th>ORGANIZASAUN</th>
-								<th>JENIS</th>
+								<th>KATEGORIA</th>
 								<th>SERVISU</th>
 								<th>STATUS</th>
 								<th>DOKUMENTU</th>
@@ -53,7 +55,7 @@
 								<td data-title="Suku">{{ obj.village }}</td>
 								<td data-title="Aldeia">{{ obj.aldeia }}</td>
 								<td data-title="Organizasaun">{{ obj.organizasaun|default_if_none:"-" }}</td>
-								<td data-title="Jenis"><span class="badge badge-jenis-{{ obj.jenis|lower }}">{{ obj.jenis }}</span></td>
+								<td data-title="Kategoria"><span class="badge badge-jenis-{{ obj.jenis|lower }}">{{ obj.jenis }}</span></td>
 								<td data-title="Servisu">{% if obj.servisu %}{{ obj.servisu.badak }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
 								<td data-title="Status">{{ obj.status }}</td>
 								<td data-title="Dokumentu">

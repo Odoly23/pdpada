@@ -593,3 +593,6 @@ div.dataTables_wrapper div.dataTables_length label { font-weight: 400; color: #6
 .struk-tree .org-sayap .struk-people li:first-child { border-top: 0; }
 .struk-tree .org-children::before, .struk-tree .org-children > .org-item::before { border-left: 1px solid #000; }
 .struk-tree .org-children > .org-item::after { border-top: 1px solid #000; }
+.filter-simple { display: inline-block; margin: 0 1.25rem .4rem 0; }
+.filter-simple .filter-title { font-size: .75rem; font-weight: 700; text-transform: uppercase; color: var(--navy); margin-right: .4rem; }
+.filter-simple .btn { margin-right: .15rem; }
