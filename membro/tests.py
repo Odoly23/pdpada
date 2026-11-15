@@ -3120,14 +3120,24 @@ class PozisaunStepTests(BaseCase):
 			self.assertEqual(self.post(u, nivel='Postu', pozisaun='Vice II', village='').status_code, 302, u)
 			self.assertEqual(Alokasaun.objects.get().pozisaun, 'Vice II')
 
-	def test_postu_level_not_offered_to_sekjer(self):
+	def test_postu_level_offered_to_sekjer_suku_but_not_other_sekjer(self):
 		self.login('sekrsuku')
+		page = self.client.get(self.url).content.decode()
+		self.assertIn('<option value="Postu">', page)
+		self.assertIn('<option value="Vice I">', page)
+		self.assertEqual(self.post('sekrsuku', nivel='Postu', pozisaun='Vice I', village='').status_code, 302)
+		self.assertEqual(Alokasaun.objects.get().nivel, 'Postu')
+		Alokasaun.objects.all().delete()
+		Membro.objects.filter(pk=self.m.pk).update(is_colocado=False)
+		self.login('sekraldeia')
 		self.assertNotIn('<option value="Postu">', self.client.get(self.url).content.decode())
-		self.assertEqual(self.post('sekrsuku', nivel='Postu', pozisaun='Vice I', village='').status_code, 200)
+		self.assertEqual(self.post('sekraldeia', nivel='Postu', pozisaun='Vice I', village='').status_code, 200)
 		self.assertFalse(Alokasaun.objects.exists())
 
 	def test_vice_positions_only_at_postu_and_unique_per_postu(self):
-		self.assertEqual(self.post('presidente', nivel='Suku', pozisaun='Vice I').status_code, 200)  # Vice la iha iha Suku
+		for niv, extra in (('Suku', {}), ('Aldeia', {'aldeia': self.a1.pk, 'village': ''})):
+			self.assertEqual(self.post('presidente', nivel=niv, pozisaun='Vice I', **extra).status_code, 200, niv)  # Vice la iha iha Suku/Aldeia
+			self.assertEqual(self.post('presidente', nivel=niv, pozisaun='Presidente', **extra).status_code, 200, niv)
 		self.assertEqual(self.post('presidente', nivel='Postu', pozisaun='Vice III', village='').status_code, 302)
 		other = self.make('PZ000020')
 		self.url = reverse('membro-aloka', args=[other.hashed])
@@ -3140,7 +3150,7 @@ class PozisaunStepTests(BaseCase):
 	def test_levels_limited_by_role(self):
 		self.login('sekrsuku')
 		page = self.client.get(self.url).content.decode()
-		for n, ok in (('Suku', True), ('Aldeia', True), ('Organizasaun', False), ('Postu', False)):
+		for n, ok in (('Suku', True), ('Aldeia', True), ('Organizasaun', False), ('Postu', True)):
 			self.assertEqual(f'<option value="{n}">' in page, ok, n)
 		self.assertContains(self.client.get(self.url), 'Militante')
 		self.assertEqual(self.post('sekrsuku', nivel='Organizasaun', village='', organizasaun=self.org.pk).status_code, 200)
