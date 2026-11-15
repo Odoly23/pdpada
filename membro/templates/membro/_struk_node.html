@@ -1,0 +1,28 @@
+<li class="org-item">
+	<div class="org-card{% if node.kind == 'Postu' %} org-root{% endif %}{% if node.kind == 'Sayap' %} org-sayap{% endif %}">
+		<div class="org-head"><span class="org-no">{{ node.kind }}</span> {% if node.url %}<a href="{{ node.url }}">{{ node.title }}</a>{% else %}{{ node.title }}{% endif %}</div>
+		<div class="org-body">
+			{% if node.kind == 'Sayap' %}
+			<ul class="struk-people">
+				{% for r in node.sayap %}
+				<li><span class="struk-label">{{ r.code }}</span>
+					<small class="text-muted">Coord.</small> {% if r.coord %}<a href="{% url 'membro-detail' r.coord.hashed %}">{{ r.coord.nome }}</a>{% else %}<span class="text-muted">-</span>{% endif %}<br>
+					<small class="text-muted">Sekr.</small> {% if r.sekr %}<a href="{% url 'membro-detail' r.sekr.hashed %}">{{ r.sekr.nome }}</a>{% else %}<span class="text-muted">-</span>{% endif %}</li>
+				{% endfor %}
+			</ul>
+			{% else %}
+			<ul class="struk-people">
+				{% for p in node.people %}
+				<li><span class="struk-label">{{ p.label }}</span>
+					{% if p.membro %}<a href="{% url 'membro-detail' p.membro.hashed %}">{{ p.membro.nome }}</a>{% else %}<span class="text-muted">-</span>{% endif %}</li>
+				{% endfor %}
+			</ul>
+			{% endif %}
+		</div>
+	</div>
+	{% if node.children %}
+	<ul class="org-children{% if node.kind == 'Suku' or node.kind == 'Aldeia' %} struk-col{% endif %}">
+		{% for child in node.children %}{% include "membro/_struk_node.html" with node=child %}{% endfor %}
+	</ul>
+	{% endif %}
+</li>

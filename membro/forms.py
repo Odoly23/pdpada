@@ -34,18 +34,15 @@ class MembroForm(forms.ModelForm):
 	data_hakbit = forms.DateField(label="Data Hakbit (Tama PD)", widget=DateInput(), required=False)
 	class Meta:
 		model = Membro
-		fields = ['kategoria', 'nome', 'sex', 'place_of_birth', 'date_of_birth', 'marital', 'nu_eleitoral',
-			'image', 'file_eleitoral', 'village', 'aldeia', 'organizasaun', 'data_hakbit', 'status']
+		fields = ['nome', 'sex', 'place_of_birth', 'date_of_birth', 'marital', 'nu_eleitoral',
+			'image', 'file_eleitoral', 'village', 'aldeia', 'data_hakbit', 'status']
 
 	def __init__(self, *args, user=None, **kwargs):
 		super().__init__(*args, **kwargs)
 		group = c_user_group(user) if user else None
 		scope = c_user_scope(user) if user else None
-		self.fields['organizasaun'].queryset = Organizasaun.objects.filter(is_active=True)
-		self.fields['organizasaun'].empty_label = '--- Laiha ---'
-		self.fields['kategoria'].initial = 'Militante'
-		self.fields['kategoria'].help_text = 'Militante: membru ho Nu. Eleitoral. Simpatizante: dadus simples (Nu. Eleitoral opsionál).'
-		self.fields['nu_eleitoral'].help_text = 'Obrigatóriu ba Militante; Simpatizante bele husik mamuk.'
+		self.fields['nu_eleitoral'].error_messages['required'] = 'Nu. Eleitoral obrigatóriu ba membru hotu (Militante no Simpatizante).'
+		self.fields['nu_eleitoral'].required = True  # importante: obrigatóriu ba membru hotu (Militante no Simpatizante)
 		# upload: FileInput biasa (tanpa tautan/URL publik); isi file diperiksa di server
 		self.fields['image'].widget = forms.FileInput(attrs={'accept': 'image/jpeg,image/png'})
 		self.fields['file_eleitoral'].widget = forms.FileInput(attrs={'accept': 'application/pdf'})
@@ -63,11 +60,7 @@ class MembroForm(forms.ModelForm):
 			self.fields['village'].initial = scope.village_id
 			self.fields['village'].disabled = True
 		elif group == roles.SEKR_ORG and scope and scope.organizasaun_id:
-			# anggota organisasi bisa berasal dari suku/aldeia mana pun di Postu; organisasi terkunci
-			self.fields['organizasaun'].queryset = Organizasaun.objects.filter(pk=scope.organizasaun_id)
-			self.fields['organizasaun'].empty_label = None
-			self.fields['organizasaun'].initial = scope.organizasaun_id
-			self.fields['organizasaun'].disabled = True
+			# anggota organisasi bisa berasal dari suku/aldeia mana pun di Postu; organisasi diisi otomatis di view
 			village_id = self.data.get('village') if self.is_bound else (self.instance.village_id if self.instance.pk else None)
 			valid = str(village_id).isdigit() if village_id else False
 			self.fields['aldeia'].queryset = Aldeia.objects.filter(village_id=village_id) if valid else Aldeia.objects.none()
@@ -84,9 +77,8 @@ class MembroForm(forms.ModelForm):
 		self.helper.attrs = {'data-aldeias-url': reverse('ajax_load_aldeias')}  # dropdown Suku -> Aldeia
 		self.helper.layout = Layout(
 			Row(
-				Column('kategoria', css_class='form-group col-md-3 mb-0'),
-				Column('nome', css_class='form-group col-md-6 mb-0'),
-				Column('sex', css_class='form-group col-md-3 mb-0'),
+				Column('nome', css_class='form-group col-md-8 mb-0'),
+				Column('sex', css_class='form-group col-md-4 mb-0'),
 				css_class='form-row'
 			),
 			Row(
@@ -107,9 +99,8 @@ class MembroForm(forms.ModelForm):
 				css_class='form-row'
 			),
 			Row(
-				Column('organizasaun', css_class='form-group col-md-4 mb-0'),
-				Column('data_hakbit', css_class='form-group col-md-4 mb-0'),
-				Column('status', css_class='form-group col-md-4 mb-0'),
+				Column('data_hakbit', css_class='form-group col-md-6 mb-0'),
+				Column('status', css_class='form-group col-md-6 mb-0'),
 				css_class='form-row'
 			),
 			HTML(BTN_CANCEL),
@@ -138,7 +129,7 @@ class MembroForm(forms.ModelForm):
 	def clean_nu_eleitoral(self):
 		valor = normalize_eleitoral(self.cleaned_data.get('nu_eleitoral'))
 		if not valor:
-			return None  # Simpatizante bele laiha; Militante diperiksa iha clean()
+			return None  # la mosu (field obrigatóriu); membru antigu ho nu. mamuk tenke hatama bainhira edita
 		qs = Membro.objects.filter(nu_eleitoral__iexact=valor)
 		if self.instance.pk:
 			qs = qs.exclude(pk=self.instance.pk)
@@ -154,8 +145,6 @@ class MembroForm(forms.ModelForm):
 		village, aldeia = cleaned.get('village'), cleaned.get('aldeia')
 		if village and aldeia and aldeia.village_id != village.pk:
 			self.add_error('aldeia', 'Aldeia ne\'e la pertense ba suku ne\'ebé hili.')
-		if cleaned.get('kategoria') == 'Militante' and not cleaned.get('nu_eleitoral'):
-			self.add_error('nu_eleitoral', 'Nu. Eleitoral obrigatóriu ba Militante.')
 		return cleaned
 
 
@@ -207,13 +196,8 @@ class EdukasaunForm(forms.ModelForm):
 		return cleaned
 
 
-TIPU_ALOKASAUN = [('Ejekutivu', 'Ejekutivu (Postu, Suku ka Aldeia)'), ('Organizasaun', 'Organizasaun (sayap: OJD, OMD, MPD...)')]
-NIVEL_TIPU = {'Ejekutivu': ('Postu', 'Suku', 'Aldeia'), 'Organizasaun': ('Suku', 'Aldeia', 'Organizasaun')}
-
-
 class AlokasaunForm(forms.ModelForm):
 	membro = MembroChoiceField(label="Membru", queryset=Membro.objects.none())
-	tipu = forms.ChoiceField(label="Tipu Pozisaun", choices=TIPU_ALOKASAUN, required=False)
 	data_hahu = forms.DateField(label="Data Hahu", widget=DateInput())
 	data_termina = forms.DateField(label="Data Termina", widget=DateInput(), required=False)
 
@@ -221,16 +205,18 @@ class AlokasaunForm(forms.ModelForm):
 		model = Alokasaun
 		fields = ['membro', 'nivel', 'pozisaun', 'village', 'aldeia', 'organizasaun', 'data_hahu', 'data_termina', 'ativu']
 
-	def __init__(self, *args, **kwargs):
+	def __init__(self, *args, user=None, **kwargs):
 		super().__init__(*args, **kwargs)
+		self.group = c_user_group(user) if user else roles.ADMIN
+		# nivel Postu deit ba Admin (pozisaun ne'e mantein se iha ona)
+		if self.group != roles.ADMIN and not (self.instance.pk and self.instance.nivel == 'Postu'):
+			self.fields['nivel'].choices = [c for c in self.fields['nivel'].choices if c[0] != 'Postu']
 		# membru yang sudah punya pozisaun ativu (is_colocado) tidak tampil; saat edit, pemegangnya sendiri tetap tampil
 		bebas = Q(is_colocado=False)
 		if self.instance.pk:
 			bebas |= Q(pk=self.instance.membro_id)
 		self.fields['membro'].queryset = Membro.objects.filter(bebas, status='Ativu').exclude(aprovasaun='Rejeitadu').select_related('village', 'aldeia')
 		self.fields['organizasaun'].queryset = Organizasaun.objects.filter(is_active=True)
-		if self.instance.pk and not self.is_bound:
-			self.initial['tipu'] = 'Organizasaun' if self.instance.organizasaun_id else 'Ejekutivu'
 		self.helper = FormHelper()
 		self.helper.form_method = 'post'
 		self.helper.form_id = 'alokasaunForm'
@@ -238,9 +224,8 @@ class AlokasaunForm(forms.ModelForm):
 		self.helper.layout = Layout(
 			Row(Column('membro', css_class='form-group col-md-12 mb-0'), css_class='form-row'),
 			Row(
-				Column('tipu', css_class='form-group col-md-4 mb-0'),
-				Column('nivel', css_class='form-group col-md-4 mb-0'),
-				Column('pozisaun', css_class='form-group col-md-4 mb-0'),
+				Column('nivel', css_class='form-group col-md-6 mb-0'),
+				Column('pozisaun', css_class='form-group col-md-6 mb-0'),
 				css_class='form-row'
 			),
 			Row(
@@ -268,16 +253,9 @@ class AlokasaunForm(forms.ModelForm):
 			self.add_error('pozisaun', f'Pozisaun {pozisaun} la existe iha nivel {nivel}.')
 			return cleaned
 		village, aldeia, org = cleaned.get('village'), cleaned.get('aldeia'), cleaned.get('organizasaun')
-		tipu = cleaned.get('tipu')
-		if tipu in NIVEL_TIPU:
-			if nivel not in NIVEL_TIPU[tipu]:
-				self.add_error('nivel', f'Tipu {tipu}: hili nivel {" / ".join(NIVEL_TIPU[tipu])}.')
-				return cleaned
-			if tipu == 'Ejekutivu':
-				org = None  # ejekutivu la iha organizasaun
-			elif not org:
-				self.add_error('organizasaun', 'Organizasaun tenke hili.')
-				return cleaned
+		if nivel == 'Postu' and self.group != roles.ADMIN and not (self.instance.pk and self.instance.nivel == 'Postu'):
+			self.add_error('nivel', 'Nivel Postu deit Admin bele aloka.')
+			return cleaned
 		if nivel == 'Postu':
 			village = aldeia = org = None
 		elif nivel == 'Suku':
@@ -286,14 +264,14 @@ class AlokasaunForm(forms.ModelForm):
 				self.add_error('village', 'Suku tenke hili.')
 			elif membro.village_id != village.pk:
 				self.add_error('membro', 'Membru ne\'e la hela iha suku ne\'e.')
-			elif org and membro.organizasaun_id != org.pk:
+			elif org and membro.organizasaun_id and membro.organizasaun_id != org.pk:
 				self.add_error('membro', 'Membru ne\'e la tama organizasaun ne\'e.')
 		elif nivel == 'Aldeia':  # organizasaun opsional = sayap (Koord OJD Aldeia, dst.)
 			if not aldeia:
 				self.add_error('aldeia', 'Aldeia tenke hili.')
 			elif membro.aldeia_id != aldeia.pk:
 				self.add_error('membro', 'Membru ne\'e la hela iha aldeia ne\'e.')
-			elif org and membro.organizasaun_id != org.pk:
+			elif org and membro.organizasaun_id and membro.organizasaun_id != org.pk:
 				self.add_error('membro', 'Membru ne\'e la tama organizasaun ne\'e.')
 			else:
 				village = aldeia.village
@@ -301,8 +279,8 @@ class AlokasaunForm(forms.ModelForm):
 			village = aldeia = None
 			if not org:
 				self.add_error('organizasaun', 'Organizasaun tenke hili.')
-			elif membro.organizasaun_id != org.pk:
-				self.add_error('membro', 'Membru ne\'e la tama organizasaun ne\'e.')
+			elif membro.organizasaun_id and membro.organizasaun_id != org.pk:
+				self.add_error('membro', 'Membru ne\'e tama organizasaun seluk.')
 		cleaned['village'], cleaned['aldeia'], cleaned['organizasaun'] = village, aldeia, org
 		if cleaned.get('data_termina') and cleaned.get('data_hahu') and cleaned['data_termina'] < cleaned['data_hahu']:
 			self.add_error('data_termina', 'Data termina tenke hafoin data hahu.')
@@ -326,26 +304,67 @@ class AlokasaunForm(forms.ModelForm):
 
 
 class AlokasaunMembroForm(AlokasaunForm):
-	"""Pasu ikus iha fluxu input membru: membru fixu; 'Laiha' = Militante/Simpatizante deit (la iha pozisaun, la rai buat ruma)."""
+	"""Pasu ikus iha fluxu input membru: hili Militante, Simpatizante ka Ejekutivu. Militante/Simpatizante = rai kategoria deit
+	(la iha pozisaun); Ejekutivu = hatudu nivel (Suku, Aldeia ka Organizasaun; Postu deit Admin)."""
+	TIPU = [('Militante', 'Militante'), ('Simpatizante', 'Simpatizante'), ('Ejekutivu', 'Ejekutivu (iha pozisaun iha struktura)')]
+	tipu = forms.ChoiceField(label="Membru ne'e", choices=TIPU)
 
-	def __init__(self, *args, membro=None, **kwargs):
-		super().__init__(*args, **kwargs)
+	def __init__(self, *args, membro=None, user=None, **kwargs):
+		super().__init__(*args, user=user, **kwargs)
+		self.membro = membro
+		group, scope = self.group, (c_user_scope(user) if user else None)
 		self.fields['membro'].queryset = Membro.objects.filter(pk=membro.pk)
 		self.fields['membro'].widget = forms.HiddenInput()
 		self.fields['membro'].initial = membro.pk
-		self.fields['tipu'].choices = [('Laiha', 'Laiha pozisaun (Militante/Simpatizante deit)')] + TIPU_ALOKASAUN
-		self.fields['tipu'].initial = 'Laiha'
-		self.fields['tipu'].required = True
+		self.fields['tipu'].initial = membro.kategoria
 		for f in ('nivel', 'pozisaun', 'data_hahu'):
 			self.fields[f].required = False
+		self.fields['data_hahu'].initial = datetime.date.today()
+		del self.fields['data_termina'], self.fields['ativu']
+		# nivel tuir permisaun: Admin (Postu, Suku, Aldeia, Organizasaun); Presidente (Suku, Aldeia, Organizasaun); sekjer deit nia unidade
+		allowed = {roles.ADMIN: ('Postu', 'Suku', 'Aldeia', 'Organizasaun'), roles.PRESIDENTE: ('Suku', 'Aldeia', 'Organizasaun'),
+			roles.SEKR_SUKU: ('Suku', 'Aldeia'), roles.SEKR_ALDEIA: ('Aldeia',), roles.SEKR_ORG: ('Organizasaun',)}.get(group, ())
+		self.allowed_nivel = allowed
+		self.fields['nivel'].choices = [('', '---------')] + [(n, n) for n in allowed]
+		if group == roles.SEKR_SUKU and scope and scope.village_id:
+			self.fields['village'].queryset = Village.objects.filter(pk=scope.village_id)
+			self.fields['aldeia'].queryset = Aldeia.objects.filter(village_id=scope.village_id)
+		elif group == roles.SEKR_ALDEIA and scope and scope.aldeia_id:
+			self.fields['village'].queryset = Village.objects.filter(pk=scope.aldeia.village_id)
+			self.fields['aldeia'].queryset = Aldeia.objects.filter(pk=scope.aldeia_id)
+		elif group == roles.SEKR_ORG and scope and scope.organizasaun_id:
+			self.fields['organizasaun'].queryset = Organizasaun.objects.filter(pk=scope.organizasaun_id)
+		self.helper.layout = Layout(
+			'membro',
+			Row(
+				Column('tipu', css_class='form-group col-md-4 mb-0'),
+				Column('nivel', css_class='form-group col-md-4 mb-0 ejekutivu-field'),
+				Column('pozisaun', css_class='form-group col-md-4 mb-0 ejekutivu-field'),
+				css_class='form-row'
+			),
+			Row(
+				Column('village', css_class='form-group col-md-4 mb-0 unit-suku unit-aldeia'),
+				Column('aldeia', css_class='form-group col-md-4 mb-0 unit-aldeia'),
+				Column('organizasaun', css_class='form-group col-md-4 mb-0 unit-suku unit-aldeia unit-organizasaun'),
+				css_class='form-row'
+			),
+			Row(Column('data_hahu', css_class='form-group col-md-4 mb-0 ejekutivu-field'), css_class='form-row'),
+			HTML(BTN_CANCEL),
+			HTML(BTN_SAVE)
+		)
 
 	def clean(self):
-		if self.data.get(self.add_prefix('tipu')) == 'Laiha':
-			return forms.ModelForm.clean(self)
+		tipu = self.cleaned_data.get('tipu')
 		cleaned = forms.ModelForm.clean(self)
+		if tipu in ('Militante', 'Ejekutivu') and not self.membro.nu_eleitoral:
+			self.add_error('tipu', f'Nu. Eleitoral obrigatóriu ba {tipu}. Hatama uluk iha Edita Membru, ka hili Simpatizante.')
+		if tipu != 'Ejekutivu':
+			return cleaned
 		for f, msg in (('nivel', 'Nivel tenke hili.'), ('pozisaun', 'Pozisaun tenke hili.'), ('data_hahu', 'Data hahu tenke hatama.')):
 			if not cleaned.get(f):
 				self.add_error(f, msg)
+		if cleaned.get('nivel') and cleaned['nivel'] not in self.allowed_nivel:
+			self.add_error('nivel', 'Ita la iha permisaun atu aloka nivel ne\'e.')
 		if self.errors:
 			return cleaned
 		return AlokasaunForm.clean(self)
@@ -438,7 +457,6 @@ class ServisuForm(forms.ModelForm):
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
-		self.fields['detalle'].help_text = 'Ezemplu: naran eskola, fatin servisu, atividade.'
 		self.helper = FormHelper()
 		self.helper.form_method = 'post'
 		self.helper.form_id = 'servisuForm'

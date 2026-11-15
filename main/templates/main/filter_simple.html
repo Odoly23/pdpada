@@ -1,0 +1,6 @@
+{# Tombol filter sederhana (btn btn-sm). Variabel: filters = [{label, url, count, active}], title #}
+<div class="filter-simple no-print" role="group" aria-label="{{ title|default:'Filtru' }}">
+	{% if title %}<span class="filter-title">{{ title }}</span>{% endif %}
+	{% for f in filters %}<a class="btn btn-sm {% if f.active %}btn-info{% else %}btn-outline-secondary{% endif %}" href="{{ f.url }}"{% if f.count is not None %} title="{{ f.count }} membru"{% endif %}{% if f.active %} aria-current="true"{% endif %}>{{ f.label }}</a>
+	{% endfor %}
+</div>

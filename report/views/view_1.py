@@ -78,7 +78,7 @@ def Dash(request):
 		{'name': 'Seidauk iha dadus', 'total': qs.filter(servisu__isnull=True).count(), 'url': _url(servisu='laiha')},
 	]
 	tables = [
-		{'title': 'Membru Tuir Jenis', 'head': 'Jenis', 'rows': jenis_rows},
+		{'title': 'Membru Tuir Kategoria', 'head': 'Kategoria', 'rows': jenis_rows},
 		{'title': 'Membru Tuir Servisu', 'head': 'Servisu', 'rows': servisu_rows},
 		{'title': 'Membru Tuir Suku', 'head': 'Suku', 'sexu': True, 'rows': _named_rows(qs, 'village_id', 'village__name', 'village')},
 		{'title': 'Membru Tuir Aldeia', 'head': 'Aldeia', 'sexu': True, 'rows': _named_rows(qs, 'aldeia_id', 'aldeia__name', 'aldeia')},

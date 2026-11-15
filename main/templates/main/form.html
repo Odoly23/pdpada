@@ -14,7 +14,6 @@
 		<div class="card shadow-lg pt-0 rounded">
 			<div class="card-header">{{ legend|upper }}</div>
 			<div class="card-body">
-				{% if fluxu_info %}<p class="text-muted mb-2">{{ fluxu_info }}</p>{% endif %}
 				{% crispy form %}
 				{% if skip_url %}<a class="btn btn-sm btn-secondary mt-2" href="{{ skip_url }}" title="Liu pasu ne'e">Liu pasu ne'e <i class="fa fa-step-forward"></i></a>{% endif %}
 			</div> <!--end card-body-->

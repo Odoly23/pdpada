@@ -568,3 +568,31 @@ div.dataTables_wrapper div.dataTables_length label { font-weight: 400; color: #6
 /* hitungan jenis membru di Varanda */
 
 .filter-title { align-self: center; min-width: 6.5rem; font-weight: 700; color: var(--navy); text-transform: uppercase; font-size: .8rem; letter-spacing: .05em; }
+.struk-people { list-style: none; margin: 0; padding: 0; }
+.struk-people li { padding: .1rem 0; border-bottom: 1px dotted #c9cff0; }
+.struk-people li:last-child { border-bottom: 0; }
+.struk-label { display: block; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--navy); }
+/* bagan Struktura PD: suku berjajar ke samping (geser), aldeia bertumpuk ke bawah di tiap suku */
+.struk-tree > .org-item > .org-children { flex-wrap: nowrap; justify-content: flex-start; justify-content: safe center; }  /* safe center: cabang kiri la tohar bainhira bagan luan */
+.struk-tree { display: inline-block; min-width: 100%; }
+.org-children.struk-col { flex-direction: column; align-items: center; flex-wrap: nowrap; }
+.struk-col > .org-item { padding-top: .75rem; margin-bottom: 0; }
+.struk-col > .org-item::before { height: .75rem; }
+.struk-col > .org-item::after { display: none; }
+/* bagan Struktura PD: gaya organigrama klasik (kotak putih bergaris hitam, judul tengah, garis penghubung hitam) */
+.struk-tree .org-card, .struk-tree .org-card.org-root { background: #fff; border: 1px solid #000; border-top: 1px solid #000; box-shadow: none; text-align: center; width: 230px; }
+.struk-tree .org-card.org-root { width: 300px; }
+.struk-tree .org-head { background: #fff; color: #000; font-weight: 700; text-transform: uppercase; font-size: .8rem; padding: .4rem .5rem .2rem; }
+.struk-tree .org-head a { color: #000; text-decoration: underline; }
+.struk-tree .org-no { display: block; min-width: 0; margin: 0; padding: 0; background: none; color: #6c757d; font-size: .65rem; font-weight: 600; letter-spacing: .06em; }
+.struk-tree .org-body { padding: .1rem .5rem .45rem; }
+.struk-tree .struk-people li { border-bottom: 0; padding: .1rem 0; }
+.struk-tree .struk-label { color: #000; font-size: .65rem; font-weight: 600; }
+.struk-tree .struk-people a { color: #000; }
+.struk-tree .org-sayap .struk-people li { font-size: .74rem; line-height: 1.25; border-top: 1px dotted #999; }
+.struk-tree .org-sayap .struk-people li:first-child { border-top: 0; }
+.struk-tree .org-children::before, .struk-tree .org-children > .org-item::before { border-left: 1px solid #000; }
+.struk-tree .org-children > .org-item::after { border-top: 1px solid #000; }
+.filter-simple { display: inline-block; margin: 0 1.25rem .4rem 0; }
+.filter-simple .filter-title { font-size: .75rem; font-weight: 700; text-transform: uppercase; color: var(--navy); margin-right: .4rem; }
+.filter-simple .btn { margin-right: .15rem; }
