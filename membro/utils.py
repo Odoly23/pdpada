@@ -6,7 +6,7 @@ from django.db.models import Count, Q
 from urllib.parse import urlencode
 from config.user_utils import membro_scope
 from custom.models import Year
-from membro.models import Membro, Historia, Alokasaun, Servisu, POZISAUN, POZISAUN_POR_NIVEL
+from membro.models import Membro, Historia, Alokasaun, Servisu, Pozisaun, NIVEL
 
 SNAPSHOT_FIELDS = ['kategoria', 'nome', 'sex', 'place_of_birth', 'date_of_birth', 'marital', 'nu_eleitoral',
 	'telefone', 'image', 'file_eleitoral', 'village', 'aldeia', 'address', 'organizasaun', 'data_hakbit', 'status']
@@ -101,9 +101,9 @@ def apply_filters(qs, params):
 
 def apply_alokasaun_filters(qs, params):
 	"""Filter daftar alokasaun dari parameter GET (dipakai tautan di dashboard Struktura)."""
-	if params.get('nivel') in POZISAUN_POR_NIVEL:
+	if params.get('nivel') in dict(NIVEL):
 		qs = qs.filter(nivel=params['nivel'])
-	if params.get('pozisaun') in dict(POZISAUN):
+	if params.get('pozisaun') and Pozisaun.objects.filter(naran=params['pozisaun']).exists():
 		qs = qs.filter(pozisaun=params['pozisaun'])
 	if params.get('ativu') in ('Sim', 'Lae'):
 		qs = qs.filter(ativu=params['ativu'])

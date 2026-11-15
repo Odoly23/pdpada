@@ -1,4 +1,5 @@
 import datetime
+import json
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import Q
@@ -11,7 +12,7 @@ from config import roles
 from config.file_utils import sanitize_image, validate_image_content
 from config.upload_utils import validate_image_size
 from config.user_utils import c_user_group, c_user_scope
-from membro.models import Membro, Alokasaun, OrgPozisaun, OrgResponsavel, Servisu, Edukasaun, KATEGORIA, POZISAUN_POR_NIVEL
+from membro.models import Membro, Alokasaun, OrgPozisaun, OrgResponsavel, Servisu, Edukasaun, Pozisaun, KATEGORIA, pozisaun_por_nivel
 
 BTN_CANCEL = """ <a class="btn btn-secondary" href="{{ cancel_url }}" title="Cancela"><i class="fa fa-close"></i> Cancela</a> """
 BTN_SAVE = """ <button class="btn btn-primary" type="submit" title="Rai"> Rai <i class="fa fa-save"></i></button> """
@@ -211,6 +212,11 @@ class AlokasaunForm(forms.ModelForm):
 	def __init__(self, *args, user=None, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.group = c_user_group(user) if user else roles.ADMIN
+		# pozisaun mai husi tabela Pozisaun (ativu); pozisaun atual husi instansia mantein se la ativu tan
+		nomes = list(Pozisaun.objects.filter(ativu=True).values_list('naran', flat=True))
+		if self.instance.pk and self.instance.pozisaun not in nomes:
+			nomes.append(self.instance.pozisaun)
+		self.fields['pozisaun'] = forms.ChoiceField(label="Pozisaun", choices=[('', '---------')] + [(n, n) for n in nomes])
 		# nivel Postu deit ba Presidente no Admin (pozisaun ne'e mantein se iha ona)
 		if self.group not in POSTU_NIVEL_ROLES and not (self.instance.pk and self.instance.nivel == 'Postu'):
 			self.fields['nivel'].choices = [c for c in self.fields['nivel'].choices if c[0] != 'Postu']
@@ -223,7 +229,13 @@ class AlokasaunForm(forms.ModelForm):
 		self.helper = FormHelper()
 		self.helper.form_method = 'post'
 		self.helper.form_id = 'alokasaunForm'
-		self.helper.attrs = {'data-aldeias-url': reverse('ajax_load_aldeias')}
+		self.poz_nivel = pozisaun_por_nivel()
+		# pozisaun ba nivel ida-idak mai husi tabela Pozisaun (JS uza atu hatudu pozisaun ne'ebé loos deit)
+		poz_map = {}
+		for nivel, nomes in self.poz_nivel.items():
+			for naran in nomes:
+				poz_map.setdefault(naran, []).append(nivel)
+		self.helper.attrs = {'data-aldeias-url': reverse('ajax_load_aldeias'), 'data-pozisaun-nivel': json.dumps(poz_map)}
 		self.helper.layout = Layout(
 			Row(Column('membro', css_class='form-group col-md-12 mb-0'), css_class='form-row'),
 			Row(
@@ -252,7 +264,7 @@ class AlokasaunForm(forms.ModelForm):
 		membro, nivel, pozisaun = cleaned.get('membro'), cleaned.get('nivel'), cleaned.get('pozisaun')
 		if not (membro and nivel and pozisaun):
 			return cleaned
-		if pozisaun not in POZISAUN_POR_NIVEL[nivel]:
+		if pozisaun not in self.poz_nivel[nivel] and not (self.instance.pk and self.instance.pozisaun == pozisaun and self.instance.nivel == nivel):
 			self.add_error('pozisaun', f'Pozisaun {pozisaun} la existe iha nivel {nivel}.')
 			return cleaned
 		village, aldeia, org = cleaned.get('village'), cleaned.get('aldeia'), cleaned.get('organizasaun')
