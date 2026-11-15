@@ -18,7 +18,7 @@ def membro_scope(user, qs=None):
 	from membro.models import Membro
 	qs = Membro.objects.all() if qs is None else qs
 	group = c_user_group(user)
-	if group in roles.POSTU_ROLES:
+	if group in roles.POSTU_ROLES or group == roles.ADMIN:
 		return qs
 	scope = c_user_scope(user)
 	if scope:
@@ -35,7 +35,7 @@ def alokasaun_scope(user, qs=None):
 	from membro.models import Alokasaun
 	qs = Alokasaun.objects.all() if qs is None else qs
 	group = c_user_group(user)
-	if group in roles.POSTU_ROLES:
+	if group in roles.POSTU_ROLES or group == roles.ADMIN:
 		return qs
 	scope = c_user_scope(user)
 	if scope:

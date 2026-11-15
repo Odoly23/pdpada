@@ -16,7 +16,7 @@ from membro.utils import snapshot, diff_snapshot, log_historia, membro_listing, 
 
 # lista membru (filtru kategoria, servisu, suku, aldeia)
 @login_required
-@allowed_users(allowed_roles=roles.LISTA_ROLES)
+@allowed_users(allowed_roles=roles.DETALLE_ROLES)
 def MembroList(request):
 	group = c_user_group(request.user)
 	objects, semua_ano = membro_listing(request.user, request.GET)
@@ -34,7 +34,7 @@ def MembroList(request):
 
 # detalle membru (dadus, kontaktu, servisu)
 @login_required
-@allowed_users(allowed_roles=roles.LISTA_ROLES)
+@allowed_users(allowed_roles=roles.DETALLE_ROLES)
 def MembroDetail(request, hashid):
 	group = c_user_group(request.user)
 	obj = get_object_or_404(membro_scope(request.user), hashed=hashid)
@@ -171,8 +171,8 @@ def MembroFile(request, hashid, kind):
 
 # fluxu input membru: membru -> edukasaun -> servisu -> pozisaun -> detalle
 def _bele_aloka(user, emp):
-	"""Pozisaun bele aloka de'it husi Presidente ba membru aprovadu, ativu no seidauk iha pozisaun."""
-	return (c_user_group(user) in roles.ALOKA_ROLES and emp.aprovasaun == 'Aprovadu' and emp.status == 'Ativu' and not emp.is_colocado)
+	"""Pozisaun bele aloka (Presidente/Admin) ba membru ativu, seidauk iha pozisaun no la rejeitadu; input hotu uluk, depois aprova."""
+	return (c_user_group(user) in roles.ALOKA_ROLES and emp.aprovasaun != 'Rejeitadu' and emp.status == 'Ativu' and not emp.is_colocado)
 
 
 # URL pasu tuir mai iha fluxu (ho ?fluxu=1)
@@ -232,7 +232,7 @@ def MembroAloka(request, hashid):
 	group = c_user_group(request.user)
 	emp = get_object_or_404(membro_scope(request.user), hashed=hashid)
 	if not _bele_aloka(request.user, emp):
-		messages.warning(request, 'Membru ne\'e la bele hetan pozisaun (seidauk aprovadu, la ativu ka iha ona pozisaun).')
+		messages.warning(request, 'Membru ne\'e la bele hetan pozisaun (rejeitadu, la ativu ka iha ona pozisaun).')
 		return redirect('membro-detail', hashid=hashid)
 	if request.method == 'POST':
 		form = AlokasaunMembroForm(request.POST, membro=emp)

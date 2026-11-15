@@ -227,7 +227,7 @@ class AlokasaunForm(forms.ModelForm):
 		bebas = Q(is_colocado=False)
 		if self.instance.pk:
 			bebas |= Q(pk=self.instance.membro_id)
-		self.fields['membro'].queryset = Membro.objects.filter(bebas, aprovasaun='Aprovadu', status='Ativu').select_related('village', 'aldeia')
+		self.fields['membro'].queryset = Membro.objects.filter(bebas, status='Ativu').exclude(aprovasaun='Rejeitadu').select_related('village', 'aldeia')
 		self.fields['organizasaun'].queryset = Organizasaun.objects.filter(is_active=True)
 		if self.instance.pk and not self.is_bound:
 			self.initial['tipu'] = 'Organizasaun' if self.instance.organizasaun_id else 'Ejekutivu'

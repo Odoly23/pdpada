@@ -62,6 +62,8 @@ def _tiles(group, counts):
 		add('Suku no Aldeia', 'Rejistu suku Postu Dom Aleixo', 'fa-map-marker', reverse('master-list', args=['suku']))
 		add('Organizasaun', 'OJD, OPD, MPD no seluk', 'fa-flag', reverse('master-list', args=['organizasaun']))
 		add('Tinan Ativu', 'Troka tinan ne\'ebé uza ba relatoriu', 'fa-calendar', reverse('master-list', args=['ano']))
+		add('Lista Membru', 'Hare no jere dadus membru tomak', 'fa-list', reverse('membro-list'))
+		add('Aumenta Membru', 'Input dadus membru: edukasaun, servisu no pozisaun', 'fa-user-plus', reverse('membro-add'))
 		add('Historia', 'Rekorda mudansa dadus tomak', 'fa-history', reverse('historia-list'))
 		return tiles
 	if group == roles.FISKAIS:

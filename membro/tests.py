@@ -104,9 +104,10 @@ class ScopeTests(BaseCase):
 		self.assertEqual(self.client.get(reverse('membro-detail', args=[self.ma2.hashed])).status_code, 404)
 		self.assertEqual(self.client.get(reverse('membro-detail', args=[self.ma1.hashed])).status_code, 200)
 
-	def test_admin_cannot_see_members(self):
+	def test_admin_sees_all_members_to_input_full_data(self):
 		self.login('admin')
-		self.assertEqual(self.client.get(reverse('membro-list')).status_code, 403)
+		self.assertEqual(self.names('admin'), {'SCOPE01', 'SCOPE02', 'SCOPE03'})
+		self.assertEqual(self.client.get(reverse('membro-detail', args=[self.mb1.hashed])).status_code, 200)
 
 	def test_anonymous_redirected_to_login(self):
 		resp = self.client.get(reverse('membro-list'))
@@ -116,10 +117,10 @@ class ScopeTests(BaseCase):
 
 class InputTests(BaseCase):
 	def test_only_secretaries_can_input(self):
-		for u in ('presidente', 'koordpostu', 'koordsuku', 'admin', 'sekrpostu'):
+		for u in ('presidente', 'koordpostu', 'koordsuku', 'sekrpostu'):
 			self.login(u)
 			self.assertEqual(self.client.get(reverse('membro-add')).status_code, 403, u)
-		for u in ('sekrsuku', 'sekraldeia', 'sekrorg'):
+		for u in ('sekrsuku', 'sekraldeia', 'sekrorg', 'admin'):
 			self.login(u)
 			self.assertEqual(self.client.get(reverse('membro-add')).status_code, 200, u)
 
@@ -257,12 +258,14 @@ class AlokasaunTests(BaseCase):
 		self.assertEqual(resp.status_code, 200)
 		self.assertEqual(Alokasaun.objects.count(), 0)
 
-	def test_only_approved_members_selectable(self):
-		pend = self.make('ALO0004')
+	def test_rejected_members_not_selectable_but_pending_are(self):
+		rej = self.make('ALO0004', aprovasaun='Rejeitadu')
 		self.login('presidente')
-		resp = self.client.post(reverse('alokasaun-add'), self.data(pend))
+		resp = self.client.post(reverse('alokasaun-add'), self.data(rej))
 		self.assertEqual(Alokasaun.objects.count(), 0)
 		self.assertEqual(resp.status_code, 200)
+		pend = self.make('ALO0005')  # input hotu uluk, depois aprova
+		self.assertEqual(self.client.post(reverse('alokasaun-add'), self.data(pend)).status_code, 302)
 
 	def test_presidente_only_at_postu_level(self):
 		self.login('presidente')
@@ -391,7 +394,7 @@ class LayoutAndReportTests(BaseCase):
 		return [i['label'] for i in resp.context['nav_items']]
 
 	def test_menu_per_role(self):
-		self.assertEqual(self.menu('admin'), ['Varanda', 'Painel', 'Uzuáriu', 'Data Master', 'Eleisaun', 'Historia'])
+		self.assertEqual(self.menu('admin'), ['Varanda', 'Painel', 'Uzuáriu', 'Data Master', 'Eleisaun', 'Membru', 'Historia'])
 		self.assertEqual(self.menu('presidente'),
 			['Varanda', 'Painel', 'Eleisaun', 'Membru', 'Relatoriu', 'Struktura', 'Historia'])
 		self.assertEqual(self.menu('sekrsuku'), ['Varanda', 'Painel', 'Eleisaun', 'Membru', 'Relatoriu', 'Struktura'])
@@ -1085,8 +1088,10 @@ class SukuRekapTests(BaseCase):
 			self.assertEqual([(p['label'], p['nome']) for p in resp.context['pemimpin']],
 				[('Cordenador Suku', 'Joao Koord'), ('Sekjer Suku', 'Aaa Sekr')], u)
 			self.assertEqual(resp.context['pemimpin'][0]['idade'], self.m1.age())
-			self.assertEqual([(r['nome'], r['pozisaun']) for r in resp.context['rows']], [
-				('Joao Koord', 'Cordenador Suku'), ('Aaa Sekr', 'Sekjer Suku'), ('Abel Aldeia', 'Sekjer Aldeia A1'), ('Mario Biasa', 'Membru')], u)
+			self.assertEqual([(r['aldeia'].name, getattr(r['coord'], 'nome', None), getattr(r['sekr'], 'nome', None)) for r in resp.context['rows']],
+				[('A1', None, 'Abel Aldeia'), ('A2', None, None)], u)
+			self.assertContains(resp, reverse('membro-aldeia', args=[resp.context['rows'][0]['aldeia'].pk]))
+			self.assertContains(resp, 'Sekretariu/a Geral')
 			self.assertContains(resp, 'Lista kompañeiru husi suku')
 			self.assertNotContains(resp, 'Orang Suku B')
 
@@ -1633,9 +1638,9 @@ class LandingTests(BaseCase):
 		self.assertNotContains(resp, 'Aumenta Membru')
 		self.assertNotContains(resp, reverse('historia-list'))
 
-	def test_admin_tiles_have_no_member_features(self):
+	def test_admin_tiles_have_member_input_but_no_search_or_reports(self):
 		resp, tiles = self.tiles('admin')
-		self.assertEqual(set(tiles), {'Painel Admin', 'Uzuáriu', 'Suku no Aldeia', 'Organizasaun', 'Tinan Ativu', 'Historia'})
+		self.assertEqual(set(tiles), {'Painel Admin', 'Uzuáriu', 'Suku no Aldeia', 'Organizasaun', 'Tinan Ativu', 'Lista Membru', 'Aumenta Membru', 'Historia'})
 		self.assertFalse(resp.context['can_search'])
 		self.assertNotContains(resp, 'id="search-q"')
 
@@ -2535,8 +2540,7 @@ class DelegaduTests(BaseCase):
 		self.assertEqual(self.client.get('/').context['info']['lengkap'], 1)
 		page = self.client.get(reverse('membro-suku', args=[self.va.pk]))
 		self.assertEqual([p['nome'] for p in page.context['pemimpin']], ['Yakobus Koord', 'Rosalino Sekr'])
-		labels = {r['nome']: r['pozisaun'] for r in page.context['rows']}
-		self.assertEqual(labels['Anacleto Sayap'], 'Cordenador OJD Suku')
+		self.assertEqual(len({r['aldeia'].pk for r in page.context['rows']}), len(page.context['rows']))  # aldeia ida-idak dala ida
 
 	def test_form_allows_wing_only_for_member_of_that_organizasaun(self):
 		self.login('presidente')
@@ -2853,7 +2857,7 @@ class KategoriaServisuTests(BaseCase):
 	def test_servisu_and_kontaktu_only_input_roles_within_scope(self):
 		m = self.novo(nu='SC000001')
 		for name in ('membro-servisu', 'membro-kontaktu'):
-			for u, code in [('sekrsuku', 200), ('koordsuku', 403), ('presidente', 403), ('sekrpostu', 403), ('admin', 403), ('sekrsukub', 404)]:
+			for u, code in [('sekrsuku', 200), ('koordsuku', 403), ('presidente', 403), ('sekrpostu', 403), ('admin', 200), ('sekrsukub', 404)]:
 				self.login(u)
 				self.assertEqual(self.client.get(reverse(name, args=[m.hashed])).status_code, code, (name, u))
 
@@ -3028,8 +3032,10 @@ class FluxuInputTests(BaseCase):
 
 	def test_aloka_blocked_for_pending_colocado_or_other_roles(self):
 		self.login('presidente')
-		pend = self.make('FX000002')
-		self.assertRedirects(self.client.get(self.url('membro-aloka', pend)), self.url('membro-detail', pend), fetch_redirect_response=False)
+		rej = self.make('FX000002', aprovasaun='Rejeitadu')
+		self.assertRedirects(self.client.get(self.url('membro-aloka', rej)), self.url('membro-detail', rej), fetch_redirect_response=False)
+		pend = self.make('FX000006')  # input hotu uluk, depois aprova: Pendente bele hetan pozisaun
+		self.assertEqual(self.client.get(self.url('membro-aloka', pend)).status_code, 200)
 		self.aloka()
 		self.assertRedirects(self.client.get(self.url('membro-aloka')), self.url('membro-detail'), fetch_redirect_response=False)
 		self.login('sekrsuku')
@@ -3078,3 +3084,47 @@ class FluxuInputTests(BaseCase):
 	def test_other_roles_without_list_permission_get_no_cards(self):
 		self.login('sekrpostu')
 		self.assertFalse(self.client.get('/').context['struktura']['cards'])
+
+
+class AldeiaRekapTests(BaseCase):
+	"""Pájina suku: tabela aldeia (Coordenador no Sekretariu/a Geral); klik aldeia = lista membru aldeia."""
+
+	def setUp(self):
+		self.k = self.make('AL000001', aprovasaun='Aprovadu', nome='Koord Aldeia')
+		self.s = self.make('AL000002', aprovasaun='Aprovadu', nome='Sekr Aldeia')
+		self.o = self.make('AL000003', aprovasaun='Aprovadu', nome='Sayap OJD', organizasaun=self.org)
+		self.biasa = self.make('AL000004', aldeia=self.a2, nome='Biasa A2')
+		d = datetime.date(2026, 1, 1)
+		Alokasaun.objects.create(membro=self.k, nivel='Aldeia', pozisaun='Coordenador', aldeia=self.a1, village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.s, nivel='Aldeia', pozisaun='Sekretariu', aldeia=self.a1, village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.o, nivel='Aldeia', pozisaun='Coordenador', aldeia=self.a1, village=self.va, organizasaun=self.org, data_hahu=d)
+
+	def test_suku_page_one_row_per_aldeia_with_leaders_and_links(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-suku', args=[self.va.pk]))
+		rows = resp.context['rows']
+		self.assertEqual([r['aldeia'].name for r in rows], ['A1', 'A2'])
+		self.assertEqual((rows[0]['coord'].nome, rows[0]['sekr'].nome), ('Koord Aldeia', 'Sekr Aldeia'))  # sayap OJD la sai Coordenador
+		self.assertEqual((rows[1]['coord'], rows[1]['sekr']), (None, None))
+		self.assertEqual([r['n'] for r in rows], [3, 1])
+		for needle in ('Coordenador', 'Sekretariu/a Geral', reverse('membro-aldeia', args=[self.a1.pk])):
+			self.assertContains(resp, needle)
+		self.assertNotContains(resp, 'Naran Membru')
+
+	def test_aldeia_page_lists_only_that_aldeia_with_positions(self):
+		self.login('presidente')
+		resp = self.client.get(reverse('membro-aldeia', args=[self.a1.pk]))
+		self.assertEqual([(r['nome'], r['pozisaun']) for r in resp.context['rows']], [
+			('Koord Aldeia', 'Cordenador Aldeia A1'), ('Sekr Aldeia', 'Sekjer Aldeia A1'), ('Sayap OJD', 'Cordenador OJD Aldeia')])
+		self.assertEqual(resp.context['tot']['total'], 3)
+		self.assertEqual([(p['label'], p['nome']) for p in resp.context['pemimpin']], [('Cordenador Aldeia', 'Koord Aldeia'), ('Sekjer Aldeia', 'Sekr Aldeia')])
+		self.assertNotContains(resp, 'Biasa A2')
+		self.assertContains(resp, 'Naran Membru')
+		self.assertContains(resp, 'ESTRUTURA ALDEIA A1')
+
+	def test_aldeia_page_roles_and_404(self):
+		for u, code in [('presidente', 200), ('koordpostu', 200), ('sekrpostu', 200), ('koordsuku', 403), ('sekrsuku', 403), ('admin', 403)]:
+			self.login(u)
+			self.assertEqual(self.client.get(reverse('membro-aldeia', args=[self.a1.pk])).status_code, code, u)
+		self.login('presidente')
+		self.assertEqual(self.client.get(reverse('membro-aldeia', args=[99999])).status_code, 404)

@@ -280,28 +280,19 @@ def SukuRekap(request, pk):
 		ativu=Count('id', filter=Q(status='Ativu')), inativu=Count('id', filter=Q(status='Inativu')),
 		falesidu=Count('id', filter=Q(status='Falesidu')))
 
-	label, rank, leaders = {}, {}, {}
-	holders = Alokasaun.objects.filter(ativu='Sim').filter(Q(village=village) | Q(aldeia__village=village) | Q(organizasaun__isnull=False, membro__village=village))
-	for a in holders.select_related('aldeia', 'organizasaun').order_by('nivel', 'pozisaun'):
-		pos = POZISAUN_LABEL.get(a.pozisaun, a.pozisaun)
-		if a.nivel == 'Suku' and not a.organizasaun_id:
-			label[a.membro_id], rank[a.membro_id] = f'{pos} Suku', (0 if a.pozisaun == 'Coordenador' else 0.5)
-			leaders[a.pozisaun] = a.membro_id
-		elif a.nivel == 'Suku':  # sayap organisasi tingkat suku
-			label.setdefault(a.membro_id, f'{pos} {a.organizasaun.code} Suku')
-			rank.setdefault(a.membro_id, 0.7)
-		elif a.nivel == 'Aldeia':
-			label.setdefault(a.membro_id, f'{pos} {a.organizasaun.code if a.organizasaun_id else "Aldeia"} {a.aldeia.name}'.replace('  ', ' '))
-			rank.setdefault(a.membro_id, 1)
-		elif a.nivel == 'Organizasaun':
-			label.setdefault(a.membro_id, f'{pos} {a.organizasaun.code}')
-			rank.setdefault(a.membro_id, 2)
-	members = sorted(qs, key=lambda m: (rank.get(m.pk, 3), m.aldeia.name, m.nome))
-	rows = [{'aldeia': m.aldeia.name, 'nome': m.nome, 'pozisaun': label.get(m.pk, 'Membru')} for m in members]
-	by_id = {m.pk: m for m in members}
+	# satu liña ida-idak ba aldeia (naran aldeia la dobra): Coordenador no Sekretariu/a Geral aldeia
+	aldeias = list(Aldeia.objects.filter(village=village).order_by('name'))
+	hold = {(a.aldeia_id, a.pozisaun): a.membro for a in Alokasaun.objects.filter(
+		ativu='Sim', nivel='Aldeia', aldeia__village=village, organizasaun__isnull=True).select_related('membro')}
+	n_aldeia = dict(qs.order_by().values_list('aldeia_id').annotate(n=Count('id')))
+	rows = [{'aldeia': a, 'n': n_aldeia.get(a.pk, 0), 'url': reverse('membro-aldeia', args=[a.pk]),
+		'coord': hold.get((a.pk, 'Coordenador')), 'sekr': hold.get((a.pk, 'Sekretariu'))} for a in aldeias]
+	leaders = {}
+	for a in Alokasaun.objects.filter(ativu='Sim', nivel='Suku', village=village, organizasaun__isnull=True).select_related('membro'):
+		leaders[a.pozisaun] = a.membro
 	pemimpin = []
 	for key, name in (('Coordenador', 'Cordenador Suku'), ('Sekretariu', 'Sekjer Suku')):
-		m = by_id.get(leaders.get(key))
+		m = leaders.get(key)
 		pemimpin.append({'label': name, 'nome': m.nome if m else None, 'idade': m.age() if m else None})
 	context = {
 		'group': group, 'village': village, 'tot': tot, 'rows': rows, 'pemimpin': pemimpin,
@@ -373,3 +364,44 @@ def MembroSum(request):
 		'meta_description': 'Sumariu membru Partido Democratico, Postu Dom Aleixo, tuir suku, aldeia no organizasaun.',
 	}
 	return render(request, 'membro/sumariu.html', context)
+
+
+# rekap tuir aldeia (klik husi pájina suku): lista membru aldeia ida de'it
+@login_required
+@allowed_users(allowed_roles=roles.POSTU_ROLES)
+def AldeiaRekap(request, pk):
+	"""Detalhe aldeia ida: Coordenador no Sekjer aldeia, total no tabela Suku | Aldeia | Naran Membru | Posisaun."""
+	group = c_user_group(request.user)
+	aldeia = get_object_or_404(Aldeia.objects.select_related('village'), pk=pk)
+	village = aldeia.village
+	ano = Year.objects.filter(is_active=True).first()
+	qs = membro_scope(request.user).filter(aldeia=aldeia)
+	if ano:
+		qs = qs.filter(year=ano)
+	tot = qs.aggregate(
+		total=Count('id'), mane=Count('id', filter=Q(sex='Mane')), feto=Count('id', filter=Q(sex='Feto')),
+		ativu=Count('id', filter=Q(status='Ativu')), inativu=Count('id', filter=Q(status='Inativu')),
+		falesidu=Count('id', filter=Q(status='Falesidu')))
+	label, rank, leaders = {}, {}, {}
+	for a in Alokasaun.objects.filter(ativu='Sim', nivel='Aldeia', aldeia=aldeia).select_related('organizasaun').order_by('pozisaun'):
+		pos = POZISAUN_LABEL.get(a.pozisaun, a.pozisaun)
+		if a.organizasaun_id:
+			label.setdefault(a.membro_id, f'{pos} {a.organizasaun.code} Aldeia')
+			rank.setdefault(a.membro_id, 0.7)
+		else:
+			label[a.membro_id], rank[a.membro_id] = f'{pos} Aldeia {aldeia.name}', (0 if a.pozisaun == 'Coordenador' else 0.5)
+			leaders[a.pozisaun] = a.membro_id
+	members = sorted(qs, key=lambda m: (rank.get(m.pk, 3), m.nome))
+	by_id = {m.pk: m for m in members}
+	rows = [{'aldeia': aldeia.name, 'nome': m.nome, 'pozisaun': label.get(m.pk, 'Membru')} for m in members]
+	pemimpin = []
+	for key, name in (('Coordenador', 'Cordenador Aldeia'), ('Sekretariu', 'Sekjer Aldeia')):
+		m = by_id.get(leaders.get(key))
+		pemimpin.append({'label': name, 'nome': m.nome if m else None, 'idade': m.age() if m else None})
+	context = {
+		'group': group, 'village': village, 'aldeia': aldeia, 'tot': tot, 'rows': rows, 'pemimpin': pemimpin,
+		'struktura': {'title': f'ESTRUTURA ALDEIA {aldeia.name.upper()}', 'cards': struktura_cards(group, 'Aldeia', membro_scope(request.user), aldeia=aldeia)},
+		'title': f'Aldeia {aldeia.name}', 'legend': f'Aldeia {aldeia.name}',
+		'meta_description': f'Lista membru aldeia {aldeia.name}, suku {village.name}, Partido Democratico, Postu Dom Aleixo.',
+	}
+	return render(request, 'membro/aldeia_rekap.html', context)

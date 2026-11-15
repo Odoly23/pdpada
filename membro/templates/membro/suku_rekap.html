@@ -32,15 +32,16 @@
 			</div>
 			<div class="table-responsive mt-3">
 				<table class="table table-sm table-bordered text-center suku-table">
-					<thead><tr class="th-navy"><th>SUKU</th><th>Aldeia</th><th>Naran Membru</th><th>Posisaun</th></tr></thead>
+					<thead><tr class="th-navy"><th>SUKU</th><th>Aldeia</th><th>Coordenador</th><th>Sekretariu/a Geral</th></tr></thead>
 					<tbody>
 						{% for r in rows %}
 						<tr>
 							{% if forloop.first %}<td rowspan="{{ rows|length }}" class="align-middle suku-name">{{ village.name }}</td>{% endif %}
-							<td>{{ r.aldeia }}</td><td>{{ r.nome }}</td><td class="text-left">{{ r.pozisaun }}</td>
+							<td><a href="{{ r.url }}">{{ r.aldeia.name }}</a> <small class="text-muted">({{ r.n }})</small></td>
+							<td class="text-left">{{ r.coord.nome|default:"-" }}</td><td class="text-left">{{ r.sekr.nome|default:"-" }}</td>
 						</tr>
 						{% empty %}
-						<tr><td>{{ village.name }}</td><td colspan="3" class="text-muted">Seidauk iha membru iha suku ida ne'e.</td></tr>
+						<tr><td>{{ village.name }}</td><td colspan="3" class="text-muted">Seidauk iha aldeia iha suku ida ne'e.</td></tr>
 						{% endfor %}
 					</tbody>
 				</table>

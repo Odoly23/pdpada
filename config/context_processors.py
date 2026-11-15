@@ -38,6 +38,10 @@ def _menu(request, group):
 		items.append(_dropdown('Data Master', 'fa-database', master))
 		items.append(_dropdown('Eleisaun', 'fa-flag', [_item(request, 'Eleisaun no Tempat', 'fa-cogs', 'eleisaun-admin',
 			names=('eleisaun-admin', 'eleisaun-add', 'tempat-add', 'fiskais-add'))]))
+		items.append(_dropdown('Membru', 'fa-address-card', [
+			_item(request, 'Lista Membru', 'fa-list', 'membro-list', names=('membro-list', 'membro-detail', 'membro-update')),
+			_item(request, 'Aumenta Membru', 'fa-user-plus', 'membro-add'),
+			_item(request, 'Struktura PD', 'fa-sitemap', 'alokasaun-dash', names=('alokasaun-dash', 'alokasaun-list', 'alokasaun-add', 'alokasaun-update'))]))
 		items.append(_item(request, 'Historia', 'fa-history', 'historia-list'))
 		return items
 	if group in roles.VIEW_ROLES:
