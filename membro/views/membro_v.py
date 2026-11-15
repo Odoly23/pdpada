@@ -11,7 +11,7 @@ from custom.models import Year, Village, Aldeia, Organizasaun
 from django.urls import reverse
 from membro.forms import MembroForm, KontaktuForm, ServisuForm, EdukasaunForm, AlokasaunMembroForm
 from membro.models import Membro, Alokasaun, Servisu, Edukasaun
-from membro.utils import snapshot, diff_snapshot, log_historia, membro_listing, aprovasaun_filters, kategoria_filters, SERVISU_BUTTONS
+from membro.utils import snapshot, diff_snapshot, log_historia, membro_listing
 
 
 # lista membru (filtru kategoria, servisu, suku, aldeia)
@@ -24,9 +24,6 @@ def MembroList(request):
 		'group': group, 'objects': objects, 'semua_ano': semua_ano,
 		'can_add': group in roles.INPUT_ROLES, 'can_aprova': group in roles.APROVA_ROLES,
 		'can_export': group in roles.EXPORT_ROLES,
-		'filters': aprovasaun_filters(request.user, request.GET),
-		'jenis_filters': kategoria_filters(request.user, request.GET),
-		'servisu_filters': kategoria_filters(request.user, request.GET, 'servisu', SERVISU_BUTTONS),
 		'title': 'Lista Membru', 'legend': 'Lista Membru'
 	}
 	return render(request, 'membro/list.html', context)

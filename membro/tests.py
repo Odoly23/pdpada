@@ -2049,43 +2049,29 @@ class FilterButtonsAndTablesTests(BaseCase):
 		self.make('FB00003', self.va, self.a1, sex='Mane', aprovasaun='Aprovadu')
 		self.make('FB00004', self.vb, self.b1, sex='Mane', aprovasaun='Rejeitadu')
 
-	def filters(self, user, query=''):
+	def listed(self, user, query=''):
 		self.login(user)
 		resp = self.client.get(reverse('membro-list') + query)
 		self.assertEqual(resp.status_code, 200)
-		return resp, {f['label']: f for f in resp.context['filters']}
+		return resp, {m.nu_eleitoral for m in resp.context['objects']}
 
-	# ---- daftar membru
-	def test_member_list_has_simple_small_buttons_with_counts_in_tooltip(self):
-		resp, f = self.filters('presidente')
-		self.assertEqual({k: v['count'] for k, v in f.items()}, {'Hotu': 4, 'Pendente': 2, 'Aprovadu': 1, 'Rejeitadu': 1})
-		self.assertContains(resp, 'btn btn-sm btn-info')  # tombol ativu
-		self.assertContains(resp, 'btn btn-sm btn-outline-secondary')
-		self.assertContains(resp, 'title="4 membru"')
-		self.assertNotContains(resp, 'btn-filter')
+	# ---- daftar membru: la iha tombol filter (data deit); filtru GET kontinua serbisu
+	def test_member_list_has_no_filter_buttons(self):
+		resp, _ = self.listed('presidente')
+		for needle in ('btn-filter', 'filter-simple', 'filter-title'):
+			self.assertNotContains(resp, needle)
+		self.assertNotIn('filters', resp.context)
+		self.assertContains(resp, 'KATEGORIA')
+		self.assertNotContains(resp, 'JENIS')
 
-	def test_active_button_follows_query(self):
-		for value in ('Pendente', 'Aprovadu', 'Rejeitadu'):
-			resp, f = self.filters('presidente', f'?aprovasaun={value}')
-			self.assertEqual([k for k, v in f.items() if v['active']], [value])
-			listed = {m.aprovasaun for m in resp.context['objects']}
-			self.assertEqual(listed, {value})
+	def test_aprovasaun_query_still_filters_and_ignores_invalid(self):
+		for value, nus in (('Pendente', {'FB00001', 'FB00002'}), ('Aprovadu', {'FB00003'}), ('Rejeitadu', {'FB00004'})):
+			self.assertEqual(self.listed('presidente', f'?aprovasaun={value}')[1], nus, value)
+		self.assertEqual(len(self.listed('presidente', '?aprovasaun=bukan-status')[1]), 4)
 
-	def test_invalid_value_falls_back_to_hotu(self):
-		_, f = self.filters('presidente', '?aprovasaun=bukan-status')
-		self.assertEqual([k for k, v in f.items() if v['active']], ['Hotu'])
-
-	def test_other_filters_are_kept_and_counted(self):
-		_, f = self.filters('presidente', '?sex=Mane&aprovasaun=Pendente')
-		self.assertEqual({k: v['count'] for k, v in f.items()}, {'Hotu': 3, 'Pendente': 1, 'Aprovadu': 1, 'Rejeitadu': 1})
-		self.assertIn('sex=Mane', f['Aprovadu']['url'])
-		self.assertIn('aprovasaun=Aprovadu', f['Aprovadu']['url'])
-		self.assertNotIn('aprovasaun', f['Hotu']['url'])
-		self.assertIn('sex=Mane', f['Hotu']['url'])
-
-	def test_counts_respect_user_scope(self):
-		_, f = self.filters('koordsuku')
-		self.assertEqual({k: v['count'] for k, v in f.items()}, {'Hotu': 3, 'Pendente': 2, 'Aprovadu': 1, 'Rejeitadu': 0})
+	def test_other_filters_combine_and_scope_applies(self):
+		self.assertEqual(self.listed('presidente', '?sex=Mane&aprovasaun=Pendente')[1], {'FB00001'})
+		self.assertEqual(self.listed('koordsuku')[1], {'FB00001', 'FB00002', 'FB00003'})
 
 	def test_member_list_has_no_search_builder(self):
 		self.login('presidente')
@@ -2850,21 +2836,6 @@ class KategoriaServisuTests(BaseCase):
 			objs = self.client.get(reverse('membro-list'), {'jenis': jenis}).context['objects']
 			self.assertEqual({o.nu_eleitoral for o in objs}, esperado, jenis)
 		self.assertEqual(len(self.client.get(reverse('membro-list'), {'jenis': 'ngawur'}).context['objects']), 3)  # nilai asing diabaikan
-
-	def test_list_has_separate_filter_rows_with_counts(self):
-		self.make('JN00004', kategoria='Militante'); self.make('JN00005', kategoria='Simpatizante')
-		self.login('presidente')
-		resp = self.client.get(reverse('membro-list'))
-		f = {x['label']: x for x in resp.context['jenis_filters']}
-		self.assertEqual((f['Hotu']['count'], f['Militante']['count'], f['Simpatizante']['count'], f['Struktura Penting']['count']), (2, 1, 1, 0))
-		self.assertContains(resp, 'Struktura Penting')
-		self.assertContains(resp, 'KATEGORIA')
-		self.assertNotContains(resp, 'JENIS')
-		for judul in ('>Kategoria<', '>Aprovasaun<', '>Servisu<'):
-			self.assertContains(resp, judul)
-		self.assertNotContains(resp, 'btn-filter')  # tombol simple btn btn-sm
-		self.assertContains(resp, 'Struktura Penting')
-		self.assertTrue(f['Hotu']['active'])
 
 	def test_servisu_filters(self):
 		from membro.models import Servisu
