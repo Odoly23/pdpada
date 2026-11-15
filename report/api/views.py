@@ -104,7 +104,7 @@ class APIAlokasaun(BaseAPI):
 	"""Posisi aktif per nivel dan pozisaun (untuk grafik Struktura)."""
 	def get(self, request, format=None):
 		order = {'Postu': 0, 'Suku': 1, 'Aldeia': 2, 'Organizasaun': 3}
-		poz = {'Presidente': 0, 'Coordenador': 1, 'Sekretariu': 2}
+		poz = {'Presidente': 0, 'Vice I': 1, 'Vice II': 2, 'Vice III': 3, 'Coordenador': 4, 'Sekretariu': 5}
 		rows = alokasaun_scope(request.user).filter(ativu='Sim').values_list('nivel', 'pozisaun').annotate(n=Count('id'))
 		rows = sorted(rows, key=lambda r: (order.get(r[0], 9), poz.get(r[1], 9)))
 		return Response({'label': [f'{r[0]} · {r[1]}' for r in rows], 'obj': [r[2] for r in rows]})

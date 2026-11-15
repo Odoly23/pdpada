@@ -272,11 +272,10 @@ class AlokasaunTests(BaseCase):
 		resp = self.client.post(reverse('alokasaun-add'), self.data(self.m1, pozisaun='Presidente'))
 		self.assertEqual(Alokasaun.objects.count(), 0)
 		postu = {'membro': self.m1.pk, 'nivel': 'Postu', 'pozisaun': 'Presidente', 'data_hahu': '2026-01-01', 'ativu': 'Sim'}
-		self.assertEqual(self.client.post(reverse('alokasaun-add'), postu).status_code, 200)  # nivel Postu deit Admin
-		self.assertEqual(Alokasaun.objects.count(), 0)
-		self.login('admin')
-		self.client.post(reverse('alokasaun-add'), postu)
+		self.assertEqual(self.client.post(reverse('alokasaun-add'), postu).status_code, 302)  # Presidente bele aloka nivel Postu
 		self.assertEqual(Alokasaun.objects.count(), 1)
+		self.login('koordpostu')
+		self.assertEqual(self.client.post(reverse('alokasaun-add'), postu).status_code, 403)  # Koord Postu la bele aloka
 
 	def test_organization_level(self):
 		m = self.make('ALO0005', aprovasaun='Aprovadu', organizasaun=self.org)
@@ -3038,7 +3037,7 @@ class AldeiaRekapTests(BaseCase):
 
 
 class PozisaunStepTests(BaseCase):
-	"""Pasu pozisaun: Militante / Simpatizante (rai kategoria deit) ka Ejekutivu (nivel Suku, Aldeia, Organizasaun; Postu deit Admin)."""
+	"""Pasu pozisaun: Militante / Simpatizante (rai kategoria deit) ka Ejekutivu (nivel Suku, Aldeia, Organizasaun; Postu deit Presidente no Admin)."""
 
 	def setUp(self):
 		self.m = self.make('PZ000001')
@@ -3109,13 +3108,34 @@ class PozisaunStepTests(BaseCase):
 		self.m.refresh_from_db()
 		self.assertEqual(self.m.organizasaun, self.org)  # membru tama organizasaun ne'e
 
-	def test_postu_level_only_for_admin(self):
-		self.assertEqual(self.post('presidente', nivel='Postu', pozisaun='Presidente', village='').status_code, 200)
+	def test_postu_level_and_vice_positions_for_presidente_and_admin(self):
+		self.login('presidente')
+		page = self.client.get(self.url).content.decode()
+		self.assertIn('<option value="Postu">', page)
+		for v in ('Vice I', 'Vice II', 'Vice III'):
+			self.assertIn(f'<option value="{v}">', page)
+		for u in ('presidente', 'admin'):
+			Alokasaun.objects.all().delete()
+			Membro.objects.filter(pk=self.m.pk).update(is_colocado=False)
+			self.assertEqual(self.post(u, nivel='Postu', pozisaun='Vice II', village='').status_code, 302, u)
+			self.assertEqual(Alokasaun.objects.get().pozisaun, 'Vice II')
+
+	def test_postu_level_not_offered_to_sekjer(self):
+		self.login('sekrsuku')
+		self.assertNotIn('<option value="Postu">', self.client.get(self.url).content.decode())
+		self.assertEqual(self.post('sekrsuku', nivel='Postu', pozisaun='Vice I', village='').status_code, 200)
 		self.assertFalse(Alokasaun.objects.exists())
-		page = self.client.get(self.url)
-		self.assertNotContains(page, '<option value="Postu">')
-		self.assertEqual(self.post('admin', nivel='Postu', pozisaun='Presidente', village='').status_code, 302)
-		self.assertEqual(Alokasaun.objects.get().nivel, 'Postu')
+
+	def test_vice_positions_only_at_postu_and_unique_per_postu(self):
+		self.assertEqual(self.post('presidente', nivel='Suku', pozisaun='Vice I').status_code, 200)  # Vice la iha iha Suku
+		self.assertEqual(self.post('presidente', nivel='Postu', pozisaun='Vice III', village='').status_code, 302)
+		other = self.make('PZ000020')
+		self.url = reverse('membro-aloka', args=[other.hashed])
+		self.m = other
+		resp = self.post('presidente', nivel='Postu', pozisaun='Vice III', village='')  # Vice III ativu iha ona
+		self.assertEqual(resp.status_code, 200)
+		self.assertEqual(Alokasaun.objects.count(), 1)
+		self.assertEqual(self.post('presidente', nivel='Postu', pozisaun='Vice I', village='').status_code, 302)
 
 	def test_levels_limited_by_role(self):
 		self.login('sekrsuku')
