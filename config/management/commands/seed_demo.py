@@ -88,7 +88,7 @@ class Command(BaseCommand):
 				kategoria='Simpatizante' if simpa else 'Militante',
 				nome=f'{rnd.choice(NAMA)} {rnd.choice(APELIDU)}', sex=sex,
 				date_of_birth=datetime.date(rnd.randint(1960, 2006), rnd.randint(1, 12), rnd.randint(1, 28)),
-				marital=rnd.choice(['Solteiro/a', 'Casado/a', 'Casado/a', 'Viuvo/a']),
+				marital=rnd.choice(['Klosan', "Kaben-na'in", "Kaben-na'in", 'Faluk']),
 				nu_eleitoral=None if simpa and rnd.random() < 0.6 else f'{PREFIX}{n:05d}', village=a.village, aldeia=a,
 				organizasaun=rnd.choice(orgs + [None, None]) if orgs else None,
 				data_hakbit=datetime.date(rnd.randint(2010, 2025), 1, 1),
@@ -101,8 +101,10 @@ class Command(BaseCommand):
 				Servisu.objects.create(membro=m, status='Servisu', setor='Governu', instituisaun=rnd.choice(['Ministeriu Saude', 'Ministeriu Edukasaun', 'Munisipiu Dili']),
 					diresaun='Diresaun Jeral', pozisaun=rnd.choice(['Funsionáriu', 'Mestre', 'Enfermeiru']), kategoria='B', grau='3', data_hahu=datetime.date(rnd.randint(2008, 2023), 1, 1))
 			elif sorte < 0.5:
-				Servisu.objects.create(membro=m, status='Servisu', setor='Laos Governu', tipu_laos=rnd.choice(['Privadu', 'ONG', 'Negosiu']),
-					instituisaun=rnd.choice(['Kompañia Dili', 'Loja Rasik', 'ONG Lokál']), pozisaun=rnd.choice(['Motorista', 'Vendedór', 'Staff']), data_hahu=datetime.date(rnd.randint(2008, 2023), 1, 1))
+				setor = rnd.choice(['Organizasaun', 'Kompania'])
+				Servisu.objects.create(membro=m, status='Servisu', setor=setor,
+					instituisaun=rnd.choice(['ONG Lokál', 'Igreja Paróquia']) if setor == 'Organizasaun' else rnd.choice(['Kompañia Dili', 'Loja Rasik']),
+					pozisaun=rnd.choice(['Motorista', 'Vendedór', 'Asistente']), data_hahu=datetime.date(rnd.randint(2008, 2023), 1, 1))
 			else:
 				Servisu.objects.create(membro=m, status='Seidauk', atividade=rnd.choice(['Estudante', 'Hela uma', 'Agrikultura', 'Dezempregadu']))
 

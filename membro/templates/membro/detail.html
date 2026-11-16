@@ -43,9 +43,9 @@
 					<tr><td>Nu. Eleitoral</td><td>{{ obj.nu_eleitoral|default_if_none:"-" }}</td></tr>
 					<tr><td>Sexu</td><td>{{ obj.sex }}</td></tr>
 					<tr><td>Fatin/Data Moris</td><td>{{ obj.place_of_birth|default:"-" }} / {{ obj.date_of_birth|date:"d/m/Y" }} ({{ obj.age }} tinan)</td></tr>
-					<tr><td>Estado Civil</td><td>{{ obj.marital|default:"-" }}</td></tr>
+					<tr><td>Estadu Sivíl</td><td>{{ obj.marital|default:"-" }}</td></tr>
 					<tr><td>Kartaun Eleitoral (PDF)</td><td>{% if obj.file_eleitoral %}<a href="{% url 'membro-file' hashid 'eleitoral' %}" target="_blank" rel="noopener"><i class="fa fa-file-pdf-o"></i> Hare PDF</a>{% else %}<span class="text-muted">Seidauk upload eleitoral</span>{% endif %}</td></tr>
-					<tr><td>Nu. Telemovel</td><td>{{ obj.telefone|default:"-" }}</td></tr>
+					<tr><td>Nu. Telemóvel</td><td>{{ obj.telefone|default:"-" }}</td></tr>
 					<tr><td>Suku / Aldeia</td><td>{{ obj.village }} / {{ obj.aldeia }}</td></tr>
 					<tr><td>Hela Fatin</td><td>{{ obj.address|default:"-" }}</td></tr>
 					<tr><td>Organizasaun</td><td>{{ obj.organizasaun|default:"-" }}</td></tr>
@@ -56,14 +56,15 @@
 					{% else %}<tr><td colspan="3" class="text-muted">Seidauk iha dadus edukasaun.{% if can_edit %} <a href="{% url 'membro-edukasaun' hashid %}">Hatama agora</a>{% endif %}</td></tr>{% endif %}
 					<tr><th colspan="3" bgcolor="#eceefa">SERVISU</th></tr>
 					{% if servisu %}
-					<tr><td>Servisu agora</td><td colspan="2">{{ servisu.get_status_display }}</td></tr>
+					<tr><td>Servisu</td><td colspan="2">{{ servisu.get_status_display }}</td></tr>
 					{% if servisu.status == 'Servisu' %}
-					<tr><td>Tipu Instituisaun</td><td colspan="2">{{ servisu.get_setor_display|default:"-" }}{% if servisu.tipu_laos %} · {{ servisu.get_tipu_laos_display }}{% endif %}</td></tr>
-					<tr><td>Instituisaun / Pozisaun</td><td colspan="2">{{ servisu.instituisaun }} · {{ servisu.pozisaun }}</td></tr>
+					<tr><td>Servisu iha</td><td colspan="2">{{ servisu.get_setor_display|default:"-" }}</td></tr>
+					<tr><td>Fatin servisu</td><td colspan="2">{{ servisu.instituisaun|default:"-" }}</td></tr>
+					<tr><td>Pozisaun ka kargu</td><td colspan="2">{{ servisu.pozisaun|default:"-" }}</td></tr>
 					{% if servisu.setor == 'Governu' %}<tr><td>Diresaun · Kategoria · Grau</td><td colspan="2">{{ servisu.diresaun|default:"-" }} · {{ servisu.kategoria|default:"-" }} · {{ servisu.grau|default:"-" }}</td></tr>{% endif %}
-					<tr><td>Hahu / Fatin</td><td colspan="2">{{ servisu.data_hahu|date:"d/m/Y"|default:"-" }} / {{ servisu.municipality|default:"-" }}</td></tr>
+					<tr><td>Data hahú · Munisípiu</td><td colspan="2">{{ servisu.data_hahu|date:"d/m/Y"|default:"-" }} · {{ servisu.municipality|default:"-" }}</td></tr>
 					{% else %}
-					<tr><td>Atividade agora</td><td colspan="2">{{ servisu.get_atividade_display|default:"-" }}{% if servisu.detalle %} · {{ servisu.detalle }}{% endif %}</td></tr>
+					<tr><td>Halo saida agora</td><td colspan="2">{{ servisu.get_atividade_display|default:"-" }}{% if servisu.detalle %} · {{ servisu.detalle }}{% endif %}</td></tr>
 					{% endif %}
 					{% else %}
 					<tr><td colspan="3" class="text-muted">Seidauk iha dadus servisu.{% if can_edit %} <a href="{% url 'membro-servisu' hashid %}">Hatama agora</a>{% endif %}</td></tr>

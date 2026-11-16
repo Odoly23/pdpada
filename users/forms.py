@@ -9,7 +9,7 @@ from config.user_utils import c_user_group, c_user_scope
 from custom.models import Village, Aldeia, Organizasaun
 from users.models import UserScope
 
-BTN_CANCEL = """ <a class="btn btn-secondary" href="{{ cancel_url }}" title="Cancela"><i class="fa fa-close"></i> Cancela</a> """
+BTN_CANCEL = """ <a class="btn btn-secondary" href="{{ cancel_url }}" title="Kansela"><i class="fa fa-close"></i> Kansela</a> """
 BTN_SAVE = """ <button class="btn btn-primary" type="submit" title="Rai"> Rai <i class="fa fa-save"></i></button> """
 
 

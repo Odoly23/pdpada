@@ -131,12 +131,13 @@ class APIJenis(BaseAPI):
 		return Response({'label': [l for _, l in labels], 'obj': [filter_jenis(qs, v).count() for v, _ in labels]})
 
 
-# API estadu servisu (Governu, Laos Governu, Seidauk)
+# API estadu servisu (Governu, Organizasaun, Kompañia, Seidauk)
 class APIServisu(BaseAPI):
 	def get(self, request, format=None):
 		qs = membro_ativu(request.user)
 		rows = [('Servisu Governu', qs.filter(servisu__status='Servisu', servisu__setor='Governu')),
-			('Servisu Laos Governu', qs.filter(servisu__status='Servisu', servisu__setor='Laos Governu')),
+			('Servisu Organizasaun', qs.filter(servisu__status='Servisu', servisu__setor='Organizasaun')),
+			('Servisu Kompañia', qs.filter(servisu__status='Servisu', servisu__setor='Kompania')),
 			('Seidauk Servisu', qs.filter(servisu__status='Seidauk')), ('Seidauk iha dadus', qs.filter(servisu__isnull=True))]
 		return Response({'label': [l for l, _ in rows], 'obj': [q.count() for _, q in rows]})
 

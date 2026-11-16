@@ -24,7 +24,7 @@ def years_ago(today, n):
 
 
 FILTER_CHOICES = {
-	'marital': ['Solteiro/a', 'Casado/a', 'Divorciado/a', 'Viuvo/a'],
+	'marital': ['Klosan', "Kaben-na'in", 'Fahe malu', 'Faluk'],
 	'aprovasaun': ['Pendente', 'Aprovadu', 'Rejeitadu'],
 	'status': ['Ativu', 'Inativu', 'Falesidu'],
 	'sex': ['Mane', 'Feto'],
@@ -86,7 +86,7 @@ def apply_filters(qs, params):
 		qs = qs.filter(servisu__status=params['servisu'])
 	elif params.get('servisu') == 'laiha':
 		qs = qs.filter(servisu__isnull=True)
-	if params.get('setor') in ('Governu', 'Laos Governu'):
+	if params.get('setor') in ('Governu', 'Organizasaun', 'Kompania'):
 		qs = qs.filter(servisu__setor=params['setor'])
 	umur = params.get('umur')
 	if umur in AGE_RANGE:
@@ -137,7 +137,7 @@ SEARCH_MIN = 2
 
 
 def search_membro(user, q, limit=50):
-	"""Cari membru dalam wilayah user: semua kata ada di naran, awalan Nu. Eleitoral, atau Nu. Telemovel."""
+	"""Cari membru dalam wilayah user: semua kata ada di naran, awalan Nu. Eleitoral, atau Nu. Telemóvel."""
 	q = ' '.join((q or '').split())
 	if len(q) < SEARCH_MIN:
 		return Membro.objects.none()
@@ -151,7 +151,7 @@ def search_membro(user, q, limit=50):
 	return membro_scope(user).filter(cond).select_related('village', 'aldeia', 'organizasaun').order_by('nome')[:limit]
 
 
-CSV_HEADER = ['Nu. Eleitoral', 'Naran', 'Sexu', 'Data Moris', 'Idade', 'Estado Civil', 'Nu. Telemovel', 'Suku', 'Aldeia',
+CSV_HEADER = ['Nu. Eleitoral', 'Naran', 'Sexu', 'Data Moris', 'Idade', 'Estadu Sivíl', 'Nu. Telemóvel', 'Suku', 'Aldeia',
 	'Hela Fatin', 'Organizasaun', 'Data Hakbit', 'Status', 'Aprovasaun', 'Tinan', 'Kategoria', 'Servisu']
 
 

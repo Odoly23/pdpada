@@ -593,3 +593,4 @@ div.dataTables_wrapper div.dataTables_length label { font-weight: 400; color: #6
 .struk-tree .org-sayap .struk-people li:first-child { border-top: 0; }
 .struk-tree .org-children::before, .struk-tree .org-children > .org-item::before { border-left: 1px solid #000; }
 .struk-tree .org-children > .org-item::after { border-top: 1px solid #000; }
+.form-section { margin: .75rem 0 .5rem; padding-bottom: .25rem; border-bottom: 1px solid #c9cff0; color: var(--navy); font-weight: 700; text-transform: uppercase; font-size: .8rem; letter-spacing: .04em; }

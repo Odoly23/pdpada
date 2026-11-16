@@ -22,7 +22,7 @@ def _group_members(members, key):
 @login_required
 @allowed_users(allowed_roles=roles.DUPLIKAT_ROLES)
 def MembroDupla(request):
-	"""Membru dobel potensial: naran + data moris hanesan, ka Nu. Telemovel hanesan.
+	"""Membru dobel potensial: naran + data moris hanesan, ka Nu. Telemóvel hanesan.
 	Nu. Eleitoral dobel sudah ditolak sistema; ini menangkap kasus yang lolos (salah ketik Nu. Eleitoral)."""
 	group = c_user_group(request.user)
 	qs = membro_scope(request.user).select_related('village', 'aldeia', 'organizasaun')
