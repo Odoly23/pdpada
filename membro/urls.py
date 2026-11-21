@@ -31,6 +31,7 @@ urlpatterns = [
 	path('aprovasaun/<str:hashid>/rejeita/', views.AprovasaunRejeita, name='aprovasaun-rejeita'),
 	path('alokasaun/dash/', views.StrukturaBagan, name='alokasaun-dash'),
 	path('alokasaun/tabel/', views.AlokasaunDash, name='alokasaun-tabel'),
+	path('alokasaun/template/', views.AlokasaunTemplate, name='alokasaun-template'),
 	path('alokasaun/', views.AlokasaunList, name='alokasaun-list'),
 	path('alokasaun/add/', views.AlokasaunAdd, name='alokasaun-add'),
 	path('alokasaun/<int:pk>/edit/', views.AlokasaunUpdate, name='alokasaun-update'),

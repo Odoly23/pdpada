@@ -11,6 +11,9 @@ from config.user_utils import c_user_group, c_user_scope, alokasaun_scope
 from custom.models import Village, Aldeia, Organizasaun, Year
 from membro.forms import AlokasaunForm
 from membro.models import Alokasaun, Pozisaun
+from membro.pd_template import PD_TEMPLATE, SAYAP_CODES, label_unit
+from collections import defaultdict
+from urllib.parse import urlencode
 from membro.utils import log_historia, apply_alokasaun_filters
 
 
@@ -48,8 +51,9 @@ def AlokasaunAdd(request):
 			log_historia(request.user, instance.membro, 'Aloka', f'{instance.pozisaun} {instance.nivel} {instance.unit() or ""}'.strip())
 			messages.success(request, 'Pozisaun aloka ona.')
 			return redirect('alokasaun-list')
-	else:
-		form = AlokasaunForm(user=request.user)
+	else:  # klik "Aloka" di template PD: nivel, pozisaun, unit dibawa dari URL
+		prefill = {k: request.GET[k] for k in ('nivel', 'pozisaun', 'village', 'aldeia', 'organizasaun') if request.GET.get(k)}
+		form = AlokasaunForm(initial=prefill, user=request.user)
 	context = {
 		'form': form, 'group': group, 'cancel_url': '/membro/alokasaun/',
 		'back_url': 'alokasaun-list', 'back_label': 'Struktura no Pozisaun',
@@ -224,3 +228,45 @@ def StrukturaBagan(request):
 		'title': 'Struktura PD', 'legend': 'Struktura PD'
 	}
 	return render(request, 'membro/struktura_bagan.html', context)
+
+
+# template struktur PD (Suku, Aldeia, sayap OJD/OMD/MPD) tuir dokumen PD: aloka tuir kedudukan iha komunidade
+@login_required
+@allowed_users(allowed_roles=roles.POSTU_ROLES + [roles.ADMIN])
+def AlokasaunTemplate(request):
+	group = c_user_group(request.user)
+	nivel = request.GET.get('nivel') if request.GET.get('nivel') in ('Suku', 'Aldeia') else ''
+	village = Village.objects.filter(pk=request.GET['village']).first() if request.GET.get('village', '').isdigit() else None
+	aldeia = Aldeia.objects.select_related('village').filter(pk=request.GET['aldeia']).first() if request.GET.get('aldeia', '').isdigit() else None
+	org = Organizasaun.objects.filter(code=request.GET.get('org'), is_active=True).first() if request.GET.get('org') in SAYAP_CODES else None
+	rows, base_label, add_base = [], '', {}
+	if nivel == 'Suku' and village:
+		base = Alokasaun.objects.filter(ativu='Sim', nivel='Suku', village=village, organizasaun=None)
+		base_label, add_base = f'SUKU {village.name.upper()}', {'nivel': 'Suku', 'village': village.pk}
+	elif nivel == 'Aldeia' and aldeia:
+		base = Alokasaun.objects.filter(ativu='Sim', nivel='Aldeia', aldeia=aldeia, organizasaun=org)
+		base_label = f'ALDEIA {aldeia.name.upper()}' + (f' · {org.code}' if org else '')
+		add_base = {'nivel': 'Aldeia', 'aldeia': aldeia.pk, **({'organizasaun': org.pk} if org else {})}
+	else:
+		base = None
+	if base is not None:
+		code = org.code if org else None
+		holders = defaultdict(list)
+		for a in base.select_related('membro').order_by('id'):
+			holders[a.pozisaun].append(a)
+		for no, (naran, lbl) in enumerate(PD_TEMPLATE, start=1):
+			rows.append({'no': no, 'label': label_unit(lbl, code), 'holders': holders.get(naran, []),
+				'add': reverse('alokasaun-add') + '?' + urlencode({**add_base, 'pozisaun': naran})})
+		template_names = {naran for naran, _ in PD_TEMPLATE}
+		for naran, lst in holders.items():  # pozisaun di luar template
+			if naran not in template_names:
+				rows.append({'no': None, 'label': naran, 'holders': lst, 'add': ''})
+	context = {
+		'group': group, 'can_aloka': group in roles.ALOKA_ROLES, 'nivel': nivel,
+		'village': village, 'aldeia': aldeia, 'org': org, 'base_label': base_label, 'rows': rows,
+		'villages': Village.objects.order_by('name'),
+		'aldeias': Aldeia.objects.filter(village=village).order_by('name') if village else [],
+		'orgs': Organizasaun.objects.filter(is_active=True, code__in=SAYAP_CODES).order_by('code'),
+		'title': 'Template Struktura PD', 'legend': 'Template Struktura PD',
+	}
+	return render(request, 'membro/alokasaun_template.html', context)

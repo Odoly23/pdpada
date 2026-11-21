@@ -304,7 +304,9 @@ class AlokasaunForm(forms.ModelForm):
 			if lain:
 				raise ValidationError(f'{membro.nome} iha ona pozisaun ativu: {lain.pozisaun} {lain.nivel}. Termina uluk pozisaun ne\'e.')
 			qs = Alokasaun.objects.filter(nivel=nivel, pozisaun=pozisaun, ativu='Sim')
-			if nivel == 'Suku':
+			if Pozisaun.objects.filter(naran=pozisaun, unik=False).exists():  # Membru Seksaun: barak ba unidade ida
+				qs = qs.none()
+			elif nivel == 'Suku':
 				qs = qs.filter(village=village, organizasaun=org)  # org kosong = pemimpin utama suku
 			elif nivel == 'Aldeia':
 				qs = qs.filter(aldeia=aldeia, organizasaun=org)

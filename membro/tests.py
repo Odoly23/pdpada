@@ -7,6 +7,7 @@ from django.urls import reverse
 from config import roles
 from custom.models import Municipality, AdministrativePost, Village, Aldeia, Organizasaun, Year
 from membro.models import Membro, Alokasaun, Historia, OrgPozisaun, OrgResponsavel, Servisu, Pozisaun, pozisaun_por_nivel
+from membro.pd_template import template_naran
 from users.models import UserScope
 
 
@@ -602,7 +603,7 @@ class StrukturaDashTests(BaseCase):
 		self.login('presidente')
 		resp = self.client.get(reverse('alokasaun-dash'))
 		struktura = [i for i in resp.context['nav_items'] if i['label'] == 'Struktura'][0]
-		self.assertEqual([c['url'] for c in struktura['children']], [reverse('alokasaun-dash'), reverse('organigrama'), reverse('alokasaun-tabel')])  # dropdown: Struktura PD, Organigrama, Tabel Struktura
+		self.assertEqual([c['url'] for c in struktura['children']], [reverse('alokasaun-dash'), reverse('organigrama'), reverse('alokasaun-tabel'), reverse('alokasaun-template')])  # dropdown: Struktura PD, Organigrama, Tabel Struktura, Template PD
 		self.assertTrue(struktura['active'])
 
 	def test_alokasaun_api_scoped(self):
@@ -3263,8 +3264,8 @@ class StrukturaBaganTests(BaseCase):
 		self.assertTemplateUsed(resp, 'membro/alokasaun_dash.html')
 		self.assertEqual(resp.context['title'], 'Tabel Struktura')
 		struktura = [i for i in resp.context['nav_items'] if i['label'] == 'Struktura'][0]
-		self.assertEqual([c['label'] for c in struktura['children']], ['Struktura PD', 'Organigrama', 'Tabel Struktura'])
-		self.assertEqual([c['active'] for c in struktura['children']], [False, False, True])
+		self.assertEqual([c['label'] for c in struktura['children']], ['Struktura PD', 'Organigrama', 'Tabel Struktura', 'Template PD'])
+		self.assertEqual([c['active'] for c in struktura['children']], [False, False, True, False])
 
 	def test_sekretariu_postu_and_koord_org_other_rules(self):
 		self.login('sekrpostu')
@@ -3281,11 +3282,12 @@ class PozisaunMasterTests(BaseCase):
 		vice_c = ['Vice Coordenador I', 'Vice Coordenador II', 'Vice Coordenador III']
 		vice_s = ['Vice Sekretariu I', 'Vice Sekretariu II', 'Vice Sekretariu III']
 		semua = ['Presidente', 'Vice I', 'Vice II', 'Vice III', 'Coordenador'] + vice_c + ['Sekretariu'] + vice_s
-		self.assertEqual(list(Pozisaun.objects.values_list('naran', flat=True)), semua)
+		self.assertEqual(list(Pozisaun.objects.filter(iha_postu=True).values_list('naran', flat=True)), semua)
 		por_nivel = pozisaun_por_nivel()
 		self.assertEqual(por_nivel['Postu'], semua)
-		for n in ('Suku', 'Aldeia', 'Organizasaun'):  # Coordenador ho Vice I-III no Sekretariu ho Vice I-III
-			self.assertEqual(por_nivel[n], ['Coordenador'] + vice_c + ['Sekretariu'] + vice_s, n)
+		for n in ('Suku', 'Aldeia', 'Organizasaun'):  # template PD: Coordenador, Vice, Sekretariu, Tezoureiru, Chefe + Membru seksaun
+			self.assertTrue(set(template_naran()) <= set(por_nivel[n]), n)
+			self.assertNotIn('Presidente', por_nivel[n])
 
 	def test_vice_coordenador_and_sekretariu_selectable_and_saved_at_suku_and_aldeia(self):
 		self.login('presidente')
@@ -3366,3 +3368,73 @@ class PozisaunMasterTests(BaseCase):
 		unused = Pozisaun.objects.get(naran='Vice III')
 		self.client.post(f'/admin/membro/pozisaun/{unused.pk}/delete/', {'post': 'yes'})
 		self.assertFalse(Pozisaun.objects.filter(pk=unused.pk).exists())
+
+
+class PdTemplatePageTests(BaseCase):
+	"""Template struktur PD (dokumen resmi): Suku, Aldeia, dan sayap OJD/OMD/MPD; Membru Seksaun barak."""
+
+	def setUp(self):
+		self.k = self.make('TP000001', aprovasaun='Aprovadu')
+		self.s = self.make('TP000002', aprovasaun='Aprovadu')
+		self.mb1 = self.make('TP000003', aprovasaun='Aprovadu')
+		self.mb2 = self.make('TP000004', aprovasaun='Aprovadu')
+		self.ok = self.make('TP000005', aprovasaun='Aprovadu', aldeia=self.a1, village=self.va, organizasaun=self.org)
+		d = datetime.date(2026, 1, 1)
+		Alokasaun.objects.create(membro=self.k, nivel='Suku', pozisaun='Coordenador', village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.s, nivel='Suku', pozisaun='Sekretariu', village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.mb1, nivel='Suku', pozisaun='Membru Seksaun Politika e Programa', village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.mb2, nivel='Suku', pozisaun='Membru Seksaun Politika e Programa', village=self.va, data_hahu=d)
+		Alokasaun.objects.create(membro=self.ok, nivel='Aldeia', pozisaun='Coordenador', aldeia=self.a1, village=self.va, organizasaun=self.org, data_hahu=d)
+
+	def page(self, query):
+		self.login('presidente')
+		return self.client.get(reverse('alokasaun-template') + query)
+
+	def test_suku_rows_follow_document_order_with_all_holders(self):
+		resp = self.page('?nivel=Suku&village=%d' % self.va.pk)
+		self.assertEqual(resp.status_code, 200)
+		rows = resp.context['rows']
+		self.assertEqual(rows[0]['label'], 'Coordenador (PD)')
+		self.assertEqual(rows[3]['label'], 'Secretario (PD)')
+		self.assertEqual(rows[6]['label'], 'Tezoureiro/a')
+		membru = [r for r in rows if r['label'] == 'Membros'][0]
+		self.assertEqual([a.membro.nome for a in membru['holders']], [self.mb1.nome, self.mb2.nome])  # barak
+		self.assertContains(resp, '1º Vice Coordenador')
+		self.assertContains(resp, 'Chefe Seksaun Logistika e Transporte')
+		self.assertEqual(len(rows), 17)  # 7 posisaun + 5 seksaun x (Chefe + Membros)
+
+	def test_aldeia_pd_and_sayap_show_suffix_and_only_that_unit(self):
+		pd = self.page('?nivel=Aldeia&aldeia=%d' % self.a1.pk).context['rows']
+		self.assertEqual(pd[0]['label'], 'Coordenador (PD)')
+		self.assertEqual(pd[0]['holders'], [])  # sayap ok la hatudu iha PD
+		sayap = self.page('?nivel=Aldeia&aldeia=%d&org=OJD' % self.a1.pk)
+		self.assertEqual(sayap.context['rows'][0]['label'], 'Coordenador (OJD)')
+		self.assertEqual([a.membro.nome for a in sayap.context['rows'][0]['holders']], [self.ok.nome])
+		self.assertContains(sayap, 'Coordenador (OJD)')
+
+	def test_add_link_prefills_form(self):
+		resp = self.page('?nivel=Suku&village=%d' % self.va.pk)
+		add = [r for r in resp.context['rows'] if r['label'] == 'Membros'][0]['add']
+		self.assertIn('pozisaun=Membru+Seksaun+Politika+e+Programa', add)
+		form = self.client.get(add).context['form']
+		self.assertEqual(form.initial.get('pozisaun'), 'Membru Seksaun Politika e Programa')
+		self.assertEqual(form.initial.get('village'), str(self.va.pk))
+
+	def test_membru_seksaun_can_hold_many_but_chefe_stays_unique(self):
+		self.login('presidente')
+		m = self.make('TP000010', aprovasaun='Aprovadu')
+		base = {'membro': m.pk, 'nivel': 'Suku', 'village': self.va.pk, 'data_hahu': '2026-01-01', 'ativu': 'Sim'}
+		self.assertEqual(self.client.post(reverse('alokasaun-add'), dict(base, pozisaun='Membru Seksaun Politika e Programa')).status_code, 302)
+		m2 = self.make('TP000011', aprovasaun='Aprovadu')
+		self.assertEqual(self.client.post(reverse('alokasaun-add'), dict(base, membro=m2.pk, pozisaun='Membru Seksaun Politika e Programa')).status_code, 302)
+		m3 = self.make('TP000012', aprovasaun='Aprovadu')
+		resp = self.client.post(reverse('alokasaun-add'), dict(base, membro=m3.pk, pozisaun='Chefe Seksaun Sosiais e Kultura'))
+		self.assertEqual(resp.status_code, 302)
+		m4 = self.make('TP000013', aprovasaun='Aprovadu')
+		resp = self.client.post(reverse('alokasaun-add'), dict(base, membro=m4.pk, pozisaun='Chefe Seksaun Sosiais e Kultura'))
+		self.assertEqual(resp.status_code, 200)  # chefe seksaun ida deit iha unidade ida
+
+	def test_access_limited_to_postu_and_admin(self):
+		for u, code in (('presidente', 200), ('koordpostu', 200), ('admin', 200), ('sekrsuku', 403), ('koordsuku', 403)):
+			self.login(u)
+			self.assertEqual(self.client.get(reverse('alokasaun-template')).status_code, code, u)
