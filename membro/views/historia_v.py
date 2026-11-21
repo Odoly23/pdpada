@@ -15,7 +15,7 @@ AKSAUN_STYLE = {
 	'Rejeita': ('fa-times-circle', 'bad'), 'Aloka': ('fa-sitemap', 'info'), 'Edita Pozisaun': ('fa-pencil', 'warn'),
 	'Termina Pozisaun': ('fa-stop-circle', 'warn'), 'Organigrama': ('fa-sitemap', 'info'), 'Edita Servisu': ('fa-briefcase', 'warn'), 'Edita Kontaktu': ('fa-phone', 'warn'),
 	'Resultado Submete': ('fa-check-square-o', 'ok'), 'Loke Resultado': ('fa-unlock', 'warn'), 'Hare Resultado': ('fa-eye', 'dark'),
-	'Eleisaun Foun': ('fa-flag', 'info'), 'Eleisaun Live': ('fa-television', 'info'), 'Tempat Foun': ('fa-map-marker', 'info'),
+	'Eleisaun Foun': ('fa-flag', 'info'), 'Eleisaun Live': ('fa-television', 'info'), 'Fatin Votasaun Foun': ('fa-map-marker', 'info'), 'Tempat Foun': ('fa-map-marker', 'info'),
 	'Fiskais Foun': ('fa-user-plus', 'info'), 'Hamoos Fiskais': ('fa-trash', 'bad'), 'Hamoos': ('fa-trash', 'bad'), 'Hamoos Pozisaun': ('fa-trash', 'bad'), 'Ekspor': ('fa-download', 'dark'),
 	'Hare Dokumentu': ('fa-file-pdf-o', 'dark'),
 }

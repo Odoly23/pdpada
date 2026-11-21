@@ -13,9 +13,9 @@
 		</div>
 	</div>
 	{% if not fk %}
-		<div class="alert alert-warning">Konta ida ne'e seidauk hetan tempat votasaun. Kontaktu Admin.</div>
+		<div class="alert alert-warning">Konta ida ne'e seidauk hetan fatin votasaun. Kontaktu Admin.</div>
 	{% elif not fk.tempat.ativu %}
-		<div class="alert alert-warning">Tempat votasaun ne'e la ativu. Kontaktu Admin.</div>
+		<div class="alert alert-warning">Fatin votasaun ne'e la ativu. Kontaktu Admin.</div>
 	{% elif not el %}
 		<div class="alert alert-warning">Laiha eleisaun ativu. Hein Admin aktiva eleisaun molok input rezultadu.</div>
 	{% elif locked %}
@@ -31,7 +31,7 @@
 		<div class="card shadow-lg pt-0 rounded">
 			<div class="card-header">Submete rezultadu {{ fk.tempat.naran }}</div>
 			<div class="card-body">
-				<div class="alert alert-info">Submete <strong>dala ida de'it</strong>. Hafoin submete, formulariu taka no bele loke fali de'it husi Admin. Tempat votasaun aloka ona husi Admin; ita de'it hatama <strong>total votu PD</strong> no <strong>foto rezultadu</strong> (JPEG/PNG, maks. 2 MB).</div>
+				<div class="alert alert-info">Submete <strong>dala ida de'it</strong>. Hafoin submete, formulariu taka no bele loke fali de'it husi Admin. Fatin votasaun aloka ona husi Admin; ita de'it hatama <strong>total votu PD</strong> no <strong>foto rezultadu</strong> (JPEG/PNG, maks. 2 MB).</div>
 				{% crispy form %}
 			</div>
 		</div>

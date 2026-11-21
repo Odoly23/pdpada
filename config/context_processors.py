@@ -36,7 +36,7 @@ def _menu(request, group):
 			for tipu, label, icon in [('suku', 'Suku', 'fa-map-marker'), ('aldeia', 'Aldeia', 'fa-map-o'),
 				('organizasaun', 'Organizasaun', 'fa-flag'), ('ano', 'Tinan Ativu', 'fa-calendar')]]
 		items.append(_dropdown('Data Master', 'fa-database', master))
-		items.append(_dropdown('Eleisaun', 'fa-flag', [_item(request, 'Eleisaun no Tempat', 'fa-cogs', 'eleisaun-admin',
+		items.append(_dropdown('Eleisaun', 'fa-flag', [_item(request, 'Eleisaun no Fatin Votasaun', 'fa-cogs', 'eleisaun-admin',
 			names=('eleisaun-admin', 'eleisaun-add', 'tempat-add', 'fiskais-add'))]))
 		items.append(_dropdown('Membru', 'fa-address-card', [
 			_item(request, 'Lista Membru', 'fa-list', 'membro-list', names=('membro-list', 'membro-detail', 'membro-update')),

@@ -1,5 +1,5 @@
 ADMIN = 'admin'
-FISKAIS = 'fiskais'  # input hasil votu partidu per tempat votasaun (sekali submit)
+FISKAIS = 'fiskais'  # input rezultadu votu partidu tuir fatin votasaun (dala ida deit)
 PRESIDENTE = 'presidente'
 KOORD_POSTU = 'koord_postu'
 SEKR_POSTU = 'sekr_postu'

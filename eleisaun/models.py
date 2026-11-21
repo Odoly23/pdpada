@@ -26,13 +26,15 @@ class Eleisaun(models.Model):
 
 
 class TempatVoting(models.Model):
-	naran = models.CharField(max_length=120, verbose_name="Naran Tempat Votasaun")
+	naran = models.CharField(max_length=120, verbose_name="Naran Fatin Votasaun")
 	village = models.ForeignKey(Village, on_delete=models.PROTECT, verbose_name="Suku")
 	aldeia = models.ForeignKey(Aldeia, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Aldeia")
 	ativu = models.BooleanField(default=True, verbose_name="Ativu")
 
 	class Meta:
 		ordering = ['village__name', 'naran']
+		verbose_name = 'Fatin Votasaun'
+		verbose_name_plural = 'Fatin Votasaun'
 		constraints = [models.UniqueConstraint(fields=['naran', 'village'], name='tempat_naran_suku_unik')]
 
 	def __str__(self):
@@ -42,7 +44,7 @@ class TempatVoting(models.Model):
 class FiskaisTempat(models.Model):
 	"""Fiskais (akun dengan peran Fiskais Partidu) yang bertugas di satu tempat votasaun."""
 	user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='fiskais_tempat', verbose_name="Fiskais")
-	tempat = models.ForeignKey(TempatVoting, on_delete=models.PROTECT, related_name='fiskais', verbose_name="Tempat")
+	tempat = models.ForeignKey(TempatVoting, on_delete=models.PROTECT, related_name='fiskais', verbose_name="Fatin Votasaun")
 
 	class Meta:
 		ordering = ['tempat__naran', 'user__username']
@@ -54,7 +56,7 @@ class FiskaisTempat(models.Model):
 class Resultado(models.Model):
 	"""Hasil votu partidu di satu tempat untuk satu eleisaun. Terkunci setelah disubmit sampai Admin membuka lagi."""
 	eleisaun = models.ForeignKey(Eleisaun, on_delete=models.PROTECT, related_name='resultados', verbose_name="Eleisaun")
-	tempat = models.ForeignKey(TempatVoting, on_delete=models.PROTECT, related_name='resultados', verbose_name="Tempat")
+	tempat = models.ForeignKey(TempatVoting, on_delete=models.PROTECT, related_name='resultados', verbose_name="Fatin Votasaun")
 	votos_partidu = models.PositiveIntegerField(verbose_name="Total Votu PD")
 	foto = models.ImageField(upload_to=upload_resultado_foto, storage=private_storage, verbose_name="Foto Rezultadu", validators=[validate_image_size, validate_image_content])
 	submetidu = models.BooleanField(default=False, db_index=True, verbose_name="Submetidu (terkunci)")
