@@ -1,13 +1,16 @@
 {% extends "main/form.html" %}
 {% block form_scripts %}
 <script type="text/javascript">
-	// form servisu tuir status: iha servisu -> form servisu (governu ka laos governu); seidauk -> ita halo saida agora
+	// form servisu: iha servisu -> fatin servisu (Governu, Organizasaun ka Kompañia); seidauk -> saida mak halo agora
+	var NARAN_FATIN = {Governu: 'Naran ministériu ka instituisaun estadu', Organizasaun: 'Naran organizasaun', Kompania: 'Naran kompañia'};
 	function toggleServisu() {
 		var st = $('#id_status').val(), setor = $('#id_setor').val();
 		$('.sv-kerja').toggle(st === 'Servisu');
 		$('.sv-governu').toggle(st === 'Servisu' && setor === 'Governu');
-		$('.sv-laos').toggle(st === 'Servisu' && setor === 'Laos Governu');
 		$('.sv-seidauk').toggle(st === 'Seidauk');
+		var label = $('label[for="id_instituisaun"]');
+		var obrig = label.find('.asteriskField').detach();
+		label.text(NARAN_FATIN[setor] || 'Naran fatin servisu').append(obrig);
 	}
 	$('#id_status, #id_setor').on('change', toggleServisu);
 	toggleServisu();

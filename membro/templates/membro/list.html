@@ -50,7 +50,7 @@
 								<td data-title="Suku">{{ obj.village }}</td>
 								<td data-title="Aldeia">{{ obj.aldeia }}</td>
 								<td data-title="Organizasaun">{{ obj.organizasaun|default_if_none:"-" }}</td>
-								<td data-title="Kategoria"><span class="badge badge-jenis-{{ obj.jenis|lower }}">{{ obj.jenis }}</span></td>
+								<td data-title="Kategoria"><span class="badge badge-jenis-{{ obj.jenis|lower }}">{{ obj.jenis_label }}</span></td>
 								<td data-title="Servisu">{% if obj.servisu %}{{ obj.servisu.badak }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
 								<td data-title="Status">{{ obj.status }}</td>
 								<td data-title="Dokumentu">

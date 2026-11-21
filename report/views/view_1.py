@@ -70,10 +70,11 @@ def Dash(request):
 		sem_org=Count('id', filter=Q(organizasaun__isnull=True)))
 	age = _age_rows(qs)
 	jenis_rows = [{'name': lbl, 'total': filter_jenis(qs, val).count(), 'url': _url(jenis=val)}
-		for val, lbl in (('Struktura', 'Struktura Penting'), ('Militante', 'Militante'), ('Simpatizante', 'Simpatizante'))]
+		for val, lbl in (('Struktura', 'Struktura Penting'), ('Militante', 'Militante & Simpatizante'))]
 	servisu_rows = [
 		{'name': 'Servisu Governu', 'total': qs.filter(servisu__status='Servisu', servisu__setor='Governu').count(), 'url': _url(servisu='Servisu', setor='Governu')},
-		{'name': 'Servisu Laos Governu', 'total': qs.filter(servisu__status='Servisu', servisu__setor='Laos Governu').count(), 'url': _url(servisu='Servisu', setor='Laos Governu')},
+		{'name': 'Servisu Organizasaun', 'total': qs.filter(servisu__status='Servisu', servisu__setor='Organizasaun').count(), 'url': _url(servisu='Servisu', setor='Organizasaun')},
+		{'name': 'Servisu Kompañia', 'total': qs.filter(servisu__status='Servisu', servisu__setor='Kompania').count(), 'url': _url(servisu='Servisu', setor='Kompania')},
 		{'name': 'Seidauk Servisu', 'total': qs.filter(servisu__status='Seidauk').count(), 'url': _url(servisu='Seidauk')},
 		{'name': 'Seidauk iha dadus', 'total': qs.filter(servisu__isnull=True).count(), 'url': _url(servisu='laiha')},
 	]
@@ -85,7 +86,7 @@ def Dash(request):
 		{'title': 'Membru Tuir Organizasaun', 'head': 'Organizasaun', 'sexu': True, 'rows': _named_rows(qs, 'organizasaun_id', 'organizasaun__code', 'organizasaun')},
 		{'title': 'Membru Tuir Tinan Tama', 'head': 'Tinan', 'rows': _count_rows(qs, 'data_hakbit__year', 'hakbit', skip_none=True)},
 		{'title': 'Membru Tuir Idade', 'head': 'Idade', 'rows': age},
-		{'title': 'Membru Tuir Estado Civil', 'head': 'Estado Civil', 'rows': _count_rows(qs, 'marital', 'marital', none_label='Laiha', none_value='laiha')},
+		{'title': 'Membru Tuir Estadu Sivíl', 'head': 'Estadu Sivíl', 'rows': _count_rows(qs, 'marital', 'marital', none_label='Laiha', none_value='laiha')},
 	]
 	context = {
 		'group': group, 'banner': _banner(group, e), 'tot': tot, 'tables': tables, 'can_link': group in roles.LISTA_ROLES,

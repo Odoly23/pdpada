@@ -14,7 +14,7 @@ from config.upload_utils import validate_image_size
 from config.user_utils import c_user_group, c_user_scope
 from membro.models import Membro, Alokasaun, OrgPozisaun, OrgResponsavel, Servisu, Edukasaun, Pozisaun, KATEGORIA, pozisaun_por_nivel
 
-BTN_CANCEL = """ <a class="btn btn-secondary" href="{{ cancel_url }}" title="Cancela"><i class="fa fa-close"></i> Cancela</a> """
+BTN_CANCEL = """ <a class="btn btn-secondary" href="{{ cancel_url }}" title="Kansela"><i class="fa fa-close"></i> Kansela</a> """
 BTN_SAVE = """ <button class="btn btn-primary" type="submit" title="Rai"> Rai <i class="fa fa-save"></i></button> """
 
 
@@ -42,8 +42,8 @@ class MembroForm(forms.ModelForm):
 		super().__init__(*args, **kwargs)
 		group = c_user_group(user) if user else None
 		scope = c_user_scope(user) if user else None
-		self.fields['nu_eleitoral'].error_messages['required'] = 'Nu. Eleitoral obrigatóriu ba membru hotu (Militante no Simpatizante).'
-		self.fields['nu_eleitoral'].required = True  # importante: obrigatóriu ba membru hotu (Militante no Simpatizante)
+		self.fields['nu_eleitoral'].error_messages['required'] = 'Nu. Eleitoral obrigatóriu ba membru hotu.'
+		self.fields['nu_eleitoral'].required = True  # importante: obrigatóriu ba membru hotu
 		# upload: FileInput biasa (tanpa tautan/URL publik); isi file diperiksa di server
 		self.fields['image'].widget = forms.FileInput(attrs={'accept': 'image/jpeg,image/png'})
 		self.fields['file_eleitoral'].widget = forms.FileInput(attrs={'accept': 'application/pdf'})
@@ -51,8 +51,8 @@ class MembroForm(forms.ModelForm):
 		self.fields['image'].error_messages['invalid'] = "Fotu la válidu."
 		has_img = bool(self.instance.pk and self.instance.image)
 		has_pdf = bool(self.instance.pk and self.instance.file_eleitoral)
-		self.fields['image'].help_text = 'JPEG/PNG, maksimu 2 MB.' + (' Fotu iha ona; upload foun atu troka.' if has_img else '')
-		self.fields['file_eleitoral'].help_text = 'PDF deit, maksimu 5 MB.' + (' PDF iha ona; upload foun atu troka.' if has_pdf else '')
+		self.fields['image'].help_text = 'JPEG/PNG, maksimu 2 MB.' + (' Fotu iha ona; tau fotu foun atu troka.' if has_img else '')
+		self.fields['file_eleitoral'].help_text = 'PDF deit, maksimu 5 MB.' + (' PDF iha ona; tau PDF foun atu troka.' if has_pdf else '')
 		self.fields['village'].queryset = Village.objects.all()
 		self.fields['aldeia'].queryset = Aldeia.objects.select_related('village')
 		if group == roles.SEKR_SUKU and scope and scope.village_id:
@@ -202,8 +202,8 @@ POSTU_NIVEL_ROLES = (roles.ADMIN, roles.PRESIDENTE, roles.SEKR_SUKU)  # permisau
 
 class AlokasaunForm(forms.ModelForm):
 	membro = MembroChoiceField(label="Membru", queryset=Membro.objects.none())
-	data_hahu = forms.DateField(label="Data Hahu", widget=DateInput())
-	data_termina = forms.DateField(label="Data Termina", widget=DateInput(), required=False)
+	data_hahu = forms.DateField(label="Data hahú", widget=DateInput())
+	data_termina = forms.DateField(label="Data remata", widget=DateInput(), required=False)
 
 	class Meta:
 		model = Alokasaun
@@ -319,9 +319,9 @@ class AlokasaunForm(forms.ModelForm):
 
 
 class AlokasaunMembroForm(AlokasaunForm):
-	"""Pasu ikus iha fluxu input membru: hili Militante, Simpatizante ka Ejekutivu. Militante/Simpatizante = rai kategoria deit
+	"""Pasu ikus iha fluxu input membru: hili Militante & Simpatizante ka Ejekutivu. Militante & Simpatizante = rai deit
 	(la iha pozisaun); Ejekutivu = hatudu nivel (Suku, Aldeia ka Organizasaun; Postu ba Presidente, Admin no Sekjer Suku)."""
-	TIPU = [('Militante', 'Militante'), ('Simpatizante', 'Simpatizante'), ('Ejekutivu', 'Ejekutivu (iha pozisaun iha struktura)')]
+	TIPU = [('Militante', 'Militante & Simpatizante'), ('Ejekutivu', 'Ejekutivu (iha pozisaun iha struktura)')]
 	tipu = forms.ChoiceField(label="Membru ne'e", choices=TIPU)
 
 	def __init__(self, *args, membro=None, user=None, **kwargs):
@@ -372,8 +372,8 @@ class AlokasaunMembroForm(AlokasaunForm):
 	def clean(self):
 		tipu = self.cleaned_data.get('tipu')
 		cleaned = forms.ModelForm.clean(self)
-		if tipu in ('Militante', 'Ejekutivu') and not self.membro.nu_eleitoral:
-			self.add_error('tipu', f'Nu. Eleitoral obrigatóriu ba {tipu}. Hatama uluk iha Edita Membru, ka hili Simpatizante.')
+		if tipu and not self.membro.nu_eleitoral:  # membru tuan ho Nu. Eleitoral mamuk
+			self.add_error('tipu', 'Nu. Eleitoral obrigatóriu. Hatama uluk iha Edita Membru.')
 		if tipu != 'Ejekutivu':
 			return cleaned
 		for f, msg in (('nivel', 'Nivel tenke hili.'), ('pozisaun', 'Pozisaun tenke hili.'), ('data_hahu', 'Data hahu tenke hatama.')):
@@ -466,40 +466,47 @@ class KontaktuForm(forms.ModelForm):
 
 # form servisu membru: iha servisu (governu ka laos governu) ka seidauk servisu (atividade agora)
 class ServisuForm(forms.ModelForm):
+	"""Servisu membru: iha servisu (Governu, Organizasaun ka Kompañia) ka seidauk (saida mak halo agora)."""
 	class Meta:
 		model = Servisu
-		fields = ['status', 'setor', 'tipu_laos', 'instituisaun', 'diresaun', 'pozisaun', 'kategoria', 'grau', 'data_hahu', 'municipality', 'atividade', 'detalle']
+		fields = ['status', 'setor', 'instituisaun', 'diresaun', 'pozisaun', 'kategoria', 'grau', 'data_hahu', 'municipality', 'atividade', 'detalle']
 		widgets = {'data_hahu': DateInput()}
-		labels = {'atividade': 'Ita halo saida agora?', 'tipu_laos': 'Tipu Servisu (laos governu)'}
 
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
+		self.fields['status'].choices = [('', '---------')] + Servisu.STATUS
+		self.fields['setor'].choices = [('', '---------')] + Servisu.SETOR
+		self.fields['municipality'].empty_label = '---------'
 		self.helper = FormHelper()
 		self.helper.form_method = 'post'
 		self.helper.form_id = 'servisuForm'
 		self.helper.layout = Layout(
 			Row(
-				Column('status', css_class='form-group col-md-4 mb-0'),
-				Column('setor', css_class='form-group col-md-4 mb-0 sv-kerja'),
-				Column('tipu_laos', css_class='form-group col-md-4 mb-0 sv-laos'),
+				Column('status', css_class='form-group col-md-6 mb-0'),
+				Column('setor', css_class='form-group col-md-6 mb-0 sv-kerja'),
+				css_class='form-row'
+			),
+			HTML('<h6 class="form-section sv-kerja">Fatin servisu</h6>'),
+			Row(
+				Column('instituisaun', css_class='form-group col-md-6 mb-0 sv-kerja'),
+				Column('pozisaun', css_class='form-group col-md-6 mb-0 sv-kerja'),
 				css_class='form-row'
 			),
 			Row(
-				Column('instituisaun', css_class='form-group col-md-5 mb-0 sv-kerja'),
-				Column('diresaun', css_class='form-group col-md-4 mb-0 sv-governu'),
-				Column('pozisaun', css_class='form-group col-md-3 mb-0 sv-kerja'),
-				css_class='form-row'
-			),
-			Row(
+				Column('diresaun', css_class='form-group col-md-6 mb-0 sv-governu'),
 				Column('kategoria', css_class='form-group col-md-3 mb-0 sv-governu'),
 				Column('grau', css_class='form-group col-md-3 mb-0 sv-governu'),
-				Column('data_hahu', css_class='form-group col-md-3 mb-0 sv-kerja'),
-				Column('municipality', css_class='form-group col-md-3 mb-0 sv-kerja'),
 				css_class='form-row'
 			),
 			Row(
-				Column('atividade', css_class='form-group col-md-4 mb-0 sv-seidauk'),
-				Column('detalle', css_class='form-group col-md-8 mb-0 sv-seidauk'),
+				Column('data_hahu', css_class='form-group col-md-6 mb-0 sv-kerja'),
+				Column('municipality', css_class='form-group col-md-6 mb-0 sv-kerja'),
+				css_class='form-row'
+			),
+			HTML('<h6 class="form-section sv-seidauk">Saida mak halo agora</h6>'),
+			Row(
+				Column('atividade', css_class='form-group col-md-6 mb-0 sv-seidauk'),
+				Column('detalle', css_class='form-group col-md-6 mb-0 sv-seidauk'),
 				css_class='form-row'
 			),
 			HTML(BTN_CANCEL), HTML(BTN_SAVE))
@@ -510,25 +517,21 @@ class ServisuForm(forms.ModelForm):
 		kerja = status == 'Servisu'
 		governu = kerja and cleaned.get('setor') == 'Governu'
 		if kerja:
-			for campo, msg in [('setor', 'Hili instituisaun governu ka laos governu.'), ('instituisaun', 'Hatama naran instituisaun ka kompañia.'),
-					('pozisaun', 'Hatama pozisaun ka kargu.')]:
+			for campo, msg in [('setor', "Hili servisu iha ne'ebé: Governu, Organizasaun ka Kompañia."),
+					('instituisaun', 'Hakerek naran fatin servisu.'), ('pozisaun', 'Hakerek pozisaun ka kargu.')]:
 				if not cleaned.get(campo):
 					self.add_error(campo, msg)
-			if cleaned.get('setor') == 'Laos Governu' and not cleaned.get('tipu_laos'):
-				self.add_error('tipu_laos', 'Hili tipu servisu.')
 			if cleaned.get('data_hahu') and cleaned['data_hahu'] > datetime.date.today():
-				self.add_error('data_hahu', 'Data hahu servisu la bele iha futuru.')
+				self.add_error('data_hahu', 'Data hahú servisu labele iha futuru.')
 		elif status == 'Seidauk' and not cleaned.get('atividade'):
-			self.add_error('atividade', 'Hili ita halo saida agora.')
-		# campu ne'ebé la relevante hamoos, atu dadus la sai kusar
+			self.add_error('atividade', 'Hili saida mak ita halo agora.')
+		# kampu ne'ebé la relevante hamoos, atu dadus la kahur
 		if kerja:
 			cleaned['atividade'], cleaned['detalle'] = None, ''
 			if not governu:
 				cleaned['diresaun'], cleaned['kategoria'], cleaned['grau'] = '', '', ''
-			if cleaned.get('setor') != 'Laos Governu':
-				cleaned['tipu_laos'] = None
 		elif status == 'Seidauk':
-			for campo in ('setor', 'tipu_laos', 'data_hahu', 'municipality'):
+			for campo in ('setor', 'data_hahu', 'municipality'):
 				cleaned[campo] = None
 			for campo in ('instituisaun', 'diresaun', 'pozisaun', 'kategoria', 'grau'):
 				cleaned[campo] = ''

@@ -61,8 +61,7 @@ def _menu(request, group):
 		membru = [
 			_item(request, 'Sumariu Membru', 'fa-th-large', 'membro-sumariu'),
 			_item(request, 'Struktura Penting', 'fa-sitemap', 'membro-list', query='?jenis=Struktura', names=('membro-list',), match_get={'jenis': 'Struktura'}),
-			_item(request, 'Militante', 'fa-user', 'membro-list', query='?jenis=Militante', names=('membro-list',), match_get={'jenis': 'Militante'}),
-			_item(request, 'Simpatizante', 'fa-heart', 'membro-list', query='?jenis=Simpatizante', names=('membro-list',), match_get={'jenis': 'Simpatizante'}),
+			_item(request, 'Militante & Simpatizante', 'fa-user', 'membro-list', query='?jenis=Militante', names=('membro-list',), match_get={'jenis': 'Militante'}),
 			_item(request, 'Lista Membru', 'fa-list', 'membro-list', names=('membro-list', 'membro-detail', 'membro-update'), match_absent=('jenis',)),
 			_item(request, 'Pesquiza', 'fa-search', 'membro-cari'),
 		]
