@@ -84,7 +84,7 @@ def _menu(request, group):
 				names=('organigrama', 'org-pozisaun-add', 'org-pozisaun-update', 'org-responsavel-add', 'org-responsavel-update')),
 			_item(request, 'Tabel Struktura', 'fa-table', 'alokasaun-tabel',
 				names=('alokasaun-tabel', 'alokasaun-list', 'alokasaun-add', 'alokasaun-update')),
-			*([_item(request, 'Template PD', 'fa-file-text-o', 'alokasaun-template', names=('alokasaun-template',))]
+			*([_item(request, 'Alokasaun EXECUTIVO', 'fa-file-text-o', 'alokasaun-template', names=('alokasaun-template',))]
 				if group in roles.POSTU_ROLES or group == roles.ADMIN else [])]))
 		if group in roles.HISTORIA_ROLES:
 			items.append(_item(request, 'Historia', 'fa-history', 'historia-list'))

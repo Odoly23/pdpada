@@ -603,7 +603,7 @@ class StrukturaDashTests(BaseCase):
 		self.login('presidente')
 		resp = self.client.get(reverse('alokasaun-dash'))
 		struktura = [i for i in resp.context['nav_items'] if i['label'] == 'Struktura'][0]
-		self.assertEqual([c['url'] for c in struktura['children']], [reverse('alokasaun-dash'), reverse('organigrama'), reverse('alokasaun-tabel'), reverse('alokasaun-template')])  # dropdown: Struktura PD, Organigrama, Tabel Struktura, Template PD
+		self.assertEqual([c['url'] for c in struktura['children']], [reverse('alokasaun-dash'), reverse('organigrama'), reverse('alokasaun-tabel'), reverse('alokasaun-template')])  # dropdown: Struktura PD, Organigrama, Tabel Struktura, Alokasaun EXECUTIVO
 		self.assertTrue(struktura['active'])
 
 	def test_alokasaun_api_scoped(self):
@@ -3264,7 +3264,7 @@ class StrukturaBaganTests(BaseCase):
 		self.assertTemplateUsed(resp, 'membro/alokasaun_dash.html')
 		self.assertEqual(resp.context['title'], 'Tabel Struktura')
 		struktura = [i for i in resp.context['nav_items'] if i['label'] == 'Struktura'][0]
-		self.assertEqual([c['label'] for c in struktura['children']], ['Struktura PD', 'Organigrama', 'Tabel Struktura', 'Template PD'])
+		self.assertEqual([c['label'] for c in struktura['children']], ['Struktura PD', 'Organigrama', 'Tabel Struktura', 'Alokasaun EXECUTIVO'])
 		self.assertEqual([c['active'] for c in struktura['children']], [False, False, True, False])
 
 	def test_sekretariu_postu_and_koord_org_other_rules(self):

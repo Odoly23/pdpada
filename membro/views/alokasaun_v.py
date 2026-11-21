@@ -267,6 +267,6 @@ def AlokasaunTemplate(request):
 		'villages': Village.objects.order_by('name'),
 		'aldeias': Aldeia.objects.filter(village=village).order_by('name') if village else [],
 		'orgs': Organizasaun.objects.filter(is_active=True, code__in=SAYAP_CODES).order_by('code'),
-		'title': 'Template Struktura PD', 'legend': 'Template Struktura PD',
+		'title': 'Alokasaun EXECUTIVO', 'legend': 'Alokasaun EXECUTIVO',
 	}
 	return render(request, 'membro/alokasaun_template.html', context)
