@@ -131,3 +131,23 @@ class AdminRegistrationTests(TestCase):
 		u = User.objects.create_user('biasa', password='Teste-12345!')
 		self.client.force_login(u)
 		self.assertEqual(self.client.get('/admin/').status_code, 302)
+
+
+@override_settings(ONE_TIME_FORMS=True)
+class OneTimeFormCustomRulesTests(BaseCase):
+	"""Aturan middleware: AJAX dikecualikan; tiket terikat ke pengguna yang meminta."""
+
+	def test_ajax_post_without_token_is_not_blocked(self):
+		self.login('sekrsuku')
+		resp = self.client.post(reverse('membro-add'), self.form_data('AJ000001'), HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+		self.assertEqual(resp.status_code, 302)  # tidak diarahkan balik karena tiket hilang
+		self.assertTrue(Membro.objects.filter(nu_eleitoral='AJ000001').exists())
+
+	def test_token_from_another_user_is_rejected(self):
+		self.login('sekrsuku')
+		html = self.client.get(reverse('membro-add')).content.decode()
+		token = re.search(r'name="_ftoken" value="([^"]+)"', html).group(1)
+		self.login('sekrorg')  # pengguna lain memakai tiket sekjer suku
+		resp = self.client.post(reverse('membro-add'), dict(self.form_data('AJ000002', organizasaun=self.org.pk), _ftoken=token))
+		self.assertEqual(resp.status_code, 302)
+		self.assertFalse(Membro.objects.filter(nu_eleitoral='AJ000002').exists())
