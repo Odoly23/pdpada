@@ -121,13 +121,13 @@ class APISukuSexu(BaseAPI):
 		return Response({'label': [r['village__name'] for r in rows], 'mane': [r['mane'] for r in rows], 'feto': [r['feto'] for r in rows]})
 
 
-# API kategoria (Militante, Simpatizante, Struktura Penting)
+# API kategoria (Struktura Penting, Militante & Simpatizante)
 class APIJenis(BaseAPI):
-	"""Struktura penting, Militante dan Simpatizante (tiga data separadu)."""
+	"""Struktura Penting no Militante & Simpatizante."""
 	def get(self, request, format=None):
 		from membro.utils import filter_jenis
 		qs = membro_ativu(request.user)
-		labels = [('Struktura', 'Struktura Penting'), ('Militante', 'Militante'), ('Simpatizante', 'Simpatizante')]
+		labels = [('Struktura', 'Struktura Penting'), ('Militante', 'Militante & Simpatizante')]
 		return Response({'label': [l for _, l in labels], 'obj': [filter_jenis(qs, v).count() for v, _ in labels]})
 
 

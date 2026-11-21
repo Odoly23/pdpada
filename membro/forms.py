@@ -42,8 +42,8 @@ class MembroForm(forms.ModelForm):
 		super().__init__(*args, **kwargs)
 		group = c_user_group(user) if user else None
 		scope = c_user_scope(user) if user else None
-		self.fields['nu_eleitoral'].error_messages['required'] = 'Nu. Eleitoral obrigatóriu ba membru hotu (Militante no Simpatizante).'
-		self.fields['nu_eleitoral'].required = True  # importante: obrigatóriu ba membru hotu (Militante no Simpatizante)
+		self.fields['nu_eleitoral'].error_messages['required'] = 'Nu. Eleitoral obrigatóriu ba membru hotu.'
+		self.fields['nu_eleitoral'].required = True  # importante: obrigatóriu ba membru hotu
 		# upload: FileInput biasa (tanpa tautan/URL publik); isi file diperiksa di server
 		self.fields['image'].widget = forms.FileInput(attrs={'accept': 'image/jpeg,image/png'})
 		self.fields['file_eleitoral'].widget = forms.FileInput(attrs={'accept': 'application/pdf'})
@@ -319,9 +319,9 @@ class AlokasaunForm(forms.ModelForm):
 
 
 class AlokasaunMembroForm(AlokasaunForm):
-	"""Pasu ikus iha fluxu input membru: hili Militante, Simpatizante ka Ejekutivu. Militante/Simpatizante = rai kategoria deit
+	"""Pasu ikus iha fluxu input membru: hili Militante & Simpatizante ka Ejekutivu. Militante & Simpatizante = rai deit
 	(la iha pozisaun); Ejekutivu = hatudu nivel (Suku, Aldeia ka Organizasaun; Postu ba Presidente, Admin no Sekjer Suku)."""
-	TIPU = [('Militante', 'Militante'), ('Simpatizante', 'Simpatizante'), ('Ejekutivu', 'Ejekutivu (iha pozisaun iha struktura)')]
+	TIPU = [('Militante', 'Militante & Simpatizante'), ('Ejekutivu', 'Ejekutivu (iha pozisaun iha struktura)')]
 	tipu = forms.ChoiceField(label="Membru ne'e", choices=TIPU)
 
 	def __init__(self, *args, membro=None, user=None, **kwargs):
@@ -372,8 +372,8 @@ class AlokasaunMembroForm(AlokasaunForm):
 	def clean(self):
 		tipu = self.cleaned_data.get('tipu')
 		cleaned = forms.ModelForm.clean(self)
-		if tipu in ('Militante', 'Ejekutivu') and not self.membro.nu_eleitoral:
-			self.add_error('tipu', f'Nu. Eleitoral obrigatóriu ba {tipu}. Hatama uluk iha Edita Membru, ka hili Simpatizante.')
+		if tipu and not self.membro.nu_eleitoral:  # membru tuan ho Nu. Eleitoral mamuk
+			self.add_error('tipu', 'Nu. Eleitoral obrigatóriu. Hatama uluk iha Edita Membru.')
 		if tipu != 'Ejekutivu':
 			return cleaned
 		for f, msg in (('nivel', 'Nivel tenke hili.'), ('pozisaun', 'Pozisaun tenke hili.'), ('data_hahu', 'Data hahu tenke hatama.')):

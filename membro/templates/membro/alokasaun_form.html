@@ -1,7 +1,7 @@
 {% extends "main/form.html" %}
 {% block form_scripts %}
 <script type="text/javascript">
-	// hatudu de'it kampu ne'ebé relevante: Militante/Simpatizante = la presiza pozisaun; Ejekutivu = nivel, pozisaun no unidade
+	// hatudu de'it kampu ne'ebé relevante: Militante & Simpatizante = la presiza pozisaun; Ejekutivu = nivel, pozisaun no unidade
 	function toggleUnit() {
 		var tipu = $('#id_tipu').val() || 'Ejekutivu';
 		var ejek = tipu === 'Ejekutivu';

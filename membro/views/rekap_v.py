@@ -74,10 +74,10 @@ def _units(level, e, aldeia_rows, suku_rows):
 	return villages, aldeias
 
 
-# kartaun struktura (Ejekutivu, sayap no Militante) tuir nivel
+# kartaun struktura (Ejekutivu, sayap no Militante & Simpatizante) tuir nivel
 def struktura_cards(group, nivel, qs_membro, village=None, aldeia=None):
-	"""Kartaun Ejekutivu + sayap (OJD, OMD, MPD...) + Militante ba Postu/Suku/Aldeia; klik = lista de'it.
-	Ejekutivu/sayap = pozisaun ativu; Militante = kategoria Militante ne'ebé la iha pozisaun (is_colocado False)."""
+	"""Kartaun Ejekutivu + sayap (OJD, OMD, MPD...) + Militante & Simpatizante ba Postu/Suku/Aldeia; klik = lista de'it.
+	Ejekutivu/sayap = pozisaun ativu; Militante & Simpatizante = membru ne'ebé la iha pozisaun (is_colocado False)."""
 	if group not in roles.LISTA_ROLES:
 		return []
 	base = Alokasaun.objects.filter(ativu='Sim')
@@ -102,8 +102,8 @@ def struktura_cards(group, nivel, qs_membro, village=None, aldeia=None):
 	cards = [{'label': 'Ejekutivu', 'n': n.get((eje_nivel, None), 0), 'url': url(eje_q, 'Ejekutivu')}]
 	for code in Organizasaun.objects.filter(is_active=True).order_by('code').values_list('code', flat=True):
 		cards.append({'label': code, 'n': n.get((sayap_nivel, code), 0), 'url': url(sayap_q, code)})
-	mil = qs_membro.filter(kategoria='Militante', is_colocado=False).count()
-	cards.append({'label': {'Postu': 'Militantes Postu', 'Suku': 'Militantes Suku', 'Aldeia': 'Militantes Aldeia'}[nivel], 'n': mil,
+	mil = qs_membro.filter(is_colocado=False).count()
+	cards.append({'label': 'Militante & Simpatizante', 'n': mil,
 		'url': _list_url(group, jenis='Militante', **mil_q)})
 	return cards
 
@@ -299,7 +299,7 @@ def SukuRekap(request, pk):
 	return render(request, 'membro/suku_rekap.html', context)
 
 
-# sumáriu membru (Militante, Simpatizante, Struktura Penting)
+# sumáriu membru (Struktura Penting, Militante & Simpatizante)
 @login_required
 @allowed_users(allowed_roles=roles.LISTA_ROLES)
 def MembroSum(request):
@@ -309,9 +309,9 @@ def MembroSum(request):
 	level = _level(group)
 	ano = Year.objects.filter(is_active=True).first()
 	qs = membro_scope(request.user).filter(year=ano) if ano else membro_scope(request.user)
-	jenis = request.GET.get('jenis') if request.GET.get('jenis') in ('Struktura', 'Militante', 'Simpatizante') else ''
+	jenis = request.GET.get('jenis') if request.GET.get('jenis') in ('Struktura', 'Militante') else ''
 	jenis_buttons = [{'label': 'Hotu', 'url': '?', 'icon': 'fa-th-list', 'kind': 'all', 'count': qs.count(), 'active': not jenis}]
-	for val, lbl, icon, kind in (('Struktura', 'Struktura Penting', 'fa-sitemap', 'bad'), ('Militante', 'Militante', 'fa-user', 'all'), ('Simpatizante', 'Simpatizante', 'fa-heart', 'info')):
+	for val, lbl, icon, kind in (('Struktura', 'Struktura Penting', 'fa-sitemap', 'bad'), ('Militante', 'Militante & Simpatizante', 'fa-user', 'all')):
 		jenis_buttons.append({'label': lbl, 'url': f'?jenis={val}', 'icon': icon, 'kind': kind, 'count': filter_jenis(qs, val).count(), 'active': jenis == val})
 	qs = filter_jenis(qs, jenis)
 

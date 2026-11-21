@@ -33,11 +33,12 @@ FILTER_IDS = ['village', 'aldeia', 'organizasaun']
 
 
 def filter_jenis(qs, jenis):
-	"""Struktura = iha pozisaun ativu; Militante/Simpatizante = kategoria (tanpa sira ne'ebé iha struktura), supaya data tolu ne'e la sobu."""
+	"""Struktura = iha pozisaun ativu; Militante (Militante & Simpatizante) = membru seluk ne'ebé la iha pozisaun.
+	'Simpatizante' (ligasaun tuan) hanesan ho 'Militante'."""
 	if jenis == 'Struktura':
 		return qs.filter(is_colocado=True)
 	if jenis in ('Militante', 'Simpatizante'):
-		return qs.filter(kategoria=jenis, is_colocado=False)
+		return qs.filter(is_colocado=False)
 	return qs
 
 
@@ -169,4 +170,4 @@ def servisu_text(m):
 def csv_row(m):
 	return [csv_safe(v) for v in (
 		m.nu_eleitoral, m.nome, m.sex, m.date_of_birth, m.age(), m.marital or '', m.telefone or '', m.village, m.aldeia,
-		m.address or '', m.organizasaun or '', m.data_hakbit or '', m.status, m.aprovasaun, m.year or '', m.jenis(), servisu_text(m))]
+		m.address or '', m.organizasaun or '', m.data_hakbit or '', m.status, m.aprovasaun, m.year or '', m.jenis_label(), servisu_text(m))]

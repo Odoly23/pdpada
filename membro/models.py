@@ -9,8 +9,9 @@ from config.upload_utils import upload_foto, upload_eleitoral, validate_image_si
 from custom.models import Village, Aldeia, Organizasaun, Year
 
 SEXU = [('Mane', 'Mane'), ('Feto', 'Feto')]
-KATEGORIA = [('Militante', 'Militante'), ('Simpatizante', 'Simpatizante')]
-JENIS_LIST = ['Struktura', 'Militante', 'Simpatizante']  # Struktura = iha pozisaun ativu (is_colocado)
+KATEGORIA = [('Militante', 'Militante & Simpatizante')]  # kategoria ida deit (Militante no Simpatizante hamutuk)
+JENIS_LIST = ['Struktura', 'Militante']  # Struktura = iha pozisaun ativu (is_colocado)
+JENIS_LABEL = {'Struktura': 'Struktura Penting', 'Militante': 'Militante & Simpatizante'}
 MARITAL = [('Klosan', 'Klosan'), ("Kaben-na'in", "Kaben-na'in"), ('Fahe malu', 'Fahe malu'), ('Faluk', 'Faluk')]
 STATUS = [('Ativu', 'Ativu'), ('Inativu', 'Inativu'), ('Falesidu', 'Falesidu')]
 APROVASAUN = [('Pendente', 'Pendente'), ('Aprovadu', 'Aprovadu'), ('Rejeitadu', 'Rejeitadu')]
@@ -105,8 +106,11 @@ class Membro(HashedModel):
 		return f'{self.nome} ({self.nu_eleitoral})' if self.nu_eleitoral else self.nome
 
 	def jenis(self):
-		"""Struktura (iha pozisaun ativu) ka kategoria Militante/Simpatizante; data tolu ne'e separadu iha lista no relatóriu."""
-		return 'Struktura' if self.is_colocado else self.kategoria
+		"""Struktura (iha pozisaun ativu) ka Militante (Militante & Simpatizante, kategoria ida deit)."""
+		return 'Struktura' if self.is_colocado else 'Militante'
+
+	def jenis_label(self):
+		return JENIS_LABEL[self.jenis()]
 
 	def age(self):
 		if not self.date_of_birth:

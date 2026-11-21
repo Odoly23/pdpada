@@ -2837,18 +2837,18 @@ class KategoriaServisuTests(BaseCase):
 				self.login(u)
 				self.assertEqual(self.client.get(reverse(name, args=[m.hashed])).status_code, code, (name, u))
 
-	def test_jenis_separates_struktura_militante_simpatizante(self):
-		a = self.make('JN00001', kategoria='Militante')
-		b = self.make('JN00002', kategoria='Militante')
-		c = self.make('JN00003', kategoria='Simpatizante')
+	def test_kategoria_is_struktura_or_militante_simpatizante(self):
+		a = self.make('JN00001')
+		b = self.make('JN00002')
 		Membro.objects.filter(pk=b.pk).update(is_colocado=True)  # pemegang pozisaun
-		self.assertEqual([m.jenis() for m in Membro.objects.order_by('nu_eleitoral')], ['Militante', 'Struktura', 'Simpatizante'])
+		self.assertEqual([m.jenis_label() for m in Membro.objects.order_by('nu_eleitoral')], ['Militante & Simpatizante', 'Struktura Penting'])
 		self.login('presidente')
-		for jenis, esperado in (('Struktura', {'JN00002'}), ('Militante', {'JN00001'}), ('Simpatizante', {'JN00003'})):
+		for jenis, esperado in (('Struktura', {'JN00002'}), ('Militante', {'JN00001'}), ('Simpatizante', {'JN00001'})):  # Simpatizante = ligasaun tuan
 			objs = self.client.get(reverse('membro-list'), {'jenis': jenis}).context['objects']
 			self.assertEqual({o.nu_eleitoral for o in objs}, esperado, jenis)
-		self.assertEqual(len(self.client.get(reverse('membro-list'), {'jenis': 'ngawur'}).context['objects']), 3)  # nilai asing diabaikan
-
+		self.assertEqual(len(self.client.get(reverse('membro-list'), {'jenis': 'ngawur'}).context['objects']), 2)  # valór seluk la uza
+		with self.assertRaises(IntegrityError), transaction.atomic():
+			Membro.objects.filter(pk=a.pk).update(kategoria='Simpatizante')  # kategoria rua la iha tan
 	def test_servisu_filters(self):
 		from membro.models import Servisu
 		a, b, c = self.make('SF00001'), self.make('SF00002'), self.make('SF00003')
@@ -2870,22 +2870,23 @@ class KategoriaServisuTests(BaseCase):
 		self.assertNotIn('jenis_stats', resp.context)
 
 	def test_sumariu_filter_by_jenis(self):
-		self.make('SM90001'); self.make('SM90002', kategoria='Simpatizante')
+		self.make('SM90001'); b = self.make('SM90002')
+		Membro.objects.filter(pk=b.pk).update(is_colocado=True)
 		self.login('presidente')
-		resp = self.client.get(reverse('membro-sumariu'), {'jenis': 'Simpatizante'})
+		resp = self.client.get(reverse('membro-sumariu'), {'jenis': 'Militante'})
 		self.assertEqual(resp.context['grand'], 1)
-		self.assertContains(resp, 'jenis=Simpatizante')
+		self.assertContains(resp, 'Militante &amp; Simpatizante')
+		self.assertNotContains(resp, 'jenis=Simpatizante')
 		self.assertEqual(self.client.get(reverse('membro-sumariu')).context['grand'], 2)
-
 	def test_report_tables_and_apis_for_jenis_and_servisu(self):
 		from membro.models import Servisu
-		a = self.make('RP00001'); self.make('RP00002', kategoria='Simpatizante')
+		a = self.make('RP00001'); self.make('RP00002')
 		Servisu.objects.create(membro=a, status='Servisu', setor='Governu', instituisaun='M', pozisaun='P')
 		self.login('presidente')
 		tables = {t['head']: t for t in self.client.get(reverse('report-dash')).context['tables']}
-		self.assertEqual([(r['name'], r['total']) for r in tables['Kategoria']['rows']], [('Struktura Penting', 0), ('Militante', 1), ('Simpatizante', 1)])
+		self.assertEqual([(r['name'], r['total']) for r in tables['Kategoria']['rows']], [('Struktura Penting', 0), ('Militante & Simpatizante', 2)])
 		self.assertEqual({r['name']: r['total'] for r in tables['Servisu']['rows']}['Servisu Governu'], 1)
-		self.assertEqual(self.client.get(reverse('api-jenis')).json(), {'label': ['Struktura Penting', 'Militante', 'Simpatizante'], 'obj': [0, 1, 1]})
+		self.assertEqual(self.client.get(reverse('api-jenis')).json(), {'label': ['Struktura Penting', 'Militante & Simpatizante'], 'obj': [0, 2]})
 		api = self.client.get(reverse('api-servisu')).json()
 		self.assertEqual(api['label'], ['Servisu Governu', 'Servisu Organizasaun', 'Servisu Kompañia', 'Seidauk Servisu', 'Seidauk iha dadus'])
 		self.assertEqual(api['obj'], [1, 0, 0, 0, 1])
@@ -2895,22 +2896,24 @@ class KategoriaServisuTests(BaseCase):
 
 	def test_csv_has_kategoria_and_servisu_columns_and_handles_missing_nu(self):
 		from membro.models import Servisu
-		m = self.make('CS00001', nu_eleitoral=None, kategoria='Simpatizante')
+		m = self.make('CS00001', nu_eleitoral=None)
 		Servisu.objects.create(membro=m, status='Seidauk', atividade='Estudante')
 		self.login('presidente')
 		raw = b''.join(self.client.get(reverse('membro-export')).streaming_content).decode('utf-8')
 		self.assertIn('Kategoria', raw.splitlines()[0])
-		self.assertIn('Simpatizante', raw)
+		self.assertIn('Militante & Simpatizante', raw)
 		self.assertIn('Seidauk servisu: Estudante', raw)
-
-	def test_menu_has_separate_entries(self):
+	def test_menu_has_struktura_and_one_militante_simpatizante_entry(self):
 		self.login('presidente')
-		html = self.client.get('/').content.decode()
-		for jenis in ('Struktura', 'Militante', 'Simpatizante'):
+		resp = self.client.get('/')
+		html = resp.content.decode()
+		for jenis in ('Struktura', 'Militante'):
 			self.assertIn(f'?jenis={jenis}', html)
+		self.assertNotIn('?jenis=Simpatizante', html)
+		membru = [i for i in resp.context['nav_items'] if i['label'] == 'Membru'][0]
+		self.assertIn('Militante & Simpatizante', [c['label'] for c in membru['children']])
 		self.login('sekrpostu')
 		self.assertNotIn('?jenis=', self.client.get('/').content.decode().split('class="main-navbar"')[-1].split('</nav>')[0])
-
 
 
 class FluxuInputTests(BaseCase):
@@ -2976,13 +2979,13 @@ class FluxuInputTests(BaseCase):
 		self.make('FX000004')  # militante tanpa posisi
 		self.login('presidente')
 		cards = {c['label']: c for c in self.client.get('/').context['struktura']['cards']}
-		self.assertEqual(list(cards), ['Ejekutivu', 'OJD', 'Militantes Postu'])
-		self.assertEqual((cards['Ejekutivu']['n'], cards['OJD']['n'], cards['Militantes Postu']['n']), (0, 1, 1))
+		self.assertEqual(list(cards), ['Ejekutivu', 'OJD', 'Militante & Simpatizante'])
+		self.assertEqual((cards['Ejekutivu']['n'], cards['OJD']['n'], cards['Militante & Simpatizante']['n']), (0, 1, 1))
 		self.assertContains(self.client.get('/'), 'ESTRUTURA POSTU ADMINISTRATIVU DOM-ALEIXO')
 		lista = self.client.get(cards['OJD']['url']).context['objects']
 		self.assertEqual([a.membro for a in lista], [m2])
-		self.assertIn('jenis=Militante', cards['Militantes Postu']['url'])
-		mil = self.client.get(cards['Militantes Postu']['url']).context['objects']
+		self.assertIn('jenis=Militante', cards['Militante & Simpatizante']['url'])
+		mil = self.client.get(cards['Militante & Simpatizante']['url']).context['objects']
 		self.assertNotIn(self.m, list(mil))
 
 	def test_suku_and_aldeia_levels_have_own_struktura_cards(self):
@@ -2992,12 +2995,12 @@ class FluxuInputTests(BaseCase):
 		self.login('koordsuku')
 		ctx = self.client.get('/').context['struktura']
 		self.assertEqual(ctx['title'], 'ESTRUTURA SUKU SUKU A')
-		self.assertEqual({c['label']: c['n'] for c in ctx['cards']}, {'Ejekutivu': 1, 'OJD': 1, 'Militantes Suku': 0})
+		self.assertEqual({c['label']: c['n'] for c in ctx['cards']}, {'Ejekutivu': 1, 'OJD': 1, 'Militante & Simpatizante': 0})
 		self.assertEqual([a.membro for a in self.client.get([c for c in ctx['cards'] if c['label'] == 'OJD'][0]['url']).context['objects']], [m2])
 		self.login('sekraldeia')
 		ctx = self.client.get('/').context['struktura']
 		self.assertEqual(ctx['title'], 'ESTRUTURA ALDEIA A1')
-		self.assertEqual(ctx['cards'][-1]['label'], 'Militantes Aldeia')
+		self.assertEqual(ctx['cards'][-1]['label'], 'Militante & Simpatizante')
 
 	def test_suku_page_for_postu_roles_has_struktura_cards(self):
 		self.login('presidente')
@@ -3084,26 +3087,25 @@ class PozisaunStepTests(BaseCase):
 		d['nu_eleitoral'] = ''
 		return self.client.post(reverse('membro-add'), d)
 
-	def test_simpatizante_and_militante_only_save_kategoria(self):
-		resp = self.post('sekrsuku', tipu='Simpatizante', nivel='', pozisaun='', data_hahu='')
+	def test_militante_simpatizante_saves_without_position(self):
+		Membro.objects.filter(pk=self.m.pk).update(kategoria='Militante')
+		resp = self.post('sekrsuku', tipu='Militante', nivel='', pozisaun='', data_hahu='')
 		self.assertRedirects(resp, self.detail())
 		self.m.refresh_from_db()
-		self.assertEqual((self.m.kategoria, self.m.is_colocado, self.m.aprovasaun), ('Simpatizante', False, 'Pendente'))
+		self.assertEqual((self.m.kategoria, self.m.is_colocado, self.m.aprovasaun), ('Militante', False, 'Pendente'))
 		self.assertFalse(Alokasaun.objects.exists())
-		self.assertTrue(Historia.objects.filter(aksaun='Edita Kategoria', membro=self.m).exists())
-		self.assertRedirects(self.post('sekrsuku', tipu='Militante', nivel=''), self.detail())
-		self.m.refresh_from_db()
-		self.assertEqual(self.m.kategoria, 'Militante')
-
-	def test_militante_and_ejekutivu_need_nu_eleitoral(self):
+		self.login('sekrsuku')
+		page = self.client.get(self.url).content.decode()
+		self.assertIn('Militante &amp; Simpatizante', page)
+		self.assertNotIn('<option value="Simpatizante">', page)
+	def test_old_member_without_nu_eleitoral_must_fill_it_first(self):
 		sim = self.make('PZ000002')
-		Membro.objects.filter(pk=sim.pk).update(nu_eleitoral=None, kategoria='Simpatizante')
+		Membro.objects.filter(pk=sim.pk).update(nu_eleitoral=None)
 		self.url = reverse('membro-aloka', args=[sim.hashed])
 		self.m = sim
 		for tipu in ('Militante', 'Ejekutivu'):
-			self.assertContains(self.post('sekrsuku', tipu=tipu), 'Nu. Eleitoral obrigatóriu')
-		self.assertEqual(self.post('sekrsuku', tipu='Simpatizante', nivel='').status_code, 302)
-
+			self.assertContains(self.post('sekrsuku', tipu=tipu, nivel=''), 'Nu. Eleitoral obrigatóriu')
+		self.assertEqual(self.post('sekrsuku', tipu='Simpatizante', nivel='').status_code, 200)  # pilihan tuan la iha tan
 	def test_ejekutivu_suku_creates_position_and_marks_colocado(self):
 		resp = self.post('sekrsuku', tipu='Ejekutivu')
 		self.assertRedirects(resp, self.detail())

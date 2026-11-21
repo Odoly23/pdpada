@@ -70,7 +70,7 @@ def Dash(request):
 		sem_org=Count('id', filter=Q(organizasaun__isnull=True)))
 	age = _age_rows(qs)
 	jenis_rows = [{'name': lbl, 'total': filter_jenis(qs, val).count(), 'url': _url(jenis=val)}
-		for val, lbl in (('Struktura', 'Struktura Penting'), ('Militante', 'Militante'), ('Simpatizante', 'Simpatizante'))]
+		for val, lbl in (('Struktura', 'Struktura Penting'), ('Militante', 'Militante & Simpatizante'))]
 	servisu_rows = [
 		{'name': 'Servisu Governu', 'total': qs.filter(servisu__status='Servisu', servisu__setor='Governu').count(), 'url': _url(servisu='Servisu', setor='Governu')},
 		{'name': 'Servisu Organizasaun', 'total': qs.filter(servisu__status='Servisu', servisu__setor='Organizasaun').count(), 'url': _url(servisu='Servisu', setor='Organizasaun')},

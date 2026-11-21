@@ -171,7 +171,7 @@ def MembroFile(request, hashid, kind):
 
 # fluxu input membru: membru -> edukasaun -> servisu -> pozisaun -> detalle
 def _bele_aloka(user, emp):
-	"""Pasu pozisaun (Militante/Simpatizante/Ejekutivu) ba membru ativu, seidauk iha pozisaun no la rejeitadu; input hotu uluk, depois aprova."""
+	"""Pasu pozisaun (Militante & Simpatizante ka Ejekutivu) ba membru ativu, seidauk iha pozisaun no la rejeitadu; input hotu uluk, depois aprova."""
 	return (c_user_group(user) in roles.INPUT_ROLES + roles.ALOKA_ROLES and emp.aprovasaun != 'Rejeitadu' and emp.status == 'Ativu' and not emp.is_colocado)
 
 
@@ -225,7 +225,7 @@ def EdukasaunUpdate(request, hashid):
 	return render(request, 'main/form.html', context)
 
 
-# pasu pozisaun: hili Militante, Simpatizante ka Ejekutivu (nivel Suku, Aldeia ka Organizasaun; Postu deit Admin)
+# pasu pozisaun: hili Militante & Simpatizante ka Ejekutivu (nivel Suku, Aldeia ka Organizasaun; Postu deit Admin)
 @login_required
 @allowed_users(allowed_roles=roles.INPUT_ROLES + roles.ALOKA_ROLES)
 def MembroAloka(request, hashid):
@@ -238,7 +238,7 @@ def MembroAloka(request, hashid):
 		form = AlokasaunMembroForm(request.POST, membro=emp, user=request.user)
 		if form.is_valid():
 			tipu = form.cleaned_data['tipu']
-			kategoria = 'Simpatizante' if tipu == 'Simpatizante' else 'Militante'
+			kategoria = 'Militante'  # kategoria ida deit: Militante & Simpatizante
 			if emp.kategoria != kategoria:
 				old = emp.kategoria
 				Membro.objects.filter(pk=emp.pk).update(kategoria=kategoria)
