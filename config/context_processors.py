@@ -36,7 +36,7 @@ def _menu(request, group):
 			for tipu, label, icon in [('suku', 'Suku', 'fa-map-marker'), ('aldeia', 'Aldeia', 'fa-map-o'),
 				('organizasaun', 'Organizasaun', 'fa-flag'), ('ano', 'Tinan Ativu', 'fa-calendar')]]
 		items.append(_dropdown('Data Master', 'fa-database', master))
-		items.append(_dropdown('Eleisaun', 'fa-flag', [_item(request, 'Eleisaun no Tempat', 'fa-cogs', 'eleisaun-admin',
+		items.append(_dropdown('Eleisaun', 'fa-flag', [_item(request, 'Eleisaun no Fatin Votasaun', 'fa-cogs', 'eleisaun-admin',
 			names=('eleisaun-admin', 'eleisaun-add', 'tempat-add', 'fiskais-add'))]))
 		items.append(_dropdown('Membru', 'fa-address-card', [
 			_item(request, 'Lista Membru', 'fa-list', 'membro-list', names=('membro-list', 'membro-detail', 'membro-update')),
@@ -83,7 +83,9 @@ def _menu(request, group):
 			_item(request, 'Organigrama', 'fa-share-alt', 'organigrama',
 				names=('organigrama', 'org-pozisaun-add', 'org-pozisaun-update', 'org-responsavel-add', 'org-responsavel-update')),
 			_item(request, 'Tabel Struktura', 'fa-table', 'alokasaun-tabel',
-				names=('alokasaun-tabel', 'alokasaun-list', 'alokasaun-add', 'alokasaun-update'))]))
+				names=('alokasaun-tabel', 'alokasaun-list', 'alokasaun-add', 'alokasaun-update')),
+			*([_item(request, 'Alokasaun EXECUTIVO', 'fa-file-text-o', 'alokasaun-template', names=('alokasaun-template',))]
+				if group in roles.POSTU_ROLES or group == roles.ADMIN else [])]))
 		if group in roles.HISTORIA_ROLES:
 			items.append(_item(request, 'Historia', 'fa-history', 'historia-list'))
 	if group == roles.FISKAIS:

@@ -67,7 +67,7 @@ def _tiles(group, counts):
 		add('Historia', 'Rekorda mudansa dadus tomak', 'fa-history', reverse('historia-list'))
 		return tiles
 	if group == roles.FISKAIS:
-		add('Input Rezultadu', 'Submete votu PD husi tempat votasaun (dala ida de\'it)', 'fa-pencil-square-o', reverse('eleisaun-input'))
+		add('Input Rezultadu', 'Submete votu PD husi fatin votasaun (dala ida de\'it)', 'fa-pencil-square-o', reverse('eleisaun-input'))
 		return tiles
 	if group not in roles.VIEW_ROLES:
 		return tiles

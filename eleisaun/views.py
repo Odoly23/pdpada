@@ -74,7 +74,7 @@ def ResultadoInput(request):
 				with transaction.atomic():
 					obj.save()
 			except IntegrityError:  # submit ganda bersamaan: satu saja yang diterima
-				messages.error(request, "Rezultadu ba tempat ne'e submete ona.")
+				messages.error(request, "Rezultadu ba fatin votasaun ne'e submete ona.")
 				return redirect('eleisaun-input')
 			log_historia(request.user, None, 'Resultado Submete', f'{fk.tempat.naran} · votu PD: {obj.votos_partidu}', nome=NOME_LOG)
 			messages.success(request, "Rezultadu submete ona. Dadus taka; Admin bele loke fali se presiza koriji.")
@@ -110,7 +110,7 @@ def ResultadoFile(request, pk, kind):
 	return response
 
 
-# painel Admin eleisaun (tempat votasaun no fiskais)
+# painel Admin eleisaun (fatin votasaun no fiskais)
 @login_required
 @allowed_users(allowed_roles=roles.ELEISAUN_ADMIN_ROLES)
 def EleisaunAdmin(request):
@@ -120,7 +120,7 @@ def EleisaunAdmin(request):
 		'group': c_user_group(request.user), 'el': el, 'eleisaun_list': Eleisaun.objects.all(),
 		'tempat_list': TempatVoting.objects.select_related('village', 'aldeia').prefetch_related('fiskais__user'),
 		'fiskais_list': FiskaisTempat.objects.select_related('user', 'tempat'), 'resultados': resultados,
-		'title': 'Eleisaun no Tempat', 'legend': 'Eleisaun no Tempat',
+		'title': 'Eleisaun no Fatin Votasaun', 'legend': 'Eleisaun no Fatin Votasaun',
 	}
 	return render(request, 'eleisaun/admin.html', context)
 
@@ -135,7 +135,7 @@ def _admin_form(request, form_cls, legend, aksaun, detalhe, sucesso):
 		return redirect('eleisaun-admin')
 	return render(request, 'main/form.html', {
 		'form': form, 'group': c_user_group(request.user), 'cancel_url': reverse('eleisaun-admin'),
-		'back_url': 'eleisaun-admin', 'back_label': 'Eleisaun no Tempat', 'title': legend, 'legend': legend})
+		'back_url': 'eleisaun-admin', 'back_label': 'Eleisaun no Fatin Votasaun', 'title': legend, 'legend': legend})
 
 
 # adisiona eleisaun foun
@@ -145,21 +145,21 @@ def EleisaunAdd(request):
 	return _admin_form(request, EleisaunForm, 'Aumenta Eleisaun', 'Eleisaun Foun', lambda o: f'{o.naran} ({o.tinan})', 'Eleisaun aumenta ona.')
 
 
-# adisiona tempat votasaun
+# adisiona fatin votasaun
 @login_required
 @allowed_users(allowed_roles=roles.ELEISAUN_ADMIN_ROLES)
 def TempatAdd(request):
-	return _admin_form(request, TempatForm, 'Aumenta Tempat Votasaun', 'Tempat Foun', lambda o: f'{o.naran} · {o.village}', 'Tempat aumenta ona.')
+	return _admin_form(request, TempatForm, 'Aumenta Fatin Votasaun', 'Fatin Votasaun Foun', lambda o: f'{o.naran} · {o.village}', 'Fatin votasaun aumenta ona.')
 
 
-# adisiona fiskais ba tempat votasaun
+# adisiona fiskais ba fatin votasaun
 @login_required
 @allowed_users(allowed_roles=roles.ELEISAUN_ADMIN_ROLES)
 def FiskaisAdd(request):
-	return _admin_form(request, FiskaisForm, 'Aloka Fiskais ba Tempat', 'Fiskais Foun', lambda o: f'{o.user.get_username()} @ {o.tempat.naran}', 'Fiskais aloka ona.')
+	return _admin_form(request, FiskaisForm, 'Aloka Fiskais ba Fatin Votasaun', 'Fiskais Foun', lambda o: f'{o.user.get_username()} @ {o.tempat.naran}', 'Fiskais aloka ona.')
 
 
-# hamoos fiskais husi tempat votasaun
+# hamoos fiskais husi fatin votasaun
 @login_required
 @allowed_users(allowed_roles=roles.ELEISAUN_ADMIN_ROLES)
 @require_POST

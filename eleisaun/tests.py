@@ -1,3 +1,4 @@
+import re
 import io
 import shutil
 import tempfile
@@ -127,7 +128,7 @@ class FiskaisInputTests(EleisaunBase):
 		self.live()
 		FiskaisTempat.objects.filter(user=self.users['fiskais1']).delete()
 		self.login('fiskais1')
-		self.assertContains(self.client.get(reverse('eleisaun-input')), 'seidauk hetan tempat')
+		self.assertContains(self.client.get(reverse('eleisaun-input')), 'seidauk hetan fatin votasaun')
 
 	def test_form_has_only_votes_and_photo_and_tempat_is_automatic(self):
 		self.live()
@@ -376,3 +377,21 @@ class KomparaLabelTests(EleisaunBase):
 		self.assertContains(page, 'id="komparaLabel"')
 		self.assertContains(page, 'j.kpi.kompara.label')
 
+
+
+class FatinVotasaunLabelTests(EleisaunBase):
+	"""Liafuan 'tempat' troka ba 'fatin votasaun' iha pájina eleisaun hotu."""
+
+	def test_pages_use_fatin_votasaun_not_tempat(self):
+		self.live()
+		self.login('admin')
+		pajina = [reverse('eleisaun-admin'), reverse('tempat-add')]
+		self.login('presidente')
+		pajina_pres = [reverse('eleisaun-live'), reverse('eleisaun-komparasaun')]
+		for user, urls in (('admin', pajina), ('presidente', pajina_pres)):
+			self.login(user)
+			for url in urls:
+				html = self.client.get(url).content.decode()
+				self.assertIn('Fatin Votasaun', html, url)
+				visivel = re.sub(r'<script.*?</script>|\{[{%].*?[%}]\}|<[^>]+>', ' ', html, flags=re.S)
+				self.assertNotRegex(visivel, r'\bTempat\b', url)

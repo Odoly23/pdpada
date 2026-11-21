@@ -1,0 +1,67 @@
+{% extends "main/layout.html" %}
+{% block content %}
+<ol class="breadcrumb mb-2 mt-1">
+	<li class="breadcrumb-item"><a href="{% url 'home' %}">VARANDA</a></li>
+	<li class="breadcrumb-item"><a href="{% url 'alokasaun-dash' %}">STRUKTURA PD</a></li>
+	<li class="breadcrumb-item active" aria-current="page">ALOKASAUN EXECUTIVO</li>
+</ol>
+<div class="row">
+	<div class="col-sm-12">
+		<div class="card shadow-lg pt-0 rounded">
+			<div class="card-header">{{ legend|upper }}{% if base_label %} · {{ base_label }}{% endif %}</div>
+			<div class="card-body">
+				<div class="mb-2">
+					<strong>Suku:</strong>
+					{% for v in villages %}
+					<a class="btn btn-sm {% if village and village.pk == v.pk %}btn-info{% else %}btn-outline-info{% endif %}" href="?nivel=Suku&village={{ v.pk }}">{{ v.name }}</a>
+					{% endfor %}
+				</div>
+				{% if village %}
+				<div class="mb-2">
+					<strong>Aldeia:</strong>
+					{% for a in aldeias %}
+					<a class="btn btn-sm {% if aldeia and aldeia.pk == a.pk %}btn-info{% else %}btn-outline-info{% endif %}" href="?nivel=Aldeia&aldeia={{ a.pk }}">{{ a.name }}</a>
+					{% empty %}<span class="text-muted">Seidauk iha aldeia.</span>
+					{% endfor %}
+				</div>
+				{% endif %}
+				{% if aldeia %}
+				<div class="mb-2">
+					<strong>Organizasaun iha aldeia:</strong>
+					<a class="btn btn-sm {% if not org %}btn-info{% else %}btn-outline-info{% endif %}" href="?nivel=Aldeia&aldeia={{ aldeia.pk }}">PD Aldeia</a>
+					{% for o in orgs %}
+					<a class="btn btn-sm {% if org and org.pk == o.pk %}btn-info{% else %}btn-outline-info{% endif %}" href="?nivel=Aldeia&aldeia={{ aldeia.pk }}&org={{ o.code }}">{{ o.code }}</a>
+					{% endfor %}
+				</div>
+				{% endif %}
+
+				{% if rows %}
+				<section id="no-more-tables">
+					<table class="table table-sm table-bordered">
+						<thead><tr class="th-navy"><th>No.</th><th>Posisaun</th><th>Naran Membru</th>{% if can_aloka %}<th class="no-print">#</th>{% endif %}</tr></thead>
+						<tbody>
+							{% for r in rows %}
+							<tr>
+								<td class="text-center">{{ r.no|default:"" }}</td>
+								<td>{{ r.label }}</td>
+								<td>
+									{% for a in r.holders %}<a href="{% url 'membro-detail' a.membro.hashed %}">{{ a.membro.nome }}</a>{% if not forloop.last %}<br>{% endif %}{% empty %}<span class="text-muted">-</span>{% endfor %}
+								</td>
+								{% if can_aloka %}
+								<td class="no-print text-nowrap">
+									{% if r.add %}<a class="btn btn-sm btn-info" href="{{ r.add }}" title="Aloka"><i class="fa fa-user-plus"></i> Aloka</a>{% endif %}
+								</td>
+								{% endif %}
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</section>
+				{% else %}
+				<p class="text-muted">Pili suku, aldeia, atau organizasaun iha leten.</p>
+				{% endif %}
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
