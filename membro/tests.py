@@ -2976,17 +2976,13 @@ class FluxuInputTests(BaseCase):
 		Alokasaun.objects.create(membro=self.m, nivel='Suku', pozisaun='Coordenador', village=self.va, data_hahu=datetime.date(2026, 1, 1))
 		m2 = self.make('FX000003', aprovasaun='Aprovadu')
 		Alokasaun.objects.create(membro=m2, nivel='Organizasaun', pozisaun='Coordenador', organizasaun=self.org, data_hahu=datetime.date(2026, 1, 1))
-		self.make('FX000004')  # militante tanpa posisi
 		self.login('presidente')
 		cards = {c['label']: c for c in self.client.get('/').context['struktura']['cards']}
-		self.assertEqual(list(cards), ['Ejekutivu', 'OJD', 'Militante & Simpatizante'])
-		self.assertEqual((cards['Ejekutivu']['n'], cards['OJD']['n'], cards['Militante & Simpatizante']['n']), (0, 1, 1))
-		self.assertContains(self.client.get('/'), 'ESTRUTURA POSTU ADMINISTRATIVU DOM-ALEIXO')
+		self.assertEqual(list(cards), ['EXECUTIVO', 'OJD'])  # Militante & Simpatizante no Struktura laiha kartaun iha EXECUTIVO
+		self.assertEqual((cards['EXECUTIVO']['n'], cards['OJD']['n']), (0, 1))
+		self.assertContains(self.client.get('/'), '>EXECUTIVO<')
 		lista = self.client.get(cards['OJD']['url']).context['objects']
 		self.assertEqual([a.membro for a in lista], [m2])
-		self.assertIn('jenis=Militante', cards['Militante & Simpatizante']['url'])
-		mil = self.client.get(cards['Militante & Simpatizante']['url']).context['objects']
-		self.assertNotIn(self.m, list(mil))
 
 	def test_suku_and_aldeia_levels_have_own_struktura_cards(self):
 		Alokasaun.objects.create(membro=self.m, nivel='Suku', pozisaun='Coordenador', village=self.va, data_hahu=datetime.date(2026, 1, 1))
@@ -2994,17 +2990,17 @@ class FluxuInputTests(BaseCase):
 		Alokasaun.objects.create(membro=m2, nivel='Suku', pozisaun='Sekretariu', village=self.va, organizasaun=self.org, data_hahu=datetime.date(2026, 1, 1))
 		self.login('koordsuku')
 		ctx = self.client.get('/').context['struktura']
-		self.assertEqual(ctx['title'], 'ESTRUTURA SUKU SUKU A')
-		self.assertEqual({c['label']: c['n'] for c in ctx['cards']}, {'Ejekutivu': 1, 'OJD': 1, 'Militante & Simpatizante': 0})
+		self.assertEqual(ctx['title'], 'EXECUTIVO SUKU SUKU A')
+		self.assertEqual({c['label']: c['n'] for c in ctx['cards']}, {'EXECUTIVO': 1, 'OJD': 1})
 		self.assertEqual([a.membro for a in self.client.get([c for c in ctx['cards'] if c['label'] == 'OJD'][0]['url']).context['objects']], [m2])
 		self.login('sekraldeia')
 		ctx = self.client.get('/').context['struktura']
-		self.assertEqual(ctx['title'], 'ESTRUTURA ALDEIA A1')
-		self.assertEqual(ctx['cards'][-1]['label'], 'Militante & Simpatizante')
+		self.assertEqual(ctx['title'], 'EXECUTIVO ALDEIA A1')
+		self.assertEqual([c['label'] for c in ctx['cards']], ['EXECUTIVO', 'OJD'])
 
 	def test_suku_page_for_postu_roles_has_struktura_cards(self):
 		self.login('presidente')
-		self.assertContains(self.client.get(reverse('membro-suku', args=[self.va.pk])), 'ESTRUTURA SUKU SUKU A')
+		self.assertContains(self.client.get(reverse('membro-suku', args=[self.va.pk])), 'EXECUTIVO SUKU SUKU A')
 
 	def test_other_roles_without_list_permission_get_no_cards(self):
 		self.login('sekrpostu')
@@ -3045,7 +3041,7 @@ class AldeiaRekapTests(BaseCase):
 		self.assertEqual([(p['label'], p['nome']) for p in resp.context['pemimpin']], [('Cordenador Aldeia', 'Koord Aldeia'), ('Sekjer Aldeia', 'Sekr Aldeia')])
 		self.assertNotContains(resp, 'Biasa A2')
 		self.assertContains(resp, 'Naran Membru')
-		self.assertContains(resp, 'ESTRUTURA ALDEIA A1')
+		self.assertContains(resp, 'EXECUTIVO ALDEIA A1')
 
 	def test_aldeia_page_roles_and_404(self):
 		for u, code in [('presidente', 200), ('koordpostu', 200), ('sekrpostu', 200), ('koordsuku', 403), ('sekrsuku', 403), ('admin', 403)]:

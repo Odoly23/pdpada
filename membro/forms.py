@@ -321,7 +321,7 @@ class AlokasaunForm(forms.ModelForm):
 class AlokasaunMembroForm(AlokasaunForm):
 	"""Pasu ikus iha fluxu input membru: hili Militante & Simpatizante ka Ejekutivu. Militante & Simpatizante = rai deit
 	(la iha pozisaun); Ejekutivu = hatudu nivel (Suku, Aldeia ka Organizasaun; Postu ba Presidente, Admin no Sekjer Suku)."""
-	TIPU = [('Militante', 'Militante & Simpatizante'), ('Ejekutivu', 'Ejekutivu (iha pozisaun iha struktura)')]
+	TIPU = [('Militante', 'Militante & Simpatizante'), ('Ejekutivu', 'EXECUTIVO (iha pozisaun iha struktura)')]
 	tipu = forms.ChoiceField(label="Membru ne'e", choices=TIPU)
 
 	def __init__(self, *args, membro=None, user=None, **kwargs):
