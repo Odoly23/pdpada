@@ -41,7 +41,7 @@ def _banner(group, e):
 		return name, f'ALDEIA {e.aldeia.name.upper()} · SUKU {e.aldeia.village.name.upper()}'
 	if e and group in roles.ORG_ROLES and e.organizasaun_id:
 		return name, f'ORGANIZASAUN {e.organizasaun.code}'
-	return name, 'SGDM-PDPADA'
+	return name, 'SGDM-PD-PADA'
 
 
 # liga ba lista membru ho filtru
@@ -176,7 +176,7 @@ def VarandaRekap(request):
 		'can_list': group in roles.LISTA_ROLES, 'can_add': group in roles.INPUT_ROLES,
 		'can_struktura': group in roles.STRUKTURA_ROLES, 'group_cards': False,
 		'title': 'Varanda', 'legend': 'Varanda',
-		'meta_description': 'SGDM-PDPADA: Sistema Jestaun Dadus Membru Partido Democratico, Postu Administrativu Dom Aleixo, Dili.',
+		'meta_description': 'SGDM-PD-PADA: Sistema Jestaun Dadus Membru Partido Democratico, Postu Administrativu Dom Aleixo, Dili.',
 	}
 	return render(request, 'home/varanda_rekap.html', context)
 
@@ -245,7 +245,7 @@ def PainelRekap(request):
 		'selected_url': _list_url(group, **{key: sel}) if selected and linkable and key != 'organizasaun' else '',
 		'can_add': group in roles.INPUT_ROLES,
 		'title': 'Painel', 'legend': 'Painel',
-		'meta_description': 'Painel SGDM-PDPADA: membru por tinan no suku, Partido Democratico, Postu Dom Aleixo.',
+		'meta_description': 'Painel SGDM-PD-PADA: membru por tinan no suku, Partido Democratico, Postu Dom Aleixo.',
 	}
 	return render(request, 'membro/painel_rekap.html', context)
 

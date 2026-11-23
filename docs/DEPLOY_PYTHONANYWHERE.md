@@ -1,4 +1,4 @@
-# Deploy SGDM-PDPADA di PythonAnywhere
+# Deploy SGDM-PD-PADA di PythonAnywhere
 
 Ganti `USERNAME` dengan username PythonAnywhere Anda. Akun gratis cukup (SQLite, satu web app di `USERNAME.pythonanywhere.com`).
 

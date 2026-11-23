@@ -1,4 +1,4 @@
-# SGDM-PDPADA
+# SGDM-PD-PADA
 
 Sistema Jestaun Dadus Membru Partido Democratico (PD) — Postu Administrativu Dom Aleixo, Munisipiu Dili, Timor-Leste.
 

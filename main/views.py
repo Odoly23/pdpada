@@ -107,7 +107,7 @@ def home(request):
 		'group': group, 'role_label': ROLE_NAME.get(group, ''),
 		'tiles': _tiles(group, counts), 'can_search': group in roles.LISTA_ROLES, 'notif_counts': counts,
 		'title': 'Varanda', 'legend': 'Varanda',
-		'meta_description': 'SGDM-PDPADA: Sistema Jestaun Dadus Membru Partido Democratico, Postu Administrativu Dom Aleixo, Dili.',
+		'meta_description': 'SGDM-PD-PADA: Sistema Jestaun Dadus Membru Partido Democratico, Postu Administrativu Dom Aleixo, Dili.',
 	}
 	return render(request, 'home/home.html', context)
 
@@ -130,7 +130,7 @@ def healthz(request):
 		logger.exception('healthz: database tidak dapat diakses')
 		db = 'error'
 	status = 200 if db == 'ok' else 503
-	return JsonResponse({'app': 'SGDM-PDPADA', 'status': 'ok' if db == 'ok' else 'error', 'database': db}, status=status)
+	return JsonResponse({'app': 'SGDM-PD-PADA', 'status': 'ok' if db == 'ok' else 'error', 'database': db}, status=status)
 
 
 # pájina erru 403 (la iha permisaun)

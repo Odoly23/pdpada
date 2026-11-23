@@ -86,7 +86,7 @@ def UserPainel(request):
 	group = c_user_group(request.user)
 	by_role = {r['groups__name']: r['n'] for r in User.objects.filter(is_active=True).values('groups__name').annotate(n=Count('id'))}
 	context = {
-		'group': group, 'banner': ('ADMIN', 'SGDM-PDPADA'),
+		'group': group, 'banner': ('ADMIN', 'SGDM-PD-PADA'),
 		'users_by_role': [(label, by_role.get(key, 0)) for key, label in roles.ROLE_LABELS],
 		'users_total': sum(by_role.values()),
 		'master': [

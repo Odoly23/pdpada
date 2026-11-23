@@ -1,4 +1,4 @@
-# Transformasaun SGDM-PDPADA: husi papél no fotokopia ba sistema ho URL de'it
+# Transformasaun SGDM-PD-PADA: husi papél no fotokopia ba sistema ho URL de'it
 
 Dokumentu ne'e rejistu mudansa husi dadus iha papél (print, fotokopia) ba sistema ida ne'ebé ema hotu uza liu husi **enderesu web (URL)** de'it. Planu enderesu ofisiál: **`sgdm-pd.tl`** (planu, seidauk konfirma rejistu domíniu).
 
@@ -51,7 +51,7 @@ flowchart LR
     U2[Laptop] --> N
     U3[Ekran boot Live] --> N
     N(["Internet · HTTPS · sgdm-pd.tl"]) --> S
-    subgraph S["Server SGDM-PDPADA (Django)"]
+    subgraph S["Server SGDM-PD-PADA (Django)"]
         M1[Membru no Aprovasaun]
         M2[Struktura, Delegadu, Organigrama]
         M3[Eleisaun · Live · Komparasaun]

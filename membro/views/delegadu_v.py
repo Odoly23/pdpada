@@ -187,7 +187,7 @@ def build_pdf(datas, totais=None):
 	def footer(canvas, document):
 		canvas.saveState()
 		canvas.setFont('Times-Roman', 8)
-		canvas.drawString(15 * mm, 9 * mm, f'SGDM-PDPADA · {nome} · Imprime iha {stamp}')
+		canvas.drawString(15 * mm, 9 * mm, f'SGDM-PD-PADA · {nome} · Imprime iha {stamp}')
 		canvas.drawRightString(A4[0] - 15 * mm, 9 * mm, f'Pajina {document.page}')
 		canvas.restoreState()
 

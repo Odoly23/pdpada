@@ -1,4 +1,4 @@
-/* DataTables standar SGDM-PDPADA: tombol ekspor berwarna (Excel/PDF/Print/Kolona), scroll horizontal, teks Tetun.
+/* DataTables standar SGDM-PD-PADA: tombol ekspor berwarna (Excel/PDF/Print/Kolona), scroll horizontal, teks Tetun.
    Pencarian sederhana (kotak "Buka"); tidak memakai Search Builder agar mudah bagi pengguna awam. */
 $(document).ready(function () {
 	var $t = $('#example');

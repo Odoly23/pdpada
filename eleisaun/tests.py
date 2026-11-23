@@ -185,7 +185,7 @@ class LiveDashboardTests(EleisaunBase):
 		self.login('presidente')
 		resp = self.client.get(reverse('eleisaun-live'))
 		for needle in ('requestFullscreen', 'wakeLock', 'id="clock"', 'rotate(', 'live.css', 'js_custom/highcharts.js', 'noindex', 'setInterval(load, 10000)',
-				'<title>SGDM-PDPADA - Live Dashboard Eleisaun</title>', 'name="description"'):
+				'<title>SGDM-PD-PADA - Live Dashboard Eleisaun</title>', 'name="description"'):
 			self.assertContains(resp, needle)
 		self.assertNotContains(resp, 'main-navbar')  # tanpa menu: layar penuh
 		self.assertNotContains(resp, 'https://')

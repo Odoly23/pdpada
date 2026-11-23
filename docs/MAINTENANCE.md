@@ -1,4 +1,4 @@
-# Panduan Pemeliharaan SGDM-PDPADA (untuk 10 tahun ke depan)
+# Panduan Pemeliharaan SGDM-PD-PADA (untuk 10 tahun ke depan)
 
 Tujuan: siapa pun yang meneruskan sistem ini bisa memahami, memperbaiki, dan memperbarui tanpa menebak-nebak.
 

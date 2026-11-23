@@ -1272,8 +1272,8 @@ class MetaTagTests(BaseCase):
 	def test_page_specific_title_and_description(self):
 		self.login('sekrsuku')
 		resp = self.client.get('/')
-		self.assertContains(resp, '<title>SGDM-PDPADA - Varanda</title>')
-		self.assertContains(resp, 'content="SGDM-PDPADA: Sistema Jestaun Dadus Membru Partido Democratico')
+		self.assertContains(resp, '<title>SGDM-PD-PADA - Varanda</title>')
+		self.assertContains(resp, 'content="SGDM-PD-PADA: Sistema Jestaun Dadus Membru Partido Democratico')
 		self.assertContains(resp, 'property="og:url" content="http://testserver/"')
 
 	def test_robots_txt_disallows_everything(self):
@@ -1501,7 +1501,7 @@ class LoginPageTests(BaseCase):
 	def test_login_layout_follows_sample(self):
 		resp = self.client.get(reverse('login'))
 		self.assertEqual(resp.status_code, 200)
-		for needle in ('SISTEMA JESTAUN DADUS MEMBRU', 'PARTIDO DEMOCRATICO', 'SGDM-PDPADA', 'class="card border-primary shadow-lg"',
+		for needle in ('SISTEMA JESTAUN DADUS MEMBRU', 'PARTIDO DEMOCRATICO', 'SGDM-PD-PADA', 'class="card border-primary shadow-lg"',
 				'card-header bg-primary text-white', 'LOGIN', 'Log In', 'name="username"', 'name="password"', 'csrfmiddlewaretoken'):
 			self.assertContains(resp, needle)
 
@@ -1569,7 +1569,7 @@ class LandingTests(BaseCase):
 
 	def test_hero_has_title_full_flag_and_welcome(self):
 		resp, _ = self.tiles('sekrsuku')
-		for needle in ('SISTEMA JESTAUN', 'SGDM-PDPADA', 'Utiliza husi', 'Secretario Suku', 'bandeira_pd.png', 'Tinan 2026'):
+		for needle in ('SISTEMA JESTAUN', 'SGDM-PD-PADA', 'Utiliza husi', 'Secretario Suku', 'bandeira_pd.png', 'Tinan 2026'):
 			self.assertContains(resp, needle)
 		self.assertNotContains(resp, 'logo_pd')
 
@@ -1944,7 +1944,7 @@ class HealthCheckTests(BaseCase):
 	def test_ok_without_login_and_without_sensitive_data(self):
 		resp = self.client.get('/healthz/')
 		self.assertEqual(resp.status_code, 200)
-		self.assertEqual(resp.json(), {'app': 'SGDM-PDPADA', 'status': 'ok', 'database': 'ok'})
+		self.assertEqual(resp.json(), {'app': 'SGDM-PD-PADA', 'status': 'ok', 'database': 'ok'})
 
 	def test_reports_503_when_database_fails(self):
 		with mock.patch('main.views.connection.cursor', side_effect=Exception('db mati')):
