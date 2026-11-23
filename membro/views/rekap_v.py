@@ -250,7 +250,7 @@ def PainelRekap(request):
 	return render(request, 'membro/painel_rekap.html', context)
 
 
-POZISAUN_LABEL = {'Presidente': 'Presidente', 'Vice I': 'Vice I', 'Vice II': 'Vice II', 'Vice III': 'Vice III', 'Coordenador': 'Cordenador', 'Sekretariu': 'Sekjer'}
+POZISAUN_LABEL = {'Presidente': 'Presidente', 'Vice I': 'Vice I', 'Vice II': 'Vice II', 'Vice III': 'Vice III', 'Coordenador': 'Cordenador', 'Sekretariu': 'Secretario'}
 
 
 # rekap tuir suku
@@ -281,7 +281,7 @@ def SukuRekap(request, pk):
 	for a in Alokasaun.objects.filter(ativu='Sim', nivel='Suku', village=village, organizasaun__isnull=True).select_related('membro'):
 		leaders[a.pozisaun] = a.membro
 	pemimpin = []
-	for key, name in (('Coordenador', 'Cordenador Suku'), ('Sekretariu', 'Sekjer Suku')):
+	for key, name in (('Coordenador', 'Cordenador Suku'), ('Sekretariu', 'Secretario Suku')):
 		m = leaders.get(key)
 		pemimpin.append({'label': name, 'nome': m.nome if m else None, 'idade': m.age() if m else None})
 	context = {
@@ -385,7 +385,7 @@ def AldeiaRekap(request, pk):
 	by_id = {m.pk: m for m in members}
 	rows = [{'aldeia': aldeia.name, 'nome': m.nome, 'pozisaun': label.get(m.pk, 'Membru')} for m in members]
 	pemimpin = []
-	for key, name in (('Coordenador', 'Cordenador Aldeia'), ('Sekretariu', 'Sekjer Aldeia')):
+	for key, name in (('Coordenador', 'Cordenador Aldeia'), ('Sekretariu', 'Secretario Aldeia')):
 		m = by_id.get(leaders.get(key))
 		pemimpin.append({'label': name, 'nome': m.nome if m else None, 'idade': m.age() if m else None})
 	context = {

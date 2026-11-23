@@ -1090,7 +1090,7 @@ class SukuRekapTests(BaseCase):
 			t = resp.context['tot']
 			self.assertEqual((t['total'], t['mane'], t['feto'], t['ativu'], t['inativu'], t['falesidu']), (4, 3, 1, 2, 1, 1), u)
 			self.assertEqual([(p['label'], p['nome']) for p in resp.context['pemimpin']],
-				[('Cordenador Suku', 'Joao Koord'), ('Sekjer Suku', 'Aaa Sekr')], u)
+				[('Cordenador Suku', 'Joao Koord'), ('Secretario Suku', 'Aaa Sekr')], u)
 			self.assertEqual(resp.context['pemimpin'][0]['idade'], self.m1.age())
 			self.assertEqual([(r['aldeia'].name, getattr(r['coord'], 'nome', None), getattr(r['sekr'], 'nome', None)) for r in resp.context['rows']],
 				[('A1', None, 'Abel Aldeia'), ('A2', None, None)], u)
@@ -1569,7 +1569,7 @@ class LandingTests(BaseCase):
 
 	def test_hero_has_title_full_flag_and_welcome(self):
 		resp, _ = self.tiles('sekrsuku')
-		for needle in ('SISTEMA JESTAUN', 'SGDM-PDPADA', 'Utiliza husi', 'Sekjer Suku', 'bandeira_pd.png', 'Tinan 2026'):
+		for needle in ('SISTEMA JESTAUN', 'SGDM-PDPADA', 'Utiliza husi', 'Secretario Suku', 'bandeira_pd.png', 'Tinan 2026'):
 			self.assertContains(resp, needle)
 		self.assertNotContains(resp, 'logo_pd')
 
@@ -3037,9 +3037,9 @@ class AldeiaRekapTests(BaseCase):
 		self.login('presidente')
 		resp = self.client.get(reverse('membro-aldeia', args=[self.a1.pk]))
 		self.assertEqual([(r['nome'], r['pozisaun']) for r in resp.context['rows']], [
-			('Koord Aldeia', 'Cordenador Aldeia A1'), ('Sekr Aldeia', 'Sekjer Aldeia A1'), ('Sayap OJD', 'Cordenador OJD Aldeia')])
+			('Koord Aldeia', 'Cordenador Aldeia A1'), ('Sekr Aldeia', 'Secretario Aldeia A1'), ('Sayap OJD', 'Cordenador OJD Aldeia')])
 		self.assertEqual(resp.context['tot']['total'], 3)
-		self.assertEqual([(p['label'], p['nome']) for p in resp.context['pemimpin']], [('Cordenador Aldeia', 'Koord Aldeia'), ('Sekjer Aldeia', 'Sekr Aldeia')])
+		self.assertEqual([(p['label'], p['nome']) for p in resp.context['pemimpin']], [('Cordenador Aldeia', 'Koord Aldeia'), ('Secretario Aldeia', 'Sekr Aldeia')])
 		self.assertNotContains(resp, 'Biasa A2')
 		self.assertContains(resp, 'Naran Membru')
 		self.assertContains(resp, 'EXECUTIVO ALDEIA A1')
